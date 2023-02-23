@@ -1,0 +1,7 @@
+name = "Stitch"
+uuid = "046a87ae-b2c3-4cdd-ad0f-5b11a5655aa4"
+authors = ["Matthew Bowers <mlbowers@mit.edu>"]
+version = "0.1.0"
+
+[deps]
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
