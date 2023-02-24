@@ -178,12 +178,13 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
 
         # are we done?
         if isempty(search_state.holes)
-            !verbose || println("completed: ", search_state.abstraction, " with utility ", utility_fn(search_state), " used in $(length(search_state.matches)) places")
+            !verbose || println("completed: ", search_state.abstraction.body, " with utility ", utility_fn(search_state), " used in $(length(search_state.matches)) places")
             # eval util and possibly update best util
             util = utility_fn(search_state)
             if util > best_util
                 best_util = util
                 best_abstraction = deepcopy(search_state.abstraction)
+                println("new best: ", search_state.abstraction.body, " with utility ", best_util, " used in $(length(search_state.matches)) places")
             end
             continue
         end
@@ -192,7 +193,7 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
     end
 
 
-    println("Best abstraction: ", best_abstraction, " with utility ", best_util);
+    println("Best abstraction: ", best_abstraction.body, " with utility ", best_util);
 
 end
 
