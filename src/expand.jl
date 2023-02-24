@@ -12,6 +12,44 @@ end
 
 
 """
+Adds the set of expansions to whatever terminal or nonterminal is present at the match locations,
+for example :app or :lambda or primitives or variables.
+"""
+function syntactic_expansions!(search_state)
+    matches_of_sym = Dict{Symbol,Vector{Match}}() # optim: preallocate and reuse
+    for match in search_state.matches
+        sym = match.holes[end].head
+        if haskey(matches_of_sym, sym)
+            push!(matches_of_sym[sym], match)
+        else
+            matches_of_sym[sym] = [match]
+        end
+    end
+
+    for (sym, matches) in matches_of_sym
+        push!(search_state.expansions, PossibleExpansion(
+            matches,
+            SyntacticExpansion(sym, length(matches[1].holes[end].args)),
+        ))
+    end
+end
+
+function abstraction_expansions!(search_state, max_arity)
+    # variable reuse
+    for i in 0:search_state.abstraction.arity-1
+        # todo implement and set fresh=false
+    end
+    if search_state.abstraction.arity < max_arity
+        # fresh variable
+        push!(search_state.expansions, PossibleExpansion(
+            search_state.matches, # all the same matches
+            AbstractionExpansion(search_state.abstraction.arity, true),
+        ))
+    end
+end
+
+
+"""
 Saves current state to the stack, and reinitializes as a fresh state
 """
 function expand_general!(search_state, expansion)
@@ -71,13 +109,13 @@ function expand!(search_state, expansion::PossibleExpansion{SyntacticExpansion},
         push!(search_state.holes, h)
     end
     # reverse holes so they go left to right
-    @views reverse!(search_state.holes[end-expansion.data.num_holes+1:end])
+    # @views reverse!(search_state.holes[end-expansion.data.num_holes+1:end])
 
     for match in search_state.matches
         hole = pop!(match.holes)
         length(hole.args) == expansion.data.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion.data)")
         push!(match.holes_stack, hole)
-        append!(match.holes, reverse(hole.args));
+        append!(match.holes, hole.args);
     end
 end
 

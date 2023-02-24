@@ -90,42 +90,6 @@ function init_search_state(corpus) :: SearchState
 end
 
 
-"""
-Adds the set of expansions to whatever terminal or nonterminal is present at the match locations,
-for example :app or :lambda or primitives or variables.
-"""
-function syntactic_expansions!(search_state)
-    matches_of_sym = Dict{Symbol,Vector{Match}}() # optim: preallocate and reuse
-    for match in search_state.matches
-        sym = match.holes[end].head
-        if haskey(matches_of_sym, sym)
-            push!(matches_of_sym[sym], match)
-        else
-            matches_of_sym[sym] = [match]
-        end
-    end
-
-    for (sym, matches) in matches_of_sym
-        push!(search_state.expansions, PossibleExpansion(
-            matches,
-            SyntacticExpansion(sym, length(matches[1].holes[end].args)),
-        ))
-    end
-end
-
-function abstraction_expansions!(search_state, max_arity)
-    # variable reuse
-    for i in 0:search_state.abstraction.arity-1
-        # todo implement and set fresh=false
-    end
-    if search_state.abstraction.arity < max_arity
-        # fresh variable
-        push!(search_state.expansions, PossibleExpansion(
-            search_state.matches, # all the same matches
-            AbstractionExpansion(search_state.abstraction.arity, true),
-        ))
-    end
-end
 
 function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=false, follow=nothing)
     best_util = Float32(0)
@@ -137,11 +101,14 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
     # todo add arity zero here
 
     while true
-        !verbose || println("abstraction: ", search_state.abstraction.body, " | matches: ", length(search_state.matches), " | expansions: ", length(search_state.expansions));
+        !verbose || println("abstraction: ", search_state.abstraction.body,
+            " | matches: ", length(search_state.matches),
+            " | expansions: ", length(search_state.expansions),
+            " | m:", search_state.matches);
 
         if needs_expansion
             possible_expansions!(search_state, max_arity, upper_bound_fn, best_util)
-            !verbose || println("possible_expansions!() -> ", length(search_state.expansions))
+            !verbose || println("possible_expansions!() -> ", length(search_state.expansions), " ", [e.data for e in search_state.expansions])
             needs_expansion = false
             continue
         end
