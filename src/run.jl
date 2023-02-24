@@ -12,6 +12,6 @@ function test()
 
     # @show corpus
 
-    stitch_search(corpus, S.utility_size_time_matches, S.upper_bound_inf, verbose=false)
+    @time stitch_search(corpus, S.utility_size_time_matches, S.upper_bound_sum_subtree_sizes, verbose=false)
 
 end

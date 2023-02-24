@@ -6,7 +6,7 @@ end
 sum over match locations of size of match location
 """
 function upper_bound_sum_subtree_sizes(search_state, expansion) :: Float32
-    sum(m -> m.cost)
+    sum(m -> m.size, expansion.matches)
 end
 
 """
