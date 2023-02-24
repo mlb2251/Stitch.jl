@@ -103,8 +103,7 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
     while true
         !verbose || println("abstraction: ", search_state.abstraction.body,
             " | matches: ", length(search_state.matches),
-            " | expansions: ", length(search_state.expansions),
-            " | m:", search_state.matches);
+            " | expansions: ", length(search_state.expansions));
 
         if needs_expansion
             possible_expansions!(search_state, max_arity, upper_bound_fn, best_util)

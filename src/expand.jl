@@ -146,12 +146,13 @@ function unexpand!(search_state, expansion::PossibleExpansion{SyntacticExpansion
     end
 
     for match in search_state.matches
-        hole = pop!(match.holes_stack) 
-        length(hole.args) == expansion.data.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
-        push!(match.holes, hole)
         for _ in 1:expansion.data.num_holes
             pop!(match.holes)
         end
+
+        hole = pop!(match.holes_stack) 
+        length(hole.args) == expansion.data.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
+        push!(match.holes, hole)
     end
 end
 
