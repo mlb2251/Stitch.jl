@@ -48,6 +48,8 @@ end
 mutable struct Stats
     expansions::Int
     completed::Int
+
+    comparable_worklist_steps::Int
 end
 
 
@@ -85,7 +87,7 @@ function init_search_state(corpus) :: SearchState
     SearchState(
         abstraction,
         corpus,
-        Stats(0,0),
+        Stats(0,0,0),
         [abstraction.body],
         matches,
         PossibleExpansion[],
@@ -108,14 +110,14 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
     # todo add arity zero here
 
     while true
-        !verbose || println("abstraction: ", search_state.abstraction.body,
+        if needs_expansion
+            !verbose || println("abstraction: ", search_state.abstraction.body,
             " | matches: ", length(search_state.matches),
             " | expansions: ", length(search_state.expansions));
-
-        if needs_expansion
             possible_expansions!(search_state, max_arity, upper_bound_fn, best_util)
             !verbose || println("possible_expansions!() -> ", length(search_state.expansions), " ", [e.data for e in search_state.expansions])
             needs_expansion = false
+            search_state.stats.comparable_worklist_steps += 1
             continue
         end
 

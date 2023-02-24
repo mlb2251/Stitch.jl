@@ -16,7 +16,7 @@ Adds the set of expansions to whatever terminal or nonterminal is present at the
 for example :app or :lambda or primitives or variables.
 """
 function syntactic_expansions!(search_state)
-    matches_of_sym = Dict{Symbol,Vector{Match}}() # optim: preallocate and reuse
+    matches_of_sym = Dict{Symbol,Vector{Match}}() # optim: preallocate and reuse with empty!()
     for match in search_state.matches
         sym = match.holes[end].head
         if haskey(matches_of_sym, sym)
@@ -27,6 +27,7 @@ function syntactic_expansions!(search_state)
     end
 
     for (sym, matches) in matches_of_sym
+        if isempty(matches) continue end
         push!(search_state.expansions, PossibleExpansion(
             matches,
             SyntacticExpansion(sym, length(matches[1].holes[end].args)),
