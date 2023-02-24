@@ -51,11 +51,26 @@ function size_no_abstraction_var(e::SExpr) :: Float32
 end
 
 
-Base.show(io::IO, e::SExpr) = begin
+Base.show(io::IO, e::SExpr) = begin    
     if isempty(e.args)
         print(io, e.head)
+    elseif e.head === :app
+        print(io, "(", join(uncurry(e), " "), ")")
     else
         print(io, "(", e.head, " ", join(e.args, " "), ")")
+    end
+end
+
+
+"""
+takes (app (app f x) y) and returns [f, x, y]
+"""
+function uncurry(e::SExpr) :: Vector{SExpr}
+    if e.head === :app
+        res = uncurry(e.args[1])
+        return push!(res, e.args[2])
+    else
+        return [e]
     end
 end
 

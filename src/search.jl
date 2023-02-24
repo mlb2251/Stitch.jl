@@ -93,7 +93,7 @@ end
 
 """
 Adds the set of expansions to whatever terminal or nonterminal is present at the match locations,
-for example :app or :lam or primitives or variables.
+for example :app or :lambda or primitives or variables.
 """
 function syntactic_expansions!(search_state)
     matches_of_sym = Dict{Symbol,Vector{Match}}() # optim: preallocate and reuse
@@ -128,7 +128,7 @@ function abstraction_expansions!(search_state, max_arity)
     end
 end
 
-function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=false)
+function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=false, follow=nothing)
     best_util = Float32(0)
     best_abstraction = nothing
     search_state = init_search_state(corpus)
@@ -138,7 +138,7 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
     # todo add arity zero here
 
     while true
-        !verbose || println("abstraction [$(length(search_state.holes)) hole(s)]: ", search_state.abstraction)
+        !verbose || println("abstraction: ", search_state.abstraction.body, " | matches: ", length(search_state.matches))
 
         if needs_expansion
             possible_expansions!(search_state, max_arity, upper_bound_fn, best_util)
@@ -163,14 +163,22 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
         if upper_bound_fn(search_state,expansion) <= best_util
             continue # skip - worse than best so far
         end
-
-        !verbose || println("expanding with: ", expansion.data)
         
         expand_general!(search_state, expansion)
 
+        if !isnothing(follow)
+            body = string(search_state.abstraction.body)
+            prefix = split(body, "??")[1]
+            if !startswith(follow, prefix)
+                continue
+            end
+        end
+
+        !verbose || println("expanded with: ", expansion.data)
+
         # are we done?
         if isempty(search_state.holes)
-            !verbose || println("completed: ", search_state.abstraction)
+            !verbose || println("completed: ", search_state.abstraction, " with utility ", utility_fn(search_state), " used in $(length(search_state.matches)) places")
             # eval util and possibly update best util
             util = utility_fn(search_state)
             if util > best_util
@@ -258,12 +266,14 @@ function expand!(search_state, expansion::PossibleExpansion{SyntacticExpansion},
         push!(hole.args, h)
         push!(search_state.holes, h)
     end
+    # reverse holes so they go left to right
+    @views reverse!(search_state.holes[end-expansion.data.num_holes+1:end])
 
     for match in search_state.matches
         hole = pop!(match.holes)
         length(hole.args) == expansion.data.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion.data)")
         push!(match.holes_stack, hole)
-        append!(match.holes, hole.args);
+        append!(match.holes, reverse(hole.args));
     end
 end
 
