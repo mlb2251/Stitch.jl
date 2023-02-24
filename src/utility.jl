@@ -13,5 +13,5 @@ end
 size*matches utility
 """
 function utility_size_time_matches(search_state) :: Float32
-    (size_no_abstraction_var(search_state.abstraction.body) - 1) * length(search_state.matches)
+    (size_no_abstraction_var(search_state.abstraction.body) - 1 - .01 * search_state.abstraction.arity) * length(search_state.matches)
 end
