@@ -138,12 +138,13 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
     # todo add arity zero here
 
     while true
-        !verbose || println("abstraction: ", search_state.abstraction.body, " | matches: ", length(search_state.matches))
+        !verbose || println("abstraction: ", search_state.abstraction.body, " | matches: ", length(search_state.matches), " | expansions: ", length(search_state.expansions));
 
         if needs_expansion
             possible_expansions!(search_state, max_arity, upper_bound_fn, best_util)
             !verbose || println("possible_expansions!() -> ", length(search_state.expansions))
             needs_expansion = false
+            continue
         end
 
         # check if there are no expansions to try, and backtrack if so
@@ -153,7 +154,7 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
                 break
             end
 
-            !verbose || println("unexpanding with: ", search_state.past_expansions[end].data)
+            # !verbose || println("unexpanding with: ", search_state.past_expansions[end].data)
             unexpand_general!(search_state)
             continue
         end
@@ -174,7 +175,7 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
             end
         end
 
-        !verbose || println("expanded with: ", expansion.data)
+        # !verbose || println("expanded with: ", expansion.data)
 
         # are we done?
         if isempty(search_state.holes)
