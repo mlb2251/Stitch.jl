@@ -45,11 +45,17 @@ mutable struct Abstraction
     arity::Int
 end
 
+mutable struct Stats
+    expansions::Int
+    completed::Int
+end
+
 
 
 mutable struct SearchState
     abstraction::Abstraction
     corpus::Corpus
+    stats::Stats
 
     holes::Vector{SExpr}
     matches::Vector{Match} 
@@ -79,6 +85,7 @@ function init_search_state(corpus) :: SearchState
     SearchState(
         abstraction,
         corpus,
+        Stats(0,0),
         [abstraction.body],
         matches,
         PossibleExpansion[],
@@ -132,6 +139,8 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
         
         expand_general!(search_state, expansion)
 
+        search_state.stats.expansions += 1
+
         if !isnothing(follow)
             body = string(search_state.abstraction.body)
             prefix = split(body, "??")[1]
@@ -144,6 +153,7 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
 
         # are we done?
         if isempty(search_state.holes)
+            search_state.stats.completed += 1
             !verbose || println("completed: ", search_state.abstraction.body, " with utility ", utility_fn(search_state), " used in $(length(search_state.matches)) places")
             # eval util and possibly update best util
             util = utility_fn(search_state)
@@ -160,6 +170,7 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
 
 
     println("Best abstraction: ", best_abstraction.body, " with utility ", best_util);
+    println(search_state.stats);
 
 end
 
