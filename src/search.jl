@@ -58,6 +58,7 @@ mutable struct SearchState
     abstraction::Abstraction
     corpus::Corpus
     stats::Stats
+    new_abstraction_name::Symbol
 
     holes::Vector{SExpr}
     matches::Vector{Match} 
@@ -81,13 +82,14 @@ function hole_matches(corpus) :: Vector{Match}
     matches
 end
 
-function init_search_state(corpus) :: SearchState
+function init_search_state(corpus, new_abstraction_name) :: SearchState
     abstraction = Abstraction(new_hole(nothing), 0)
     matches = hole_matches(corpus)
     SearchState(
         abstraction,
         corpus,
         Stats(0,0,0),
+        new_abstraction_name,
         [abstraction.body],
         matches,
         PossibleExpansion[],
@@ -100,10 +102,15 @@ end
 
 
 
-function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=false, follow=nothing)
+function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=false, follow=nothing, new_abstraction_name=nothing)
+
+    if isnothing(new_abstraction_name)
+        new_abstraction_name = gensym("f")
+    end
+
     best_util = Float32(0)
     best_abstraction = nothing
-    search_state = init_search_state(corpus)
+    search_state = init_search_state(corpus, new_abstraction_name)
 
     needs_expansion = true
 

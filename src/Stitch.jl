@@ -5,6 +5,7 @@ include("expr.jl")
 include("search.jl")
 include("expand.jl")
 include("utility.jl")
+include("rewrite.jl")
 
 end # module Stitch
 

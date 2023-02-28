@@ -41,6 +41,14 @@ function struct_hash(e::SExpr) :: Int
     return global_struct_hash[node]
 end
 
+function curried_application(f::Symbol, args::Vector{SExpr}) :: SExpr
+    expr = SExpr(f, SExpr[], nothing)
+    for arg in args
+        expr = SExpr(:app, [expr, arg], nothing)
+    end
+    expr
+end
+
 
 new_hole(parent) = SExpr(Symbol("??"), SExpr[], parent)
 
