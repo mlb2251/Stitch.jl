@@ -7,6 +7,7 @@ mutable struct SExpr
     head::Symbol
     args::Vector{SExpr}
     parent::Union{SExpr, Nothing}
+    struct_hash::Union{Int, Nothing}
 
     # type annotation on args forces the more efficient passing in of a SExpr vector
     function SExpr(head, args::Vector{SExpr}, parent)
@@ -17,6 +18,29 @@ mutable struct SExpr
         expr
     end
 end
+
+struct HashNode
+    head::Symbol
+    args::Vector{Int}
+end
+
+const global_struct_hash = Dict{HashNode, Int}()
+
+"""
+gets structural hash value, possibly with side effects of updating the structural hash
+"""
+function struct_hash(e::Expr) :: Int
+    if !isnothing(e.struct_hash)
+        return e.struct_hash
+    end
+    args = [struct_hash(arg) for arg in e.args]
+    node = HashNode(e.head, args)
+    if !haskey(global_struct_hash, node)
+        global_struct_hash[node] = length(global_struct_hash) + 1
+    end
+    return global_struct_hash[node]
+end
+
 
 new_hole(parent) = SExpr(Symbol("??"), SExpr[], parent)
 
