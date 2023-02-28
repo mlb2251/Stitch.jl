@@ -29,7 +29,7 @@ const global_struct_hash = Dict{HashNode, Int}()
 """
 gets structural hash value, possibly with side effects of updating the structural hash
 """
-function struct_hash(e::Expr) :: Int
+function struct_hash(e::SExpr) :: Int
     if !isnothing(e.struct_hash)
         return e.struct_hash
     end

@@ -38,7 +38,13 @@ end
 function abstraction_expansions!(search_state, max_arity)
     # variable reuse
     for i in 0:search_state.abstraction.arity-1
-        # todo implement and set fresh=false
+        # this works but just slows it down:
+        # matches = [m for m in search_state.matches if struct_hash(m.holes[end]) == struct_hash(m.args[i+1])]
+        # if isempty(matches) continue end
+        # push!(search_state.expansions, PossibleExpansion(
+        #     matches,
+        #     AbstractionExpansion(i, false),
+        # ))
     end
     if search_state.abstraction.arity < max_arity
         # fresh variable
