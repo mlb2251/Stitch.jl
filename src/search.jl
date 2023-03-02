@@ -10,6 +10,13 @@ mutable struct Corpus
     programs::Vector{Program}
 end
 
+size(p::Program) = size(p.expr)
+
+function size(c::Corpus) :: Float32
+    tasks = unique([p.task for p in c.programs])
+    sum([minimum([size(p) for p in c.programs if p.task == t]) for t in tasks])
+end
+
 mutable struct Match
     expr::SExpr # pointer to subtree in original corpus
     args::Vector{SExpr} # pointers to first instance of each arg within subtree ie args[1] is #0
@@ -140,6 +147,7 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
             continue
         end
 
+
         # pop new expansion
         expansion = pop!(search_state.expansions)
         if upper_bound_fn(search_state,expansion) <= best_util
@@ -161,7 +169,7 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
         # !verbose || println("expanded with: ", expansion.data)
 
         # are we done?
-        if isempty(search_state.holes)
+        if isempty(search_state.holes)            
             search_state.stats.completed += 1
             !verbose || println("completed: ", search_state.abstraction.body, " with utility ", utility_fn(search_state), " used in $(length(search_state.matches)) places")
             # eval util and possibly update best util

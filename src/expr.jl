@@ -38,7 +38,8 @@ function struct_hash(e::SExpr) :: Int
     if !haskey(global_struct_hash, node)
         global_struct_hash[node] = length(global_struct_hash) + 1
     end
-    return global_struct_hash[node]
+    e.struct_hash = global_struct_hash[node]
+    return e.struct_hash
 end
 
 function curried_application(f::Symbol, args::Vector{SExpr}) :: SExpr
@@ -53,8 +54,10 @@ end
 new_hole(parent) = SExpr(Symbol("??"), SExpr[], parent)
 
 function detach_deepcopy(e::SExpr) :: SExpr
-    e.parent = nothing
-    deepcopy(e)
+    res = deepcopy(e)
+    res.parent = nothing
+    # res.args = [detach_deepcopy(arg) for arg in e.args]
+    res
 end
 
 function subexpressions(e::SExpr; subexprs = SExpr[]) :: Vector{SExpr}
