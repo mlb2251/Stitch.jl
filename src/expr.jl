@@ -24,7 +24,8 @@ struct HashNode
     args::Vector{Int}
 end
 
-const global_struct_hash = Dict{HashNode, Int}()
+# const global_struct_hash = Dict{HashNode, Int}()
+const global_struct_hash = Dict{String, Int}()
 
 """
 gets structural hash value, possibly with side effects of updating the structural hash
@@ -33,8 +34,12 @@ function struct_hash(e::SExpr) :: Int
     if !isnothing(e.struct_hash)
         return e.struct_hash
     end
-    args = [struct_hash(arg) for arg in e.args]
-    node = HashNode(e.head, args)
+
+    node = string(e)
+
+    # args = [struct_hash(arg) for arg in e.args]
+    # node = HashNode(e.head, args)
+    
     if !haskey(global_struct_hash, node)
         global_struct_hash[node] = length(global_struct_hash) + 1
     end

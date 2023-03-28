@@ -24,3 +24,5 @@ function utility_rewrite(search_state) :: Float32
     rewritten = rewrite(search_state)
     size(search_state.corpus) - size(rewritten)
 end
+
+# function utility_rewrite_local(search_state, match)

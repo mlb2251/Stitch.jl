@@ -39,12 +39,13 @@ function abstraction_expansions!(search_state, max_arity)
     # variable reuse
     for i in 0:search_state.abstraction.arity-1
         # this works but just slows it down:
-        # matches = [m for m in search_state.matches if struct_hash(m.holes[end]) == struct_hash(m.args[i+1])]
-        # if isempty(matches) continue end
-        # push!(search_state.expansions, PossibleExpansion(
-        #     matches,
-        #     AbstractionExpansion(i, false),
-        # ))
+        matches = [m for m in search_state.matches if struct_hash(m.holes[end]) == struct_hash(m.args[i+1])]
+        if isempty(matches) continue end
+
+        push!(search_state.expansions, PossibleExpansion(
+            matches,
+            AbstractionExpansion(i, false),
+        ))
     end
     if search_state.abstraction.arity < max_arity
         # fresh variable
@@ -137,7 +138,9 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
     for match in search_state.matches
         hole = pop!(match.holes)
         push!(match.holes_stack, hole)
-        push!(match.args, hole); # move the hole to be an argument
+        if expansion.data.fresh
+            push!(match.args, hole); # move the hole to be an argument
+        end
     end
 end
 
@@ -173,6 +176,8 @@ function unexpand!(search_state, expansion::PossibleExpansion{AbstractionExpansi
     for match in search_state.matches
         hole = pop!(match.holes_stack)
         push!(match.holes, hole)
-        pop!(match.args) === hole || error("expected same hole");
+        if expansion.data.fresh
+            pop!(match.args) === hole || error("expected same hole");
+        end
     end
 end
