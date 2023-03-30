@@ -212,6 +212,8 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
 
         # pop new expansion
         expansion = pop!(search_state.expansions)
+
+        # upper bound check
         if upper_bound_fn(search_state,expansion) <= best_util
             is_tracked_pruned(search_state, expansion=expansion, message="$(@__FILE__):$(@__LINE__) - upper bound $(upper_bound_fn(search_state,expansion)) <= best util $best_util")
             continue # skip - worse than best so far
@@ -224,6 +226,14 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
         if is_tracked(search_state)
             printstyled("TRACK: ", search_state.abstraction.body, "\n", color=:green, bold=true)
         elseif follow && !is_tracked(search_state)
+            unexpand_general!(search_state)
+            continue
+        end
+
+        # strict dominance check - https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
+        if strictly_dominated(search_state)
+            is_tracked_pruned(search_state, message="$(@__FILE__):$(@__LINE__) - strictly dominated")
+            unexpand_general!(search_state) # force early unexpansion
             continue
         end
 

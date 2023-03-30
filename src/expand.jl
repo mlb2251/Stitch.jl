@@ -201,3 +201,31 @@ function unexpand!(search_state, expansion::PossibleExpansion{AbstractionExpansi
         pop!(match.all_args) === hole || error("expected same hole");
     end
 end
+
+# https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
+function strictly_dominated(search_state)
+    redundant_arg_elim(search_state) || arg_capture(search_state)
+end
+
+# https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
+function redundant_arg_elim(search_state)
+    for i in 1:search_state.abstraction.arity
+        for j in i+1:search_state.abstraction.arity
+            if all(match -> match.unique_args[i].data.struct_hash == match.unique_args[j].data.struct_hash, search_state.matches)
+                return true
+            end
+        end
+    end
+    false
+end
+
+# https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
+function arg_capture(search_state)
+    for i in 1:search_state.abstraction.arity
+        first_match = search_state.matches[1].unique_args[i].data.struct_hash;
+        if all(match -> match.unique_args[i].data.struct_hash == first_match, search_state.matches)
+            return true
+        end
+    end 
+    false
+end
