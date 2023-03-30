@@ -1,5 +1,4 @@
 
-
 mutable struct Program
     expr::SExpr
     id::Int
@@ -8,22 +7,39 @@ end
 
 mutable struct Corpus
     programs::Vector{Program}
+    programs_by_task::Dict{Int, Vector{Program}}
+
+    function Corpus(programs)
+        tasks = unique([p.task for p in programs])
+        programs_by_task = Dict(t => [p for p in programs if p.task == t] for t in tasks)
+        new(programs, programs_by_task)
+    end
 end
 
 size(p::Program) = size(p.expr)
 
-function size(c::Corpus) :: Float32
-    tasks = unique([p.task for p in c.programs])
-    sum([minimum([size(p) for p in c.programs if p.task == t]) for t in tasks])
+function size(corpus::Corpus) :: Float32
+    sum(minimum.(size, values(corpus.programs_by_task)))
 end
 
 mutable struct Match
-    expr::SExpr # pointer to subtree in original corpus
-    args::Vector{SExpr} # pointers to first instance of each arg within subtree ie args[1] is #0
-    holes::Vector{SExpr} # pointers to holes within subtree
-    holes_stack::Vector{SExpr} # expanded holes
+    expr::SExpr{Match} # pointer to subtree in original corpus
+    all_args::Vector{SExpr{Match}}
+    unique_args::Vector{SExpr{Match}} # pointers to first instance of each arg within subtree ie args[1] is #0
+    holes::Vector{SExpr{Match}} # pointers to holes within subtree
+    holes_stack::Vector{SExpr{Match}} # expanded holes
+    local_utility_stack::Vector{Float32} # past utilities
     program::Program # which program this subtree appears in
     size::Float32
+    struct_hash::Int
+
+    # Tracks Eqn 12: https://arxiv.org/pdf/2211.16605.pdf
+    local_utility::Float32
+    
+    cumulative_utility::Float32
+    accept_rewrite::Bool
+
+    Match(expr, program) = new(expr, [], [], [expr], [], [], program, size(expr), struct_hash(expr), local_utility_init(), NaN32, false)
 end
 
 abstract type Expansion end
@@ -42,15 +58,26 @@ struct SyntacticExpansion <: Expansion
     num_holes::Int
 end
 
+Base.show(io::IO, obj::SyntacticExpansion) = pretty_show(io, obj; indent=false)
+
 struct AbstractionExpansion <: Expansion
     index::Int
     fresh::Bool
 end
 
+Base.show(io::IO, obj::AbstractionExpansion) = pretty_show(io, obj; indent=false)
+
 mutable struct Abstraction
     body::SExpr
     arity::Int
 end
+
+Base.show(io::IO, obj::Abstraction) = pretty_show(io, obj; indent=false)
+
+
+
+
+Base.copy(abstraction::Abstraction) = Abstraction(copy(abstraction.body), abstraction.arity)
 
 mutable struct Stats
     expansions::Int
@@ -59,6 +86,9 @@ mutable struct Stats
     comparable_worklist_steps::Int
 end
 
+Base.show(io::IO, obj::Stats) = pretty_show(io, obj; indent=true)
+
+
 
 
 mutable struct SearchState
@@ -66,58 +96,85 @@ mutable struct SearchState
     corpus::Corpus
     stats::Stats
     new_abstraction_name::Symbol
+    track::String
 
     holes::Vector{SExpr}
-    matches::Vector{Match} 
+    matches::Vector{Match}
+    all_nodes::Vector{SExpr} # all treenodes in bottom up order - like a version of .matches that is never filtered down
     expansions::Vector{PossibleExpansion}
 
     holes_stack::Vector{SExpr}
     expansions_stack::Vector{Vector{PossibleExpansion}}
     matches_stack::Vector{Vector{Match}}
     past_expansions::Vector{PossibleExpansion}
+
+    function SearchState(corpus, new_abstraction_name, track)
+        abstraction = Abstraction(new_hole(nothing), 0)
+        matches = init_all_corpus_matches(corpus)
+        all_nodes = map(m -> m.expr, matches)
+        new(abstraction, corpus, Stats(0,0,0), new_abstraction_name, track,
+            [abstraction.body], matches, all_nodes, PossibleExpansion[],
+            SExpr[], PossibleExpansion[], Match[], PossibleExpansion[])
+    end
+end
+
+Base.broadcastable(s::SearchState) = Ref(s)
+
+function Base.show(io::IO, search_state::SearchState)
+    print(io,
+          "abstraction: ", search_state.abstraction.body,
+          " | matches: ", length(search_state.matches),
+          " | expansions: ", length(search_state.expansions),
+    );
 end
 
 
-function hole_matches(corpus) :: Vector{Match}
+
+"""
+Initializes a Match at every subtree in the corpus
+Note any filtering to the initial match set should NOT be done here because
+downstream we need this for SearchState.all_nodes
+"""
+function init_all_corpus_matches(corpus) :: Vector{Match}
     matches = Match[]
     for program in corpus.programs
         for expr in subexpressions(program.expr)
-            match = Match(expr, SExpr[], [expr], SExpr[], program, size(expr))
+            match = Match(expr, program)
+            expr.data = match
             push!(matches, match)
         end
     end
     matches
 end
 
-function init_search_state(corpus, new_abstraction_name) :: SearchState
-    abstraction = Abstraction(new_hole(nothing), 0)
-    matches = hole_matches(corpus)
-    SearchState(
-        abstraction,
-        corpus,
-        Stats(0,0,0),
-        new_abstraction_name,
-        [abstraction.body],
-        matches,
-        PossibleExpansion[],
-        SExpr[],
-        PossibleExpansion[],
-        Match[],
-        PossibleExpansion[],
-    )
+function is_tracked(search_state; expansion=nothing)
+    !isnothing(search_state.track) || return false
+
+    isnothing(expansion) || expand_general!(search_state, expansion)
+
+    body = string(search_state.abstraction.body)
+    suffix = split(body, "??")[end]
+
+    isnothing(expansion) || unexpand_general!(search_state)
+
+    endswith(search_state.track, suffix)
+end
+
+function is_tracked_pruned(search_state; expansion=nothing, message="message here")
+    if is_tracked(search_state, expansion=expansion)
+        isnothing(expansion) || expand_general!(search_state, expansion)
+        printstyled("TRACK (PRUNED): ", search_state, "\n", color=:red, bold=true)
+        isnothing(expansion) || unexpand_general!(search_state)
+        printstyled("Reason: ", message, "\n", color=:red, bold=true)
+    end
 end
 
 
-
-function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=false, follow=nothing, new_abstraction_name=nothing)
-
-    if isnothing(new_abstraction_name)
-        new_abstraction_name = gensym("f")
-    end
+function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2, verbose=false, track=nothing, follow=false)
 
     best_util = Float32(0)
     best_abstraction = nothing
-    search_state = init_search_state(corpus, new_abstraction_name)
+    search_state = SearchState(corpus, new_abstraction_name, track)
 
     needs_expansion = true
 
@@ -125,9 +182,7 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
 
     while true
         if needs_expansion
-            !verbose || println("abstraction: ", search_state.abstraction.body,
-            " | matches: ", length(search_state.matches),
-            " | expansions: ", length(search_state.expansions));
+            !verbose || printstyled(search_state, "\n", color=:yellow);
             possible_expansions!(search_state, max_arity, upper_bound_fn, best_util)
             !verbose || println("possible_expansions!() -> ", length(search_state.expansions), " ", [e.data for e in search_state.expansions])
             needs_expansion = false
@@ -151,6 +206,7 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
         # pop new expansion
         expansion = pop!(search_state.expansions)
         if upper_bound_fn(search_state,expansion) <= best_util
+            is_tracked_pruned(search_state, expansion=expansion, message="$(@__FILE__):$(@__LINE__) - upper bound $(upper_bound_fn(search_state,expansion)) <= best util $best_util")
             continue # skip - worse than best so far
         end
         
@@ -158,12 +214,9 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
 
         search_state.stats.expansions += 1
 
-        if !isnothing(follow)
-            body = string(search_state.abstraction.body)
-            prefix = split(body, "??")[1]
-            if !startswith(follow, prefix)
-                continue
-            end
+        if is_tracked(search_state)
+            printstyled("TRACK: ", search_state.abstraction.body, "\n", color=:green, bold=true)
+            !follow || continue
         end
 
         # !verbose || println("expanded with: ", expansion.data)
@@ -171,13 +224,13 @@ function stitch_search(corpus, utility_fn, upper_bound_fn; max_arity=3, verbose=
         # are we done?
         if isempty(search_state.holes)            
             search_state.stats.completed += 1
-            !verbose || println("completed: ", search_state.abstraction.body, " with utility ", utility_fn(search_state), " used in $(length(search_state.matches)) places")
             # eval util and possibly update best util
-            util = utility_fn(search_state)
+            util = bottom_up_utility(search_state)
+            !verbose || println("completed: ", search_state.abstraction.body, " with utility ", util, " used in $(length(search_state.matches)) places")
             if util > best_util
                 best_util = util
-                best_abstraction = deepcopy(search_state.abstraction)
-                println("new best: ", search_state.abstraction.body, " with utility ", best_util, " used in $(length(search_state.matches)) places")
+                best_abstraction = copy(search_state.abstraction)
+                printstyled("new best: ", search_state.abstraction.body, " with utility ", best_util, " used in $(length(search_state.matches)) places\n", color=:green)
             end
             continue
         end

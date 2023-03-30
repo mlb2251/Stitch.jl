@@ -1,69 +1,65 @@
-
 """
-An expression. Contains parent pointer, so deepcopying will include all parents if you don't set that reference
-to `nothing` first - see `detach_deepcopy`.
+An expression. Contains parent pointer
 """
-mutable struct SExpr
+mutable struct SExpr{D}
     head::Symbol
     args::Vector{SExpr}
+
     parent::Union{SExpr, Nothing}
-    struct_hash::Union{Int, Nothing}
+    arg_idx::Union{Int, Nothing}
+
+    data::Union{D, Nothing}
 
     # type annotation on args forces the more efficient passing in of a SExpr vector
-    function SExpr(head, args::Vector{SExpr}, parent)
-        expr = new(head, args, parent)
-        for arg in args
+    function SExpr(head; args = Vector{SExpr{Match}}(), parent=nothing)
+        expr = new{Match}(head, args, parent, nothing, nothing)
+        for (i,arg) in enumerate(args)
+            isnothing(arg.parent) || error("arg already has parent")
             arg.parent = expr
+            arg.arg_idx = i
         end
         expr
     end
 end
 
-struct HashNode
+function Base.copy(e::SExpr)
+    SExpr(e.head, args=[copy(arg) for arg in e.args])
+end
+
+# getproperty!(e::SExpr, f::Symbol) = getfield(e, f)
+
+@auto_hash_equals struct HashNode
     head::Symbol
     args::Vector{Int}
 end
 
-# const global_struct_hash = Dict{HashNode, Int}()
-const global_struct_hash = Dict{String, Int}()
+const global_struct_hash = Dict{HashNode, Int}()
 
 """
-gets structural hash value, possibly with side effects of updating the structural hash
+sets structural hash value, possibly with side effects of updating the structural hash, and
+sets e.data.struct_hash. Requires .data to be set so we know this will be used immutably
 """
 function struct_hash(e::SExpr) :: Int
-    if !isnothing(e.struct_hash)
-        return e.struct_hash
-    end
+    isnothing(e.data) || isnothing(e.data.struct_hash) || return e.data.struct_hash
 
-    node = string(e)
-
-    # args = [struct_hash(arg) for arg in e.args]
-    # node = HashNode(e.head, args)
-    
+    node = HashNode(e.head, map(struct_hash,e.args))
     if !haskey(global_struct_hash, node)
         global_struct_hash[node] = length(global_struct_hash) + 1
     end
-    e.struct_hash = global_struct_hash[node]
-    return e.struct_hash
+    isnothing(e.data) || (e.data.struct_hash = global_struct_hash[node])
+    return global_struct_hash[node]
 end
 
 function curried_application(f::Symbol, args::Vector{SExpr}) :: SExpr
-    expr = SExpr(f, SExpr[], nothing)
+    expr = SExpr(f)
     for arg in args
-        expr = SExpr(:app, [expr, arg], nothing)
+        expr = SExpr(:app, [expr, arg])
     end
     expr
 end
 
 
-new_hole(parent) = SExpr(Symbol("??"), SExpr[], parent)
-
-function detach_deepcopy(e::SExpr) :: SExpr
-    res = deepcopy(e)
-    res.parent = nothing
-    # res.args = [detach_deepcopy(arg) for arg in e.args]
-    res
-end
+new_hole(parent) = SExpr(Symbol("??"), parent=parent)
 
 function subexpressions(e::SExpr; subexprs = SExpr[]) :: Vector{SExpr}
     for arg in e.args
@@ -73,19 +69,15 @@ function subexpressions(e::SExpr; subexprs = SExpr[]) :: Vector{SExpr}
 end
 
 function size(e::SExpr) :: Float32
-    total = 1
-    if length(e.args) == 0
-        return 1
-    end
-    return .01 + sum(size, e.args)
+    if isempty(e.args) 1. else .01 + sum(size, e.args) end
 end
 
 function size_no_abstraction_var(e::SExpr) :: Float32
     if startswith(string(e.head), "#")
         return 0
     end
-    if length(e.args) == 0
-        return 1
+    if isempty(e.args)
+        return 1.
     end
     return .01 + sum(size_no_abstraction_var, e.args)
 end
@@ -138,7 +130,7 @@ function Base.parse(::Type{SExpr}, original_s::String)
 
             node = items[end-item_count+1]
             for i in 2:item_count
-                node = SExpr(:app, [node, items[end-item_count+i]], nothing)
+                node = SExpr(:app, args=[node, items[end-item_count+i]])
             end
             items = items[1:end-item_count]
 
@@ -146,7 +138,7 @@ function Base.parse(::Type{SExpr}, original_s::String)
             item_count = pop!(item_counts)
             item_count += 1
         else
-            push!(items, SExpr(Symbol(item), SExpr[], nothing))
+            push!(items, SExpr(Symbol(item)))
             item_count += 1
         end
     end
@@ -157,7 +149,7 @@ function Base.parse(::Type{SExpr}, original_s::String)
 
     node = items[1]
     for i in 2:item_count
-        node = SExpr(:app, [node, items[i]], nothing)
+        node = SExpr(:app, [node, items[i]])
     end
 
     return node

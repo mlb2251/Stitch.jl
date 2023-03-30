@@ -2,7 +2,12 @@
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "394674f2e1dbc0990c888c3ca4df111f6d9b2796"
+project_hash = "a4936b5475b697096504ffe0119629c736a9aea5"
+
+[[deps.AutoHashEquals]]
+git-tree-sha1 = "45bb6705d93be619b81451bb2006b7ee5d4e4453"
+uuid = "15f4f7f2-30c1-5605-9d31-71845cf9641f"
+version = "0.2.0"
 
 [[deps.Dates]]
 deps = ["Printf"]

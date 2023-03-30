@@ -6,8 +6,11 @@ function possible_expansions!(search_state, max_arity, upper_bound_fn, best_util
     syntactic_expansions!(search_state)
     abstraction_expansions!(search_state, max_arity)
 
+    # if tracking is turned on we'll defer the pruning till later when we can more easily indicate things being pruned
+    !isnothing(search_state.track) && return
+
     # filter out ones that dont pass bounds check
-    filter!(e -> upper_bound_fn(search_state,e) > best_util, search_state.expansions)
+    filter!(e -> upper_bound_fn(search_state,e) > best_util, search_state.expansions);
 end
 
 
@@ -38,8 +41,11 @@ end
 function abstraction_expansions!(search_state, max_arity)
     # variable reuse
     for i in 0:search_state.abstraction.arity-1
-        # this works but just slows it down:
-        matches = [m for m in search_state.matches if struct_hash(m.holes[end]) == struct_hash(m.args[i+1])]
+        
+        continue # disables multiuse
+
+        # this works but just slows it down - could preallocate in a pool or something
+        matches = [m for m in search_state.matches if m.holes[end].data.struct_hash == m.unique_args[i+1].data.struct_hash]
         if isempty(matches) continue end
 
         push!(search_state.expansions, PossibleExpansion(
@@ -77,6 +83,11 @@ function expand_general!(search_state, expansion)
     # set .matches properly
     search_state.matches = expansion.matches;
 
+    for match in expansion.matches
+        push!(match.local_utility_stack, match.local_utility)
+        expand_utility!(match, hole, expansion)
+    end
+
     # expand the state
     expand!(search_state, expansion, hole)
 
@@ -93,6 +104,10 @@ function unexpand_general!(search_state::SearchState)
     # unexpand - this should be an inverse to expand!()
     search_state.matches === expansion.matches || error("mismatched matches")
     unexpand!(search_state, expansion, hole)
+
+    for match in search_state.matches
+        match.local_utility = pop!(match.local_utility_stack)
+    end
 
     # restore other state
     search_state.expansions = pop!(search_state.expansions_stack)
@@ -120,10 +135,13 @@ function expand!(search_state, expansion::PossibleExpansion{SyntacticExpansion},
     # @views reverse!(search_state.holes[end-expansion.data.num_holes+1:end])
 
     for match in search_state.matches
+        # pop next hole and save it for future backtracking
         hole = pop!(match.holes)
         length(hole.args) == expansion.data.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion.data)")
         push!(match.holes_stack, hole)
-        append!(match.holes, hole.args);
+
+        # add all the children of the hole as new holes
+        append!(match.holes, hole.args)
     end
 end
 
@@ -138,8 +156,9 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
     for match in search_state.matches
         hole = pop!(match.holes)
         push!(match.holes_stack, hole)
+        push!(match.all_args, hole);
         if expansion.data.fresh
-            push!(match.args, hole); # move the hole to be an argument
+            push!(match.unique_args, hole); # move the hole to be an argument
         end
     end
 end
@@ -177,7 +196,8 @@ function unexpand!(search_state, expansion::PossibleExpansion{AbstractionExpansi
         hole = pop!(match.holes_stack)
         push!(match.holes, hole)
         if expansion.data.fresh
-            pop!(match.args) === hole || error("expected same hole");
+            pop!(match.unique_args) === hole || error("expected same hole");
         end
+        pop!(match.all_args) === hole || error("expected same hole");
     end
 end
