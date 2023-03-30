@@ -256,7 +256,7 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
 
             # eval util and possibly update best util
             util = bottom_up_utility(search_state)    
-            
+
             if util > best_util
                 best_util = util
                 best_abstraction = copy(search_state.abstraction)
@@ -272,8 +272,7 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
     if isnothing(best_abstraction)
         println("No abstractions found")
     else 
-        println("Best abstraction: ", best_abstraction.body, " with utility ", best_util);
-        (rewritten, compressive, cumulative) = rewrite(search_state)
+        println("Best abstraction: ", best_abstraction.body, " with utility ", best_util, " compressed by ", size(search_state.corpus) / (size(search_state.corpus) - best_util), "x");
     end
     println(search_state.stats);
 
