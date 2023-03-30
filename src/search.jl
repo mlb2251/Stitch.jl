@@ -1,18 +1,18 @@
 
-mutable struct Program
-    expr::SExpr
+mutable struct Program{D}
+    expr::SExpr{D}
     id::Int
     task::Int
 end
 
-mutable struct Corpus
-    programs::Vector{Program}
-    programs_by_task::Dict{Int, Vector{Program}}
+mutable struct Corpus{D}
+    programs::Vector{Program{D}}
+    programs_by_task::Dict{Int, Vector{Program{D}}}
 
     function Corpus(programs)
         tasks = unique([p.task for p in programs])
         programs_by_task = Dict(t => [p for p in programs if p.task == t] for t in tasks)
-        new(programs, programs_by_task)
+        new{Match}(programs, programs_by_task)
     end
 end
 
@@ -32,7 +32,7 @@ mutable struct Match
     holes::Vector{SExpr{Match}} # pointers to holes within subtree
     holes_stack::Vector{SExpr{Match}} # expanded holes
     local_utility_stack::Vector{Float32} # past utilities
-    program::Program # which program this subtree appears in
+    program::Program{Match} # which program this subtree appears in
     size::Float32
     struct_hash::Int
 
@@ -97,17 +97,17 @@ Base.show(io::IO, obj::Stats) = pretty_show(io, obj; indent=true)
 
 mutable struct SearchState
     abstraction::Abstraction
-    corpus::Corpus
+    corpus::Corpus{Match}
     stats::Stats
     new_abstraction_name::Symbol
     track::Union{String, Nothing}
 
-    holes::Vector{SExpr}
+    holes::Vector{SExpr{Match}}
     matches::Vector{Match}
-    all_nodes::Vector{SExpr} # all treenodes in bottom up order - like a version of .matches that is never filtered down
+    all_nodes::Vector{SExpr{Match}} # all treenodes in bottom up order - like a version of .matches that is never filtered down
     expansions::Vector{PossibleExpansion}
 
-    holes_stack::Vector{SExpr}
+    holes_stack::Vector{SExpr{Match}}
     expansions_stack::Vector{Vector{PossibleExpansion}}
     matches_stack::Vector{Vector{Match}}
     past_expansions::Vector{PossibleExpansion}
@@ -180,6 +180,8 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
     best_abstraction = nothing
     search_state = SearchState(corpus, new_abstraction_name, track)
 
+    
+
     needs_expansion = true
 
     # todo add arity zero here
@@ -229,11 +231,21 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
         # are we done?
         if isempty(search_state.holes)            
             search_state.stats.completed += 1
+
+            # (rewritten, compressive, cumulative) = rewrite(search_state)
+            # @show rewritten compressive cumulative
+            
+            !verbose || println("completed: ", search_state.abstraction.body, " with utility ", bottom_up_utility(search_state), " used in $(length(search_state.matches)) places")
+            
+            # cheaply upper bounded version of util that uses no conflict resolution
+            approx_util = sum(match -> match.local_utility, search_state.matches)
+            if approx_util <= best_util
+                continue # skip - worse than best so far
+            end
+
             # eval util and possibly update best util
-            util = bottom_up_utility(search_state)
-            (rewritten, compressive, cumulative) = rewrite(search_state)
-            @show rewritten compressive cumulative
-            !verbose || println("completed: ", search_state.abstraction.body, " with utility ", util, " used in $(length(search_state.matches)) places")
+            util = bottom_up_utility(search_state)    
+            
             if util > best_util
                 best_util = util
                 best_abstraction = copy(search_state.abstraction)
@@ -249,6 +261,7 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
         println("No abstractions found")
     else 
         println("Best abstraction: ", best_abstraction.body, " with utility ", best_util);
+        (rewritten, compressive, cumulative) = rewrite(search_state)
     end
     println(search_state.stats);
 

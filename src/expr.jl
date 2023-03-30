@@ -3,7 +3,7 @@ An expression. Contains parent pointer
 """
 mutable struct SExpr{D}
     head::Symbol
-    args::Vector{SExpr}
+    args::Vector{SExpr{D}}
 
     parent::Union{SExpr, Nothing}
     arg_idx::Union{Int, Nothing}
@@ -61,7 +61,7 @@ end
 
 new_hole(parent) = SExpr(Symbol("??"), parent=parent)
 
-function subexpressions(e::SExpr; subexprs = SExpr[]) :: Vector{SExpr}
+function subexpressions(e::SExpr; subexprs = SExpr[])
     for arg in e.args
         subexpressions(arg, subexprs=subexprs)
     end
@@ -97,7 +97,7 @@ end
 """
 takes (app (app f x) y) and returns [f, x, y]
 """
-function uncurry(e::SExpr) :: Vector{SExpr}
+function uncurry(e::SExpr)
     if e.head === :app
         res = uncurry(e.args[1])
         return push!(res, e.args[2])

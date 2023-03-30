@@ -8,7 +8,7 @@ function rewrite(search_state::SearchState) :: Tuple{Corpus,Float32,Float32}
 
     compressive_utility = size(search_state.corpus) - size(rewritten)
 
-    @show rewritten
+    # @show rewritten
     isapprox(cumulative_utility, compressive_utility) || error("[$search_state] cumulative_utility != compressive_utility: $cumulative_utility != $compressive_utility")
 
     (rewritten, compressive_utility, cumulative_utility)
@@ -19,7 +19,7 @@ Just copying Eqn 15 from https://arxiv.org/pdf/2211.16605.pdf
 
 sets match.accept_rewrite and match.cumulative_utility
 """
-function bottom_up_utility(search_state) :: Float32
+function bottom_up_utility(search_state::SearchState) :: Float32
     for expr in search_state.all_nodes
         expr.data.cumulative_utility = NaN32
         expr.data.is_active = false
@@ -54,14 +54,12 @@ end
 
 rewrite_program(program, search_state) = Program(rewrite_inner(program.expr, search_state), program.id, program.task)
 
-function rewrite_inner(expr, search_state) :: SExpr
+function rewrite_inner(expr::SExpr{Match}, search_state::SearchState) :: SExpr
     # if cumulative utility <= 0 then there are no rewrites in this whole subtree
     expr.data.cumulative_utility > 0 || return copy(expr)
 
     if expr.data.accept_rewrite
         # do a rewrite
-        println("rerwite")
-        @show expr
         return curried_application(search_state.new_abstraction_name, [rewrite_inner(arg, search_state) for arg in expr.data.unique_args])
     else
         # don't rewrite - just recurse

@@ -5,8 +5,8 @@ import JSON
 
 function test(;kwargs...)
 
-    # json = JSON.parsefile("data/cogsci/nuts-bolts.json")[1:5]
-    json = JSON.parsefile("data/basic/simple1.json")
+    json = JSON.parsefile("data/cogsci/nuts-bolts.json")#[1:100]
+    # json = JSON.parsefile("data/basic/simple1.json")
 
     corpus = Corpus([Program(parse(SExpr, p),i,i) for (i,p) in enumerate(json)])
 
