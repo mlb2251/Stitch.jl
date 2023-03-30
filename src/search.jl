@@ -16,6 +16,9 @@ mutable struct Corpus
     end
 end
 
+Base.show(io::IO, obj::Corpus) = print(io, "\n\t", join(obj.programs, "\n\t"))
+Base.show(io::IO, obj::Program) = print(io, obj.expr)
+
 size(p::Program) = size(p.expr)
 
 function size(corpus::Corpus) :: Float32
@@ -38,8 +41,9 @@ mutable struct Match
     
     cumulative_utility::Float32
     accept_rewrite::Bool
+    is_active::Bool
 
-    Match(expr, program) = new(expr, [], [], [expr], [], [], program, size(expr), struct_hash(expr), local_utility_init(), NaN32, false)
+    Match(expr, program) = new(expr, [], [], [expr], [], [], program, size(expr), struct_hash(expr), local_utility_init(), NaN32, false, false)
 end
 
 abstract type Expansion end
@@ -96,7 +100,7 @@ mutable struct SearchState
     corpus::Corpus
     stats::Stats
     new_abstraction_name::Symbol
-    track::String
+    track::Union{String, Nothing}
 
     holes::Vector{SExpr}
     matches::Vector{Match}
@@ -216,7 +220,8 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
 
         if is_tracked(search_state)
             printstyled("TRACK: ", search_state.abstraction.body, "\n", color=:green, bold=true)
-            !follow || continue
+        elseif follow && !is_tracked(search_state)
+            continue
         end
 
         # !verbose || println("expanded with: ", expansion.data)
@@ -226,6 +231,8 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
             search_state.stats.completed += 1
             # eval util and possibly update best util
             util = bottom_up_utility(search_state)
+            (rewritten, compressive, cumulative) = rewrite(search_state)
+            @show rewritten compressive cumulative
             !verbose || println("completed: ", search_state.abstraction.body, " with utility ", util, " used in $(length(search_state.matches)) places")
             if util > best_util
                 best_util = util
@@ -238,8 +245,11 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
         needs_expansion = true
     end
 
-
-    println("Best abstraction: ", best_abstraction.body, " with utility ", best_util);
+    if isnothing(best_abstraction)
+        println("No abstractions found")
+    else 
+        println("Best abstraction: ", best_abstraction.body, " with utility ", best_util);
+    end
     println(search_state.stats);
 
 end

@@ -50,10 +50,10 @@ function struct_hash(e::SExpr) :: Int
     return global_struct_hash[node]
 end
 
-function curried_application(f::Symbol, args::Vector{SExpr}) :: SExpr
+function curried_application(f::Symbol, args) :: SExpr
     expr = SExpr(f)
     for arg in args
-        expr = SExpr(:app, [expr, arg])
+        expr = SExpr(:app, args=[expr, arg])
     end
     expr
 end
