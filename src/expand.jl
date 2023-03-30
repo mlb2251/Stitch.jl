@@ -44,9 +44,6 @@ end
 function abstraction_expansions!(search_state, max_arity)
     # variable reuse
     for i in 0:search_state.abstraction.arity-1
-        
-        continue # disables multiuse
-
         # this works but just slows it down - could preallocate in a pool or something
         matches = [m for m in search_state.matches if m.holes[end].data.struct_hash == m.unique_args[i+1].data.struct_hash]
         if isempty(matches) continue end

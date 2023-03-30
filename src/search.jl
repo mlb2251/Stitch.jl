@@ -273,7 +273,7 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
 
     # plot
     if plot
-        p = Plots.plot(plot_best, title="Best Abstraction Utility Over Time", xlabel="Expansions", ylabel="Utility", linetype=:steppre);
+        p = Plots.plot(plot_best, title="Best Utility Over Time", xlabel="Expansions", ylabel="Utility", linetype=:steppre);
     end
 end
 
