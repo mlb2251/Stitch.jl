@@ -1,3 +1,4 @@
+using Plots
 
 mutable struct Program{D}
     expr::SExpr{D}
@@ -174,13 +175,13 @@ function is_tracked_pruned(search_state; expansion=nothing, message="message her
 end
 
 
-function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2, verbose=false, track=nothing, follow=false)
+function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2, verbose=false, track=nothing, follow=false, plot=false)
 
     best_util = Float32(0)
     best_abstraction = nothing
     search_state = SearchState(corpus, new_abstraction_name, track)
 
-    
+    plot_best = Tuple{Int64, Float32}[(1,0.)]
 
     needs_expansion = true
 
@@ -249,7 +250,8 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
             if util > best_util
                 best_util = util
                 best_abstraction = copy(search_state.abstraction)
-                printstyled("new best: ", search_state.abstraction.body, " with utility ", best_util, " used in $(length(search_state.matches)) places\n", color=:green)
+                printstyled("[step=$(search_state.stats.expansions)] new best: ", search_state.abstraction.body, " with utility ", best_util, " used in $(length(search_state.matches)) places\n", color=:green)
+                push!(plot_best, (search_state.stats.expansions, best_util))
             end
             continue
         end
@@ -265,6 +267,14 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
     end
     println(search_state.stats);
 
+    # normalize y axis
+    max_y = maximum(y for (x,y) in plot_best)
+    plot_best = [(x, y/max_y) for (x,y) in plot_best]
+
+    # plot
+    if plot
+        p = Plots.plot(plot_best, title="Best Abstraction Utility Over Time", xlabel="Expansions", ylabel="Utility", linetype=:steppre);
+    end
 end
 
 

@@ -6,6 +6,9 @@ function possible_expansions!(search_state, max_arity, upper_bound_fn, best_util
     syntactic_expansions!(search_state)
     abstraction_expansions!(search_state, max_arity)
 
+    # sort!(search_state.expansions, by=e -> length(e.matches)*e.matches[1].local_utility)
+    # sort!(search_state.expansions, by=e -> upper_bound_fn(search_state,e))
+
     # if tracking is turned on we'll defer the pruning till later when we can more easily indicate things being pruned
     !isnothing(search_state.track) && return
 
@@ -19,7 +22,7 @@ Adds the set of expansions to whatever terminal or nonterminal is present at the
 for example :app or :lambda or primitives or variables.
 """
 function syntactic_expansions!(search_state)
-    matches_of_sym = Dict{Symbol,Vector{Match}}() # optim: preallocate and reuse with empty!()
+    matches_of_sym = Dict{Symbol,Vector{Match}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
     for match in search_state.matches
         sym = match.holes[end].head
         if haskey(matches_of_sym, sym)
