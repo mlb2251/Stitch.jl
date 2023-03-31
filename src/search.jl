@@ -35,6 +35,7 @@ mutable struct Match
     local_utility_stack::Vector{Float32} # past utilities
     program::Program{Match} # which program this subtree appears in
     size::Float32
+    num_nodes::Int
     struct_hash::Int
 
     # Tracks Eqn 12: https://arxiv.org/pdf/2211.16605.pdf
@@ -43,8 +44,9 @@ mutable struct Match
     cumulative_utility::Float32
     accept_rewrite::Bool
     is_active::Bool
+    id::Int
 
-    Match(expr, program) = new(expr, [], [], [expr], [], [], program, size(expr), struct_hash(expr), local_utility_init(), NaN32, false, false)
+    Match(expr, program, id) = new(expr, [], [], [expr], [], [], program, size(expr), num_nodes(expr), struct_hash(expr), local_utility_init(), NaN32, false, false, id)
 end
 
 abstract type Expansion end
@@ -142,11 +144,13 @@ downstream we need this for SearchState.all_nodes
 """
 function init_all_corpus_matches(corpus) :: Vector{Match}
     matches = Match[]
+    id = 1
     for program in corpus.programs
-        for expr in subexpressions(program.expr)
-            match = Match(expr, program)
+        for expr in subexpressions(program.expr) # child-first traversal
+            match = Match(expr, program, id)
             expr.data = match
             push!(matches, match)
+            id += 1
         end
     end
     matches
@@ -185,7 +189,7 @@ Base.@kwdef mutable struct PlotData
     pruned_bound::Vector{Tuple{Int,Float32}} = [(0,0.)]
 end
 
-function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2, expansion_processor=nothing, verbose=false, verbose_best=true, track=nothing, follow=false, plot=false, silent=false, allow_single_task=true)
+function stitch_search(corpus, new_abstraction_name; max_arity=2, upper_bound_fn=upper_bound_with_conflicts, expansion_processor=nothing, verbose=false, verbose_best=true, track=nothing, follow=false, plot=false, silent=false, allow_single_task=true)
 
     best_util = Float32(0)
     best_abstraction = nothing
@@ -285,6 +289,8 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
             # eval util
             util = bottom_up_utility(search_state)
 
+            upper_bound_fn(search_state) >= util || error("upper bound is not valid")
+
             plot && push!(plot_data.completed_util, (search_state.stats.expansions, util))
 
             # check for new best
@@ -345,7 +351,7 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
 
     # recurse, but with follow=true so that we rapidly narrow in on the best abstraction
     # then the search state at that point gets returned
-    res = stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=10000, verbose=false, verbose_best=false, track=string(best_abstraction.body), follow=true, silent=true, allow_single_task=true, plot=false)
+    res = stitch_search(corpus, new_abstraction_name; max_arity=10000, upper_bound_fn=upper_bound_fn, verbose=false, verbose_best=false, track=string(best_abstraction.body), follow=true, silent=true, allow_single_task=true, plot=false)
     isnothing(res) && error("shouldnt be possible - we found it the first time around without tracking")
     res
 end
@@ -361,7 +367,7 @@ function compress(original_corpus; iterations=3, kwargs...)
     corpus = original_corpus
     for i in 1:iterations
         println("===Iteration $i===")
-        search_res = stitch_search(corpus, upper_bound_sum_subtree_sizes, Symbol("fn_$i"); kwargs...)
+        search_res = stitch_search(corpus, Symbol("fn_$i"); kwargs...)
         if isnothing(search_res)
             println("No more abstractions")
             break

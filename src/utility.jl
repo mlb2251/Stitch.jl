@@ -6,11 +6,43 @@ end
 sum over match locations of size of match location
 """
 function upper_bound_sum_subtree_sizes(search_state, expansion=nothing) :: Float32
-    if isnothing(expansion)
-        sum(m -> m.size, search_state.matches)
-    else
-        sum(m -> m.size, expansion.matches)
+    matches = if isnothing(expansion) search_state.matches else expansion.matches end
+    sum(m -> m.size, matches)
+end
+
+"""
+Same as summing over sizes of subtrees, but not doublecounting matches within children.
+"""
+function upper_bound_with_conflicts(search_state, expansion=nothing) :: Float32
+    matches = if isnothing(expansion) search_state.matches else expansion.matches end
+    issorted(matches, by=m -> m.id) || error("matches is not sorted")
+
+    bound = 0.
+    offset = length(matches)
+
+    while true
+        bound += matches[offset].size
+        # since matches is sorted in child-first order, children are always to the left of parents. We
+        # can use .num_nodes to see how many children a match has (how big the subtree is) and skip over that many
+        # things.
+        next_id = matches[offset].id - matches[offset].num_nodes
+        next_id == 0 && break
+        search_state.all_nodes[next_id].data.id == next_id || error("all_nodes is not in the right order")
+
+        # common case: stepping one to the left in the matches array doesnt result
+        # in a child of the previous match, so we dont need to run a binary search since
+        # this is what it would return anyways
+        offset -= 1
+        offset == 0 && break
+        if matches[offset].id <= next_id
+            continue
+        end
+
+        # rarer case: run binary search to find the rightmost non-child of the previous match
+        offset = searchsortedlast(matches, search_state.all_nodes[next_id].data, by=m -> m.id)
+        offset == 0 && break
     end
+    bound
 end
 
 mutable struct ScaledFunction{F <: Function}

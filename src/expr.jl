@@ -61,6 +61,7 @@ end
 
 new_hole(parent) = SExpr(Symbol("??"), parent=parent)
 
+"child-first traversal"
 function subexpressions(e::SExpr; subexprs = SExpr[])
     for arg in e.args
         subexpressions(arg, subexprs=subexprs)
@@ -71,6 +72,8 @@ end
 function size(e::SExpr) :: Float32
     if isempty(e.args) 1. else .01 + sum(size, e.args) end
 end
+
+num_nodes(e::SExpr) = 1 + sum(num_nodes, e.args, init=0)
 
 function size_no_abstraction_var(e::SExpr) :: Float32
     if startswith(string(e.head), "#")
