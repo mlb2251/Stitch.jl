@@ -229,3 +229,8 @@ function arg_capture(search_state)
     end 
     false
 end
+
+function is_single_task(search_state)
+    first = search_state.matches[1].program.task
+    all(match -> match.program.task == first, search_state.matches)
+end

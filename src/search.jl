@@ -175,7 +175,7 @@ function is_tracked_pruned(search_state; expansion=nothing, message="message her
 end
 
 
-function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2, verbose=false, verbose_best=true, track=nothing, follow=false, plot=false, silent=false)
+function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2, verbose=false, verbose_best=true, track=nothing, follow=false, plot=false, silent=false, allow_single_task=true)
 
     best_util = Float32(0)
     best_abstraction = nothing
@@ -185,13 +185,14 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
 
     needs_expansion = true
 
-    # todo add arity zero here
-
     while true
+        # At each step of this loop we are either about to start exploring a new level of
+        # depth in the search tree (needs_expansion=true) or we are continuing search at an
+        # existing level (needs_expansion=false)
         if needs_expansion
-            !verbose || printstyled(search_state, "\n", color=:yellow);
             possible_expansions!(search_state, max_arity, upper_bound_fn, best_util)
-            !verbose || println("possible_expansions!() -> ", length(search_state.expansions), " ", [e.data for e in search_state.expansions])
+            !verbose || printstyled(search_state, "\n", color=:yellow);
+            # !verbose || println("possible_expansions!() -> ", length(search_state.expansions), " ", [e.data for e in search_state.expansions])
             needs_expansion = false
             search_state.stats.comparable_worklist_steps += 1
             continue
@@ -209,7 +210,6 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
             continue
         end
 
-
         # pop new expansion
         expansion = pop!(search_state.expansions)
 
@@ -219,10 +219,11 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
             continue # skip - worse than best so far
         end
         
+        # do the expansion
         expand_general!(search_state, expansion)
-
         search_state.stats.expansions += 1
 
+        # for when we are tracking a specific abstraction
         if is_tracked(search_state)
             silent || printstyled("TRACK: ", search_state.abstraction.body, "\n", color=:green, bold=true)
         elseif follow && !is_tracked(search_state)
@@ -237,14 +238,16 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
             continue
         end
 
-        # !verbose || println("expanded with: ", expansion.data)
+        # https://arxiv.org/pdf/2211.16605.pdf "To avoid overfitting, DreamCoder prunes the abstractions that are only useful in programs from a single task."
+        if !allow_single_task && is_single_task(search_state)
+            is_tracked_pruned(search_state, message="$(@__FILE__):$(@__LINE__) - single task")
+            unexpand_general!(search_state) # force early unexpansion
+            continue
+        end
 
         # are we done?
         if isempty(search_state.holes)            
             search_state.stats.completed += 1
-
-            # (rewritten, compressive, cumulative) = rewrite(search_state)
-            # @show rewritten compressive cumulative
             
             !verbose || println("completed: ", search_state.abstraction.body, " with utility ", bottom_up_utility(search_state), " used in $(length(search_state.matches)) places")
             
@@ -254,9 +257,10 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
                 continue # skip - worse than best so far
             end
 
-            # eval util and possibly update best util
+            # eval util
             util = bottom_up_utility(search_state)    
 
+            # check for new best
             if util > best_util
                 best_util = util
                 best_abstraction = copy(search_state.abstraction)
@@ -264,6 +268,7 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
                 push!(plot_best, (search_state.stats.expansions, best_util))
             end
 
+            # return now if this is `follow=true`
             if follow
                 string(search_state.abstraction.body) == track || error("shouldnt be possible")
                 return search_state
@@ -280,25 +285,26 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
     else 
         silent || println("Best abstraction: ", best_abstraction.body, " with utility ", best_util, " compressed by ", size(search_state.corpus) / (size(search_state.corpus) - best_util), "x");
     end
-    println(search_state.stats);
 
-    # normalize y axis
-    max_y = maximum(y for (x,y) in plot_best)
-    plot_best = [(x, y/max_y) for (x,y) in plot_best]
+    silent || println(search_state.stats);
 
     # plot
     if plot
+        # normalize y axis
+        max_y = maximum(y for (x,y) in plot_best)
+        plot_best = [(x, y/max_y) for (x,y) in plot_best]
         p = Plots.plot(plot_best, title="Best Utility Over Time", xlabel="Expansions", ylabel="Utility", linetype=:steppre);
     end
 
-    if isnothing(best_abstraction)
-        return nothing
-    end
+    isnothing(best_abstraction) && return nothing
 
     !follow || error("shouldnt be possible")
 
-    # recurse, but with follow=true
-    stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=10000, verbose=false, verbose_best=false, track=string(best_abstraction.body), follow=true, silent=true)
+    # recurse, but with follow=true so that we rapidly narrow in on the best abstraction
+    # then the search state at that point gets returned
+    res = stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=10000, verbose=false, verbose_best=false, track=string(best_abstraction.body), follow=true, silent=true, allow_single_task=true)
+    isnothing(res) && error("shouldnt be possible - we found it the first time around without tracking")
+    res
 end
 
 
