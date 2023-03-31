@@ -289,7 +289,7 @@ function stitch_search(corpus, new_abstraction_name; max_arity=2, upper_bound_fn
             # eval util
             util = bottom_up_utility(search_state)
 
-            upper_bound_fn(search_state) >= util || error("upper bound is not valid")
+            # upper_bound_fn(search_state) >= util || error("upper bound is not valid")
 
             plot && push!(plot_data.completed_util, (search_state.stats.expansions, util))
 

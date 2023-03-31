@@ -236,13 +236,13 @@ function is_single_task(search_state)
 end
 
 mutable struct SamplingProcessor{F <: Function}
-    num_samples::Int
+    keep_frac::Float32
     score::F
 end
 
 using StatsBase
 function process_expansions!(search_state, processor::SamplingProcessor)
     weights = processor.score.(search_state.expansions, search_state)
-    num_samples = max(length(search_state.expansions) ÷ 4, 1)
-    search_state.expansions = sample(search_state.expansions, Weights(weights), num_samples, replace=true);
+    num_samples = max(Int(round(length(search_state.expansions) * processor.keep_frac)), min(2, length(search_state.expansions)))
+    search_state.expansions = sample(search_state.expansions, Weights(weights), num_samples, replace=false);
 end
