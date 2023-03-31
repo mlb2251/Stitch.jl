@@ -175,7 +175,7 @@ function is_tracked_pruned(search_state; expansion=nothing, message="message her
 end
 
 
-function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2, verbose=false, track=nothing, follow=false, plot=false)
+function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2, verbose=false, verbose_best=true, track=nothing, follow=false, plot=false, silent=false)
 
     best_util = Float32(0)
     best_abstraction = nothing
@@ -224,7 +224,7 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
         search_state.stats.expansions += 1
 
         if is_tracked(search_state)
-            printstyled("TRACK: ", search_state.abstraction.body, "\n", color=:green, bold=true)
+            silent || printstyled("TRACK: ", search_state.abstraction.body, "\n", color=:green, bold=true)
         elseif follow && !is_tracked(search_state)
             unexpand_general!(search_state)
             continue
@@ -260,9 +260,15 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
             if util > best_util
                 best_util = util
                 best_abstraction = copy(search_state.abstraction)
-                printstyled("[step=$(search_state.stats.expansions)] new best: ", search_state.abstraction.body, " with utility ", best_util, " used in $(length(search_state.matches)) places\n", color=:green)
+                !verbose_best || printstyled("[step=$(search_state.stats.expansions)] new best: ", search_state.abstraction.body, " with utility ", best_util, " used in $(length(search_state.matches)) places\n", color=:green)
                 push!(plot_best, (search_state.stats.expansions, best_util))
             end
+
+            if follow
+                string(search_state.abstraction.body) == track || error("shouldnt be possible")
+                return search_state
+            end
+
             continue
         end
 
@@ -270,9 +276,9 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
     end
 
     if isnothing(best_abstraction)
-        println("No abstractions found")
+        silent || println("No abstractions found")
     else 
-        println("Best abstraction: ", best_abstraction.body, " with utility ", best_util, " compressed by ", size(search_state.corpus) / (size(search_state.corpus) - best_util), "x");
+        silent || println("Best abstraction: ", best_abstraction.body, " with utility ", best_util, " compressed by ", size(search_state.corpus) / (size(search_state.corpus) - best_util), "x");
     end
     println(search_state.stats);
 
@@ -284,6 +290,33 @@ function stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=2
     if plot
         p = Plots.plot(plot_best, title="Best Utility Over Time", xlabel="Expansions", ylabel="Utility", linetype=:steppre);
     end
+
+    if isnothing(best_abstraction)
+        return nothing
+    end
+
+    !follow || error("shouldnt be possible")
+
+    # recurse, but with follow=true
+    stitch_search(corpus, upper_bound_fn, new_abstraction_name; max_arity=10000, verbose=false, verbose_best=false, track=string(best_abstraction.body), follow=true, silent=true)
+end
+
+
+mutable struct SearchResult
+    rewritten::Corpus
+    abstraction::Abstraction
+    util::Float32
+end
+
+function compress(original_corpus; iterations=3, kwargs...)
+    corpus = original_corpus
+    for i in 1:iterations
+        println("===Iteration $i===")
+        search_res = stitch_search(corpus, upper_bound_sum_subtree_sizes, Symbol("fn_$i"); kwargs...)
+        (rewritten, compressive, cumulative) = rewrite(search_res)
+        corpus = rewritten
+    end
+    println("Total compression: ", size(original_corpus) / size(corpus), "x")
 end
 
 

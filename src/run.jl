@@ -18,6 +18,7 @@ function test(;file="data/cogsci/nuts-bolts.json", truncate=nothing, kwargs...)
     # @show corpus
 
     # @time stitch_search(corpus, S.utility_size_time_matches, S.upper_bound_sum_subtree_sizes, verbose=verbose, max_arity=2)
-    @time stitch_search(corpus, S.upper_bound_sum_subtree_sizes, :fn_0; kwargs...)
+    @time compress(corpus; kwargs...)
 
 end
+
