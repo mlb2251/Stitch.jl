@@ -5,9 +5,19 @@ end
 """
 sum over match locations of size of match location
 """
-function upper_bound_sum_subtree_sizes(search_state, expansion) :: Float32
-    sum(m -> m.size, expansion.matches)
+function upper_bound_sum_subtree_sizes(search_state, expansion=nothing) :: Float32
+    if isnothing(expansion)
+        sum(m -> m.size, search_state.matches)
+    else
+        sum(m -> m.size, expansion.matches)
+    end
 end
+
+mutable struct ScaledFunction{F <: Function}
+    f::F
+    scale::Float32
+end
+(f::ScaledFunction)(x...) = f.scale * f.f(x...)
 
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticExpansion})

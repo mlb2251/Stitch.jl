@@ -13,7 +13,7 @@ function possible_expansions!(search_state, max_arity, upper_bound_fn, best_util
     !isnothing(search_state.track) && return
 
     # filter out ones that dont pass bounds check
-    filter!(e -> upper_bound_fn(search_state,e) > best_util, search_state.expansions);
+    # filter!(e -> upper_bound_fn(search_state,e) > best_util, search_state.expansions);
 end
 
 
@@ -233,4 +233,16 @@ end
 function is_single_task(search_state)
     first = search_state.matches[1].program.task
     all(match -> match.program.task == first, search_state.matches)
+end
+
+mutable struct SamplingProcessor{F <: Function}
+    num_samples::Int
+    score::F
+end
+
+using StatsBase
+function process_expansions!(search_state, processor::SamplingProcessor)
+    weights = processor.score.(search_state.expansions, search_state)
+    num_samples = max(length(search_state.expansions) ÷ 4, 1)
+    search_state.expansions = sample(search_state.expansions, Weights(weights), num_samples, replace=true);
 end
