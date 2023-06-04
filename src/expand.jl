@@ -25,9 +25,9 @@ function syntactic_expansions!(search_state)
     matches_of_sym = Dict{Symbol,Vector{Match}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
     for match in search_state.matches
         sym = match.holes[end].head
-        if startswith(string(sym), "&") # this is a symbol
-            continue
-        end
+        # if startswith(string(sym), "&") # this is a symbol
+        #     continue
+        # end
         if haskey(matches_of_sym, sym)
             push!(matches_of_sym[sym], match)
         else
@@ -78,7 +78,9 @@ function abstraction_expansions!(search_state)
     # variable reuse
     for i in 0:search_state.abstraction.arity-1
         # this works but just slows it down - could preallocate in a pool or something
-        matches = [m for m in search_state.matches if m.holes[end].data.struct_hash == m.unique_args[i+1].data.struct_hash]
+        matches = copy(search_state.matches)
+        filter!(m -> m.holes[end].data.struct_hash == m.unique_args[i+1].data.struct_hash, matches)
+        # matches = [m for m in search_state.matches if m.holes[end].data.struct_hash == m.unique_args[i+1].data.struct_hash]
         if isempty(matches) continue end
 
         push!(search_state.expansions, PossibleExpansion(
