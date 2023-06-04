@@ -119,6 +119,8 @@ Base.@kwdef mutable struct SearchConfig
     plot::Bool = false
     silent::Bool = false
     allow_single_task::Bool = true
+    no_opt_arg_capture::Bool = false
+    no_opt_redundant_args::Bool = false
 end
 
 
