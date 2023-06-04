@@ -60,7 +60,7 @@ function rewrite_inner(expr::SExpr{Match}, search_state::SearchState) :: SExpr
 
     if expr.data.accept_rewrite
         # do a rewrite
-        return curried_application(search_state.new_abstraction_name, [rewrite_inner(arg, search_state) for arg in expr.data.unique_args])
+        return curried_application(search_state.config.new_abstraction_name, [rewrite_inner(arg, search_state) for arg in expr.data.unique_args])
     else
         # don't rewrite - just recurse
         return SExpr(expr.head, args=[rewrite_inner(arg, search_state) for arg in expr.args])

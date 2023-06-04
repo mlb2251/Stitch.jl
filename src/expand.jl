@@ -1,16 +1,16 @@
 
 
-function possible_expansions!(search_state, max_arity, upper_bound_fn, best_util)
+function possible_expansions!(search_state, best_util)
     isempty(search_state.expansions) || error("expansions should be empty")
 
     syntactic_expansions!(search_state)
-    abstraction_expansions!(search_state, max_arity)
+    abstraction_expansions!(search_state)
 
     # sort!(search_state.expansions, by=e -> length(e.matches)*e.matches[1].local_utility)
     # sort!(search_state.expansions, by=e -> upper_bound_fn(search_state,e))
 
     # if tracking is turned on we'll defer the pruning till later when we can more easily indicate things being pruned
-    !isnothing(search_state.track) && return
+    !isnothing(search_state.config.track) && return
 
     # filter out ones that dont pass bounds check
     # filter!(e -> upper_bound_fn(search_state,e) > best_util, search_state.expansions);
@@ -71,7 +71,7 @@ function symbol_expansions!(search_state)
     end
 end
 
-function abstraction_expansions!(search_state, max_arity)
+function abstraction_expansions!(search_state)
     # note: abstracting out a symbol or subtree containing a symbol is okay because you can pass
     # a symbol in just fine bc ur doing it at the call site so it's bound correctly already.
 
@@ -86,7 +86,7 @@ function abstraction_expansions!(search_state, max_arity)
             AbstractionExpansion(i, false),
         ))
     end
-    if search_state.abstraction.arity < max_arity
+    if search_state.abstraction.arity < search_state.config.max_arity
         # fresh variable
         push!(search_state.expansions, PossibleExpansion(
             search_state.matches, # all the same matches
@@ -274,8 +274,8 @@ mutable struct SamplingProcessor{F <: Function}
 end
 
 using StatsBase
-function process_expansions!(search_state, processor::SamplingProcessor)
-    weights = processor.score.(search_state.expansions, search_state)
+function process_expansions!(search_state)
+    weights = search_state.expansion_processor.score.(search_state.expansions, search_state)
     num_samples = max(Int(round(length(search_state.expansions) * processor.keep_frac)), min(2, length(search_state.expansions)))
     search_state.expansions = sample(search_state.expansions, Weights(weights), num_samples, replace=false);
 end

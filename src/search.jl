@@ -107,14 +107,26 @@ end
 Base.show(io::IO, obj::Stats) = pretty_show(io, obj; indent=true)
 
 
-
+Base.@kwdef mutable struct SearchConfig
+    new_abstraction_name::Symbol = :placeholder
+    track::Union{String, Nothing} = nothing
+    max_arity::Int = 2
+    upper_bound_fn::Function = upper_bound_with_conflicts
+    expansion_processor::Union{Function, Nothing} = nothing
+    verbose::Bool = false
+    verbose_best::Bool = true
+    follow::Bool = false
+    plot::Bool = false
+    silent::Bool = false
+    allow_single_task::Bool = true
+end
 
 mutable struct SearchState
+    config::SearchConfig
+
     abstraction::Abstraction
     corpus::Corpus{Match}
     stats::Stats
-    new_abstraction_name::Symbol
-    track::Union{String, Nothing}
 
     holes::Vector{SExpr{Match}}
     matches::Vector{Match}
@@ -126,11 +138,11 @@ mutable struct SearchState
     matches_stack::Vector{Vector{Match}}
     past_expansions::Vector{PossibleExpansion}
 
-    function SearchState(corpus, new_abstraction_name, track)
+    function SearchState(corpus, config)
         abstraction = Abstraction(new_hole(nothing), 0)
         matches = init_all_corpus_matches(corpus)
         all_nodes = map(m -> m.expr, matches)
-        new(abstraction, corpus, Stats(0,0,0), new_abstraction_name, track,
+        new(config, abstraction, corpus, Stats(0,0,0), 
             [abstraction.body], matches, all_nodes, PossibleExpansion[],
             SExpr[], PossibleExpansion[], Match[], PossibleExpansion[])
     end
@@ -168,7 +180,7 @@ function init_all_corpus_matches(corpus) :: Vector{Match}
 end
 
 function is_tracked(search_state; expansion=nothing)
-    !isnothing(search_state.track) || return false
+    !isnothing(search_state.config.track) || return false
 
     isnothing(expansion) || expand_general!(search_state, expansion)
 
@@ -177,7 +189,7 @@ function is_tracked(search_state; expansion=nothing)
 
     isnothing(expansion) || unexpand_general!(search_state)
 
-    endswith(search_state.track, suffix)
+    endswith(search_state.config.track, suffix)
 end
 
 function is_tracked_pruned(search_state; expansion=nothing, message="message here")
@@ -200,11 +212,14 @@ Base.@kwdef mutable struct PlotData
     pruned_bound::Vector{Tuple{Int,Float32}} = [(0,0.)]
 end
 
-function stitch_search(corpus, new_abstraction_name; max_arity=2, upper_bound_fn=upper_bound_with_conflicts, expansion_processor=nothing, verbose=false, verbose_best=true, track=nothing, follow=false, plot=false, silent=false, allow_single_task=true)
+
+function stitch_search(corpus, config)
 
     best_util = Float32(0)
     best_abstraction = nothing
-    search_state = SearchState(corpus, new_abstraction_name, track)
+    search_state = SearchState(corpus, config)
+    
+    (; verbose, verbose_best, plot, silent) = config
 
     plot_data = PlotData()
 
@@ -215,9 +230,9 @@ function stitch_search(corpus, new_abstraction_name; max_arity=2, upper_bound_fn
         # depth in the search tree (needs_expansion=true) or we are continuing search at an
         # existing level (needs_expansion=false)
         if needs_expansion
-            possible_expansions!(search_state, max_arity, upper_bound_fn, best_util)
-            if !isnothing(expansion_processor)
-                process_expansions!(search_state, expansion_processor)
+            possible_expansions!(search_state, best_util)
+            if !isnothing(config.expansion_processor)
+                process_expansions!(search_state)
             end
 
 
@@ -246,9 +261,9 @@ function stitch_search(corpus, new_abstraction_name; max_arity=2, upper_bound_fn
         expansion = pop!(search_state.expansions)
 
         # upper bound check
-        if upper_bound_fn(search_state,expansion) <= best_util
-            is_tracked_pruned(search_state, expansion=expansion, message="$(@__FILE__):$(@__LINE__) - upper bound $(upper_bound_fn(search_state,expansion)) <= best util $best_util")
-            plot && push!(plot_data.pruned_bound, (search_state.stats.expansions, upper_bound_fn(search_state,expansion)))
+        if config.upper_bound_fn(search_state,expansion) <= best_util
+            is_tracked_pruned(search_state, expansion=expansion, message="$(@__FILE__):$(@__LINE__) - upper bound $(config.upper_bound_fn(search_state,expansion)) <= best util $best_util")
+            plot && push!(plot_data.pruned_bound, (search_state.stats.expansions, config.upper_bound_fn(search_state,expansion)))
             continue # skip - worse than best so far
         end
         
@@ -258,7 +273,7 @@ function stitch_search(corpus, new_abstraction_name; max_arity=2, upper_bound_fn
         # for when we are tracking a specific abstraction
         if is_tracked(search_state)
             silent || printstyled("TRACK: ", search_state.abstraction.body, "\n", color=:green, bold=true)
-        elseif follow && !is_tracked(search_state)
+        elseif config.follow && !is_tracked(search_state)
             unexpand_general!(search_state)
             continue
         end
@@ -276,7 +291,7 @@ function stitch_search(corpus, new_abstraction_name; max_arity=2, upper_bound_fn
         end
 
         # https://arxiv.org/pdf/2211.16605.pdf "To avoid overfitting, DreamCoder prunes the abstractions that are only useful in programs from a single task."
-        if !allow_single_task && is_single_task(search_state)
+        if !config.allow_single_task && is_single_task(search_state)
             is_tracked_pruned(search_state, message="$(@__FILE__):$(@__LINE__) - single task")
             unexpand_general!(search_state) # force early unexpansion
             continue
@@ -313,8 +328,8 @@ function stitch_search(corpus, new_abstraction_name; max_arity=2, upper_bound_fn
             end
 
             # return now if this is `follow=true`
-            if follow
-                string(search_state.abstraction.body) == track || error("shouldnt be possible")
+            if config.follow
+                string(search_state.abstraction.body) == config.track || error("shouldnt be possible")
                 plot && break
                 return search_state
             end
@@ -358,11 +373,16 @@ function stitch_search(corpus, new_abstraction_name; max_arity=2, upper_bound_fn
 
     isnothing(best_abstraction) && return nothing
 
-    !follow || plot || error("shouldnt be possibleee")
+    !config.follow || plot || error("shouldnt be possibleee")
 
     # recurse, but with follow=true so that we rapidly narrow in on the best abstraction
     # then the search state at that point gets returned
-    res = stitch_search(corpus, new_abstraction_name; max_arity=10000, upper_bound_fn=upper_bound_fn, verbose=false, verbose_best=false, track=string(best_abstraction.body), follow=true, silent=true, allow_single_task=true, plot=false)
+    config = deepcopy(config)
+    config.max_arity=10000
+    config.verbose = config.verbose_best = config.plot = false
+    config.track = string(best_abstraction.body)
+    config.follow = config.silent = config.allow_single_task = true
+    res = stitch_search(corpus,config)
     isnothing(res) && error("shouldnt be possible - we found it the first time around without tracking")
     res
 end
@@ -376,9 +396,11 @@ end
 
 function compress(original_corpus; iterations=3, kwargs...)
     corpus = original_corpus
+    config = SearchConfig(;kwargs...)
     for i in 1:iterations
         println("===Iteration $i===")
-        search_res = stitch_search(corpus, Symbol("fn_$i"); kwargs...)
+        config.new_abstraction_name = Symbol("fn_$i")
+        search_res = stitch_search(corpus, config)
         if isnothing(search_res)
             println("No more abstractions")
             break
