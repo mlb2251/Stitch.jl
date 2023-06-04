@@ -51,6 +51,11 @@ mutable struct ScaledFunction{F <: Function}
 end
 (f::ScaledFunction)(x...) = f.scale * f.f(x...)
 
+function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansion})
+    # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
+    # node from the corpus.
+    match.local_utility += 1.0;
+end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticExpansion})
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)

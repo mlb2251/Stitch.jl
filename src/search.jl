@@ -46,7 +46,11 @@ mutable struct Match
     is_active::Bool
     id::Int
 
-    Match(expr, program, id) = new(expr, [], [], [expr], [], [], program, size(expr), num_nodes(expr), struct_hash(expr), local_utility_init(), NaN32, false, false, id)
+    # conversions between a symbol &foo and it's index %0
+    sym_of_idx::Vector{Symbol}
+    idx_of_sym::Dict{Symbol, Int} # idx_of_sym[sym_of_idx[i]] == i
+
+    Match(expr, program, id) = new(expr, [], [], [expr], [], [], program, size(expr), num_nodes(expr), struct_hash(expr), local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol, Int}())
 end
 
 abstract type Expansion end
@@ -73,6 +77,13 @@ struct AbstractionExpansion <: Expansion
 end
 
 Base.show(io::IO, obj::AbstractionExpansion) = pretty_show(io, obj; indent=false)
+
+struct SymbolExpansion <: Expansion
+    head::Symbol
+end
+
+Base.show(io::IO, obj::SymbolExpansion) = pretty_show(io, obj; indent=false)
+
 
 mutable struct Abstraction
     body::SExpr

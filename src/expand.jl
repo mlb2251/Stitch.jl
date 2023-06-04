@@ -25,6 +25,9 @@ function syntactic_expansions!(search_state)
     matches_of_sym = Dict{Symbol,Vector{Match}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
     for match in search_state.matches
         sym = match.holes[end].head
+        if startswith(string(sym), "&") # this is a symbol
+            continue
+        end
         if haskey(matches_of_sym, sym)
             push!(matches_of_sym[sym], match)
         else
@@ -41,7 +44,37 @@ function syntactic_expansions!(search_state)
     end
 end
 
+
+function symbol_expansions!(search_state)
+    matches_of_idx = Dict{Int,Vector{Match}}()
+    for match in search_state.matches
+        sym = match.holes[end].head
+        if !startswith(sym, "&") # this is not a symbol
+            continue
+        end
+
+        if !haskey(match.idx_of_sym, sym)
+            # this is a new symbol
+
+            # TODO actually these mutations to `match` are maybe not ok so im commenting them out
+            # push!(match.sym_of_idx, sym)
+            # match.idx_of_sym[sym] = length(match.sym_of_idx) # 1-indexed
+        end
+
+        idx = match.idx_of_sym[sym]
+
+        if haskey(matches_of_idx, idx)
+            push!(matches_of_idx[idx], match)
+        else
+            matches_of_idx[idx] = [match]
+        end
+    end
+end
+
 function abstraction_expansions!(search_state, max_arity)
+    # note: abstracting out a symbol or subtree containing a symbol is okay because you can pass
+    # a symbol in just fine bc ur doing it at the call site so it's bound correctly already.
+
     # variable reuse
     for i in 0:search_state.abstraction.arity-1
         # this works but just slows it down - could preallocate in a pool or something
