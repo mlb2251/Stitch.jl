@@ -97,11 +97,11 @@ Base.show(io::IO, obj::Abstraction) = pretty_show(io, obj; indent=false)
 
 Base.copy(abstraction::Abstraction) = Abstraction(copy(abstraction.body), abstraction.arity)
 
-mutable struct Stats
-    expansions::Int
-    completed::Int
+@Base.kwdef mutable struct Stats
+    expansions::Int = 0
+    completed::Int = 0
 
-    comparable_worklist_steps::Int
+    comparable_worklist_steps::Int = 0
 end
 
 Base.show(io::IO, obj::Stats) = pretty_show(io, obj; indent=true)
@@ -121,18 +121,37 @@ Base.@kwdef mutable struct SearchConfig
     allow_single_task::Bool = true
 end
 
-mutable struct SearchState
-    config::SearchConfig
 
-    abstraction::Abstraction
+Base.@kwdef mutable struct PlotData
+    best_util::Vector{Tuple{Int,Float32}} = [(0,0.)]
+    depth::Vector{Tuple{Int,Int}} = [(0,0)]
+    num_matches::Vector{Tuple{Int,Int}} = []
+    upper_bound::Vector{Tuple{Int,Float32}} = []
+    size_matches::Vector{Tuple{Int,Float32}} = []
+    completed_util::Vector{Tuple{Int,Float32}} = [(0,0.)]
+    completed_approx_util::Vector{Tuple{Int,Float32}} = [(0,0.)]
+    pruned_bound::Vector{Tuple{Int,Float32}} = [(0,0.)]
+end
+
+mutable struct SearchState
+    # config
+    config::SearchConfig
     corpus::Corpus{Match}
+    all_nodes::Vector{SExpr{Match}} # all treenodes in bottom up order - like a version of .matches that is never filtered down
+
+    # running data
+    plot_data::PlotData
+    best_util::Float32
+    best_abstraction::Union{Nothing, Abstraction}
     stats::Stats
 
+    # current abstraction
+    abstraction::Abstraction
     holes::Vector{SExpr{Match}}
     matches::Vector{Match}
-    all_nodes::Vector{SExpr{Match}} # all treenodes in bottom up order - like a version of .matches that is never filtered down
     expansions::Vector{PossibleExpansion}
 
+    # backtracking data
     holes_stack::Vector{SExpr{Match}}
     expansions_stack::Vector{Vector{PossibleExpansion}}
     matches_stack::Vector{Vector{Match}}
@@ -142,8 +161,11 @@ mutable struct SearchState
         abstraction = Abstraction(new_hole(nothing), 0)
         matches = init_all_corpus_matches(corpus)
         all_nodes = map(m -> m.expr, matches)
-        new(config, abstraction, corpus, Stats(0,0,0), 
-            [abstraction.body], matches, all_nodes, PossibleExpansion[],
+        best_util = Float32(0)
+        best_abstraction = nothing
+        new(config, corpus, all_nodes,
+            PlotData(), best_util, best_abstraction, Stats(),
+            abstraction, [abstraction.body], matches, PossibleExpansion[],
             SExpr[], PossibleExpansion[], Match[], PossibleExpansion[])
     end
 end
@@ -201,27 +223,13 @@ function is_tracked_pruned(search_state; expansion=nothing, message="message her
     end
 end
 
-Base.@kwdef mutable struct PlotData
-    best_util::Vector{Tuple{Int,Float32}} = [(0,0.)]
-    depth::Vector{Tuple{Int,Int}} = [(0,0)]
-    num_matches::Vector{Tuple{Int,Int}} = []
-    upper_bound::Vector{Tuple{Int,Float32}} = []
-    size_matches::Vector{Tuple{Int,Float32}} = []
-    completed_util::Vector{Tuple{Int,Float32}} = [(0,0.)]
-    completed_approx_util::Vector{Tuple{Int,Float32}} = [(0,0.)]
-    pruned_bound::Vector{Tuple{Int,Float32}} = [(0,0.)]
-end
 
 
 function stitch_search(corpus, config)
 
-    best_util = Float32(0)
-    best_abstraction = nothing
     search_state = SearchState(corpus, config)
     
     (; verbose, verbose_best, plot, silent) = config
-
-    plot_data = PlotData()
 
     needs_expansion = true
 
@@ -230,7 +238,7 @@ function stitch_search(corpus, config)
         # depth in the search tree (needs_expansion=true) or we are continuing search at an
         # existing level (needs_expansion=false)
         if needs_expansion
-            possible_expansions!(search_state, best_util)
+            possible_expansions!(search_state)
             if !isnothing(config.expansion_processor)
                 process_expansions!(search_state)
             end
@@ -261,8 +269,8 @@ function stitch_search(corpus, config)
         expansion = pop!(search_state.expansions)
 
         # upper bound check
-        if config.upper_bound_fn(search_state,expansion) <= best_util
-            is_tracked_pruned(search_state, expansion=expansion, message="$(@__FILE__):$(@__LINE__) - upper bound $(config.upper_bound_fn(search_state,expansion)) <= best util $best_util")
+        if config.upper_bound_fn(search_state,expansion) <= search_state.best_util
+            is_tracked_pruned(search_state, expansion=expansion, message="$(@__FILE__):$(@__LINE__) - upper bound $(config.upper_bound_fn(search_state,expansion)) <= best util $(search_state.best_util)")
             plot && push!(plot_data.pruned_bound, (search_state.stats.expansions, config.upper_bound_fn(search_state,expansion)))
             continue # skip - worse than best so far
         end
@@ -308,7 +316,7 @@ function stitch_search(corpus, config)
 
             plot && push!(plot_data.completed_approx_util, (search_state.stats.expansions, approx_util))
 
-            if approx_util <= best_util
+            if approx_util <= search_state.best_util
                 continue # skip - worse than best so far
             end
 
@@ -320,11 +328,11 @@ function stitch_search(corpus, config)
             plot && push!(plot_data.completed_util, (search_state.stats.expansions, util))
 
             # check for new best
-            if util > best_util
-                best_util = util
+            if util > search_state.best_util
+                search_state.best_util = util
                 best_abstraction = copy(search_state.abstraction)
-                !verbose_best || printstyled("[step=$(search_state.stats.expansions)] new best: ", search_state.abstraction.body, " with utility ", best_util, " used in $(length(search_state.matches)) places\n", color=:green)
-                plot && push!(plot_data.best_util, (search_state.stats.expansions, best_util))
+                !verbose_best || printstyled("[step=$(search_state.stats.expansions)] new best: ", search_state.abstraction.body, " with utility ", search_state.best_util, " used in $(length(search_state.matches)) places\n", color=:green)
+                plot && push!(plot_data.best_util, (search_state.stats.expansions, search_state.best_util))
             end
 
             # return now if this is `follow=true`
@@ -340,10 +348,10 @@ function stitch_search(corpus, config)
         needs_expansion = true
     end
 
-    if isnothing(best_abstraction)
+    if isnothing(search_state.best_abstraction)
         silent || println("No abstractions found")
     else 
-        silent || println("Best abstraction: ", best_abstraction.body, " with utility ", best_util, " compressed by ", size(search_state.corpus) / (size(search_state.corpus) - best_util), "x");
+        silent || println("Best abstraction: ", search_state.best_abstraction.body, " with utility ", search_state.best_util, " compressed by ", size(search_state.corpus) / (size(search_state.corpus) - search_state.best_util), "x");
     end
 
     silent || println(search_state.stats);
@@ -351,10 +359,10 @@ function stitch_search(corpus, config)
     # plot
     if plot
         # normalize utilities
-        plot_data.best_util = [(x, y/best_util) for (x,y) in plot_data.best_util]
-        plot_data.completed_util = [(x, y/best_util) for (x,y) in plot_data.completed_util]
-        plot_data.completed_approx_util = [(x, y/best_util) for (x,y) in plot_data.completed_approx_util]
-        plot_data.pruned_bound = [(x, y/best_util) for (x,y) in plot_data.pruned_bound]
+        plot_data.best_util = [(x, y/search_state.best_util) for (x,y) in plot_data.best_util]
+        plot_data.completed_util = [(x, y/search_state.best_util) for (x,y) in plot_data.completed_util]
+        plot_data.completed_approx_util = [(x, y/search_state.best_util) for (x,y) in plot_data.completed_approx_util]
+        plot_data.pruned_bound = [(x, y/search_state.best_util) for (x,y) in plot_data.pruned_bound]
         p = Plots.plot(plot_data.best_util, title="Best Utility Over Time", xlabel="Expansions", ylabel="Utility", linetype=:steppre, xlim=(0, search_state.stats.expansions), ylim=(0,1));
         
         Plots.plot!(p, plot_data.completed_approx_util, seriestype=:scatter, alpha=0.5, label="completed approx util")
@@ -371,7 +379,7 @@ function stitch_search(corpus, config)
     
 
 
-    isnothing(best_abstraction) && return nothing
+    isnothing(search_state.best_abstraction) && return nothing
 
     !config.follow || plot || error("shouldnt be possibleee")
 

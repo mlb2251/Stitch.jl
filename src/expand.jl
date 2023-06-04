@@ -1,6 +1,6 @@
 
 
-function possible_expansions!(search_state, best_util)
+function possible_expansions!(search_state)
     isempty(search_state.expansions) || error("expansions should be empty")
 
     syntactic_expansions!(search_state)
