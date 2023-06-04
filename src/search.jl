@@ -223,7 +223,24 @@ function is_tracked_pruned(search_state; expansion=nothing, message="message her
     end
 end
 
+"""
+Beginning a new level of search - expand current hole in all possible ways
+"""
+function expand_search_state!(search_state)
+    isempty(search_state.expansions) || error("expand_search_state!() should only be called when there are no expansions left to try")
 
+    possible_expansions!(search_state)
+    if !isnothing(search_state.config.expansion_processor)
+        process_expansions!(search_state)
+    end
+
+
+    !search_state.config.verbose || printstyled(search_state, "\n", color=:yellow);
+    # !verbose || println("possible_expansions!() -> ", length(search_state.expansions), " ", [e.data for e in search_state.expansions])
+    search_state.stats.comparable_worklist_steps += 1
+    search_state.config.plot && push!(plot_data.depth, (search_state.stats.expansions, length(search_state.past_expansions)))
+    search_state.config.plot && push!(plot_data.num_matches, (search_state.stats.expansions, length(search_state.matches)))
+end
 
 function stitch_search(corpus, config)
 
@@ -231,27 +248,9 @@ function stitch_search(corpus, config)
     
     (; verbose, verbose_best, plot, silent) = config
 
-    needs_expansion = true
+    expand_search_state!(search_state)
 
     while true
-        # At each step of this loop we are either about to start exploring a new level of
-        # depth in the search tree (needs_expansion=true) or we are continuing search at an
-        # existing level (needs_expansion=false)
-        if needs_expansion
-            possible_expansions!(search_state)
-            if !isnothing(config.expansion_processor)
-                process_expansions!(search_state)
-            end
-
-
-            !verbose || printstyled(search_state, "\n", color=:yellow);
-            # !verbose || println("possible_expansions!() -> ", length(search_state.expansions), " ", [e.data for e in search_state.expansions])
-            needs_expansion = false
-            search_state.stats.comparable_worklist_steps += 1
-            plot && push!(plot_data.depth, (search_state.stats.expansions, length(search_state.past_expansions)))
-            plot && push!(plot_data.num_matches, (search_state.stats.expansions, length(search_state.matches)))
-            continue
-        end
 
         # check if there are no expansions to try, and backtrack if so
         if isempty(search_state.expansions)
@@ -330,7 +329,7 @@ function stitch_search(corpus, config)
             # check for new best
             if util > search_state.best_util
                 search_state.best_util = util
-                best_abstraction = copy(search_state.abstraction)
+                search_state.best_abstraction = copy(search_state.abstraction)
                 !verbose_best || printstyled("[step=$(search_state.stats.expansions)] new best: ", search_state.abstraction.body, " with utility ", search_state.best_util, " used in $(length(search_state.matches)) places\n", color=:green)
                 plot && push!(plot_data.best_util, (search_state.stats.expansions, search_state.best_util))
             end
@@ -345,7 +344,7 @@ function stitch_search(corpus, config)
             continue
         end
 
-        needs_expansion = true
+        expand_search_state!(search_state)
     end
 
     if isnothing(search_state.best_abstraction)
@@ -388,7 +387,7 @@ function stitch_search(corpus, config)
     config = deepcopy(config)
     config.max_arity=10000
     config.verbose = config.verbose_best = config.plot = false
-    config.track = string(best_abstraction.body)
+    config.track = string(search_state.best_abstraction.body)
     config.follow = config.silent = config.allow_single_task = true
     res = stitch_search(corpus,config)
     isnothing(res) && error("shouldnt be possible - we found it the first time around without tracking")
