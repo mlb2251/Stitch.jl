@@ -123,6 +123,7 @@ end
 
 
 Base.@kwdef mutable struct PlotData
+    normalized::Bool = false
     best_util::Vector{Tuple{Int,Float32}} = [(0,0.)]
     depth::Vector{Tuple{Int,Int}} = [(0,0)]
     num_matches::Vector{Tuple{Int,Int}} = []
@@ -178,6 +179,15 @@ function Base.show(io::IO, search_state::SearchState)
           " | matches: ", length(search_state.matches),
           " | expansions: ", length(search_state.expansions),
     );
+end
+
+function normalize!(plot_data::PlotData, search_state::SearchState)
+    plot_data.normalized && return
+    plot_data.normalized = true
+    plot_data.best_util = [(x, y/search_state.best_util) for (x,y) in plot_data.best_util]
+    plot_data.completed_util = [(x, y/search_state.best_util) for (x,y) in plot_data.completed_util]
+    plot_data.completed_approx_util = [(x, y/search_state.best_util) for (x,y) in plot_data.completed_approx_util]
+    plot_data.pruned_bound = [(x, y/search_state.best_util) for (x,y) in plot_data.pruned_bound]
 end
 
 
@@ -357,26 +367,8 @@ function stitch_search(corpus, config)
 
     # plot
     if plot
-        # normalize utilities
-        plot_data.best_util = [(x, y/search_state.best_util) for (x,y) in plot_data.best_util]
-        plot_data.completed_util = [(x, y/search_state.best_util) for (x,y) in plot_data.completed_util]
-        plot_data.completed_approx_util = [(x, y/search_state.best_util) for (x,y) in plot_data.completed_approx_util]
-        plot_data.pruned_bound = [(x, y/search_state.best_util) for (x,y) in plot_data.pruned_bound]
-        p = Plots.plot(plot_data.best_util, title="Best Utility Over Time", xlabel="Expansions", ylabel="Utility", linetype=:steppre, xlim=(0, search_state.stats.expansions), ylim=(0,1));
-        
-        Plots.plot!(p, plot_data.completed_approx_util, seriestype=:scatter, alpha=0.5, label="completed approx util")
-        Plots.plot!(p, plot_data.completed_util, seriestype=:scatter, alpha=0.5, label="completed util")
-        # Plots.plot!(p, plot_data.pruned_bound, seriestype=:scatter, alpha=0.5, label="pruned bound")
-
-        # Plots.plot!(Plots.twinx(), plot_data.depth, seriestype=:line, z_order=:back, color=:orange, alpha=0.3, ylabel="Depth")
-        # Plots.plot!(Plots.twinx(), plot_data.num_matches, seriestype=:line, z_order=:back, color=:blue, alpha=0.3, ylabel="Matches", yaxis=:log)
-        # Plots.plot!(Plots.twinx(), plot_data.upper_bound, seriestype=:line, z_order=:back, color=:purple, alpha=0.3, ylabel="Upper Bound", yaxis=:log)
-        # Plots.plot!(Plots.twinx(), plot_data.size_matches, seriestype=:line, z_order=:back, color=:purple, alpha=0.3, ylabel="Size * Matches")
-
-        display(p)
+        plot(plot_data, search_state)
     end
-    
-
 
     isnothing(search_state.best_abstraction) && return nothing
 
@@ -392,6 +384,24 @@ function stitch_search(corpus, config)
     res = stitch_search(corpus,config)
     isnothing(res) && error("shouldnt be possible - we found it the first time around without tracking")
     res
+end
+
+function plot(plot_data::PlotData, search_state::SearchState)
+    # normalize utilities
+    normalize!(plot_data, search_state)
+
+    p = Plots.plot(plot_data.best_util, title="Best Utility Over Time", xlabel="Expansions", ylabel="Utility", linetype=:steppre, xlim=(0, search_state.stats.expansions), ylim=(0,1));
+    
+    Plots.plot!(p, plot_data.completed_approx_util, seriestype=:scatter, alpha=0.5, label="completed approx util")
+    Plots.plot!(p, plot_data.completed_util, seriestype=:scatter, alpha=0.5, label="completed util")
+    # Plots.plot!(p, plot_data.pruned_bound, seriestype=:scatter, alpha=0.5, label="pruned bound")
+
+    # Plots.plot!(Plots.twinx(), plot_data.depth, seriestype=:line, z_order=:back, color=:orange, alpha=0.3, ylabel="Depth")
+    # Plots.plot!(Plots.twinx(), plot_data.num_matches, seriestype=:line, z_order=:back, color=:blue, alpha=0.3, ylabel="Matches", yaxis=:log)
+    # Plots.plot!(Plots.twinx(), plot_data.upper_bound, seriestype=:line, z_order=:back, color=:purple, alpha=0.3, ylabel="Upper Bound", yaxis=:log)
+    # Plots.plot!(Plots.twinx(), plot_data.size_matches, seriestype=:line, z_order=:back, color=:purple, alpha=0.3, ylabel="Size * Matches")
+
+    display(p)
 end
 
 
