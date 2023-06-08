@@ -417,6 +417,7 @@ end
 function compress(original_corpus; iterations=3, kwargs...)
     corpus = original_corpus
     config = SearchConfig(;kwargs...)
+    abstractions = String[]
     for i in 1:iterations
         println("===Iteration $i===")
         config.new_abstraction_name = Symbol("fn_$i")
@@ -427,8 +428,10 @@ function compress(original_corpus; iterations=3, kwargs...)
         end
         (rewritten, compressive, cumulative) = rewrite(search_res)
         corpus = rewritten
+        push!(abstractions, string(search_res.abstraction.body))
     end
     println("Total compression: ", size(original_corpus) / size(corpus), "x")
+    return abstractions
 end
 
 
