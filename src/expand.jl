@@ -5,6 +5,7 @@ function possible_expansions!(search_state)
 
     syntactic_expansions!(search_state)
     abstraction_expansions!(search_state)
+    symbol_expansions!(search_state)
 
     # sort!(search_state.expansions, by=e -> length(e.matches)*e.matches[1].local_utility)
     # sort!(search_state.expansions, by=e -> upper_bound_fn(search_state,e))
@@ -25,9 +26,9 @@ function syntactic_expansions!(search_state)
     matches_of_sym = Dict{Symbol,Vector{Match}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
     for match in search_state.matches
         sym = match.holes[end].head
-        # if startswith(string(sym), "&") # this is a symbol
-        #     continue
-        # end
+        if startswith(string(sym), "&") # this is a symbol
+            continue
+        end
         if haskey(matches_of_sym, sym)
             push!(matches_of_sym[sym], match)
         else
@@ -49,19 +50,12 @@ function symbol_expansions!(search_state)
     matches_of_idx = Dict{Int,Vector{Match}}()
     for match in search_state.matches
         sym = match.holes[end].head
-        if !startswith(sym, "&") # this is not a symbol
+        if !startswith(string(sym), "&") # this is not a symbol
             continue
         end
 
-        if !haskey(match.idx_of_sym, sym)
-            # this is a new symbol
 
-            # TODO actually these mutations to `match` are maybe not ok so im commenting them out
-            # push!(match.sym_of_idx, sym)
-            # match.idx_of_sym[sym] = length(match.sym_of_idx) # 1-indexed
-        end
-
-        idx = match.idx_of_sym[sym]
+        idx = get(match.idx_of_sym, sym, length(match.sym_of_idx) + 1)
 
         if haskey(matches_of_idx, idx)
             push!(matches_of_idx[idx], match)
@@ -69,6 +63,15 @@ function symbol_expansions!(search_state)
             matches_of_idx[idx] = [match]
         end
     end
+
+    for (idx, matches) in matches_of_idx
+        if isempty(matches) continue end
+        push!(search_state.expansions, PossibleExpansion(
+            matches,
+            SymbolExpansion(idx),
+        ))
+    end
+
 end
 
 function abstraction_expansions!(search_state)
@@ -77,7 +80,6 @@ function abstraction_expansions!(search_state)
 
     # variable reuse
     for i in 0:search_state.abstraction.arity-1
-        # this works but just slows it down - could preallocate in a pool or something
         matches = copy(search_state.matches)
         filter!(m -> m.holes[end].data.struct_hash == m.unique_args[i+1].data.struct_hash, matches)
         # matches = [m for m in search_state.matches if m.holes[end].data.struct_hash == m.unique_args[i+1].data.struct_hash]
@@ -198,6 +200,31 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
     end
 end
 
+function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, hole)
+    
+    # set the head symbol of the hole
+    hole.head = Symbol("%$(expansion.data.idx)")
+
+    for match in search_state.matches
+        # pop next hole and save it for future backtracking
+        hole = pop!(match.holes)
+        push!(match.holes_stack, hole)
+
+        @assert string(hole.head)[1] == '&'
+
+        if length(match.sym_of_idx) < expansion.data.idx
+            # this is a new symbol
+            push!(match.sym_of_idx, hole.head)
+            match.idx_of_sym[hole.head] = expansion.data.idx
+            push!(match.idx_is_fresh,true)
+        else
+            push!(match.idx_is_fresh,false)
+        end
+
+    end
+end
+
+
 
 function unexpand!(search_state, expansion::PossibleExpansion{SyntacticExpansion}, hole)
     
@@ -236,6 +263,25 @@ function unexpand!(search_state, expansion::PossibleExpansion{AbstractionExpansi
         pop!(match.all_args) === hole || error("expected same hole");
     end
 end
+
+function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, hole)
+    
+    # set the head symbol of the hole
+    hole.head = Symbol("??")
+
+    for match in search_state.matches
+        hole = pop!(match.holes_stack) 
+        push!(match.holes, hole)
+
+        if pop!(match.idx_is_fresh)
+            pop!(match.sym_of_idx)
+            delete!(match.idx_of_sym, hole.head)
+        end
+
+    end
+end
+
+
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
 function strictly_dominated(search_state)

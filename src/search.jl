@@ -49,8 +49,9 @@ mutable struct Match
     # conversions between a symbol &foo and it's index %0
     sym_of_idx::Vector{Symbol}
     idx_of_sym::Dict{Symbol, Int} # idx_of_sym[sym_of_idx[i]] == i
+    idx_is_fresh::Vector{Bool} # stack of whether each idx is fresh across the levels of search, used for backtracking
 
-    Match(expr, program, id) = new(expr, [], [], [expr], [], [], program, size(expr), num_nodes(expr), struct_hash(expr), local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol, Int}())
+    Match(expr, program, id) = new(expr, [], [], [expr], [], [], program, size(expr), num_nodes(expr), struct_hash(expr), local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol, Int}(), Bool[])
 end
 
 abstract type Expansion end
@@ -79,7 +80,7 @@ end
 Base.show(io::IO, obj::AbstractionExpansion) = pretty_show(io, obj; indent=false)
 
 struct SymbolExpansion <: Expansion
-    head::Symbol
+    idx::Int
 end
 
 Base.show(io::IO, obj::SymbolExpansion) = pretty_show(io, obj; indent=false)
