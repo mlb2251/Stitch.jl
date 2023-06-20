@@ -59,13 +59,14 @@ end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticExpansion})
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    match.local_utility += if expansion.data.num_holes == 0 1.0  else .01 end;
+    match.local_utility += 1.;
 end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{AbstractionExpansion})
     if expansion.data.fresh
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility second term; cost_app * arity)
-        match.local_utility -= .01;
+        # note: commented out with switch away from application penalty
+        # match.local_utility -= .01;
     else
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (multiuse utility; (usages-1)*cost(arg))
         match.local_utility += match.holes[end].data.size;

@@ -70,7 +70,11 @@ function subexpressions(e::SExpr; subexprs = SExpr[])
 end
 
 function size(e::SExpr) :: Float32
-    if isempty(e.args) 1. else .01 + sum(size, e.args) end
+    size(e.head) + sum(size, e.args, init=0.)
+end
+
+function size(head::Symbol)
+    1.
 end
 
 num_nodes(e::SExpr) = 1 + sum(num_nodes, e.args, init=0)
@@ -82,7 +86,7 @@ function size_no_abstraction_var(e::SExpr) :: Float32
     if isempty(e.args)
         return 1.
     end
-    return .01 + sum(size_no_abstraction_var, e.args)
+    return size(e.head) + sum(size_no_abstraction_var, e.args)
 end
 
 
@@ -109,51 +113,57 @@ function uncurry(e::SExpr)
     end
 end
 
-
+"""
+Parse a string into an SExpr
+"""
 function Base.parse(::Type{SExpr}, original_s::String)
-    # add guaranteed spacing around parens so they parse into their own items
-    s = replace(original_s, "(" => " ( ", ")" => " ) ")
-
-    items = SExpr[]
-    item_counts = Int[]
-    item_count = 0
-    depth = 0
+    # add guaranteed parens around whole thing and guaranteed spacing around parens so they parse into their own items
+    s = replace("$original_s", "(" => " ( ", ")" => " ) ")
 
     # `split` will skip all quantities of all forms of whitespace
-    for item in split(s)
-        if item == "("
-            depth += 1
-            push!(item_counts, item_count)
-            item_count = 0
-        elseif item == ")"
-            depth -= 1
-            if depth < 0
-                error("unbalanced parens: too many close parens")
+    items = split(s)
+    length(items) > 2 || error("SExpr parse called on empty (or all whitespace) string")
+    items[1] != ")" || error("SExpr starts with a closeparen. Found in $original_s")
+
+    # this is a single symbol like "foo" or "bar"
+    length(items) == 1 && return SExpr(Symbol(items[1]))
+
+    i=0
+    expr_stack = SExpr[]
+    # num_open_parens = Int[]
+
+    while true
+        i += 1
+
+        i <= length(items) || error("unbalanced parens: unclosed parens in $original_s")
+
+        if items[i] == "("
+            # begin a new expression: push a new SExpr + head onto expr_stack
+            i += 1
+            i <= length(items) || error("unbalanced parens: too many open parens in $original_s")
+            items[i] != ")" || error("Empty parens () are not allowed. Found in $original_s")
+            items[i] != "(" || error("Each open paren must be followed directly by a head symbol like (foo ...) or ( foo ...) but instead another open paren instead like ((...) ...). Error found in $original_s")
+            push!(expr_stack, SExpr(Symbol(items[i])))
+        elseif items[i] == ")"
+            # end an expression: pop the last SExpr off of expr_stack and add it to the SExpr at one level before that
+
+            if length(expr_stack) == 1
+                i == length(items) || error("trailing characters after final closeparen in $original_s")
+                break
             end
 
-            node = items[end-item_count+1]
-            for i in 2:item_count
-                node = SExpr(:app, args=[node, items[end-item_count+i]])
-            end
-            items = items[1:end-item_count]
+            length(expr_stack) >= 2 || error("unbalanced parens: too many close parens in $original_s")
 
-            push!(items, node)
-            item_count = pop!(item_counts)
-            item_count += 1
+            last = pop!(expr_stack)
+            push!(expr_stack[end].args, last)
         else
-            push!(items, SExpr(Symbol(item)))
-            item_count += 1
+            # any other item like "foo" or "+" is a symbol
+            push!(expr_stack[end].args, SExpr(Symbol(items[i])))
         end
     end
 
-    depth == 0 || error("unbalanced parens: not enough close parens")
+    length(expr_stack) != 0 || error("unreachable - should have been caught by the first check for string emptiness")
+    length(expr_stack) == 1 || error("unbalanced parens: not enough close parens in $original_s")
 
-    item_count == length(items) || error("item_count != length(items)")
-
-    node = items[1]
-    for i in 2:item_count
-        node = SExpr(:app, [node, items[i]])
-    end
-
-    return node
+    return pop!(expr_stack)
 end

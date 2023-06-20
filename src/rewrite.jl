@@ -20,6 +20,7 @@ Just copying Eqn 15 from https://arxiv.org/pdf/2211.16605.pdf
 sets match.accept_rewrite and match.cumulative_utility
 """
 function bottom_up_utility(search_state::SearchState) :: Float32
+    # reset all utilities to NaN
     for expr in search_state.all_nodes
         expr.data.cumulative_utility = NaN32
         expr.data.is_active = false
@@ -30,6 +31,7 @@ function bottom_up_utility(search_state::SearchState) :: Float32
     end
 
     # special case the identity abstraction (\x. x) since it has a self loop dependency in terms of utility calculation
+    # since you can rewrite X -> (identity X) -> (identity (identity X)) -> ... as you infintely rewrite the argument
     if is_identity_abstraction(search_state)
         for expr in search_state.all_nodes
             expr.data.cumulative_utility = 0.
@@ -60,7 +62,7 @@ function rewrite_inner(expr::SExpr{Match}, search_state::SearchState) :: SExpr
 
     if expr.data.accept_rewrite
         # do a rewrite
-        return curried_application(search_state.config.new_abstraction_name, [rewrite_inner(arg, search_state) for arg in expr.data.unique_args])
+        return SExpr(search_state.config.new_abstraction_name, args=[rewrite_inner(arg, search_state) for arg in expr.data.unique_args])
     else
         # don't rewrite - just recurse
         return SExpr(expr.head, args=[rewrite_inner(arg, search_state) for arg in expr.args])
