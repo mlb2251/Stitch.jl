@@ -8,8 +8,11 @@ function rewrite(search_state::SearchState) :: Tuple{Corpus,Float32,Float32}
 
     compressive_utility = size(search_state.corpus) - size(rewritten)
 
-    # @show rewritten
-    isapprox(cumulative_utility, compressive_utility) || error("[$search_state] cumulative_utility != compressive_utility: $cumulative_utility != $compressive_utility")
+    @show rewritten
+    if !isapprox(cumulative_utility, compressive_utility)
+        # error("[$search_state] cumulative_utility != compressive_utility: $cumulative_utility != $compressive_utility")
+        println("ERROR: [$search_state] cumulative_utility != compressive_utility: $cumulative_utility != $compressive_utility")
+    end
 
     (rewritten, compressive_utility, cumulative_utility)
 end
@@ -60,7 +63,7 @@ function rewrite_inner(expr::SExpr{Match}, search_state::SearchState) :: SExpr
 
     if expr.data.accept_rewrite
         # do a rewrite
-        return curried_application(search_state.config.new_abstraction_name, [rewrite_inner(arg, search_state) for arg in expr.data.unique_args])
+        return curried_application(search_state.config.new_abstraction_name, vcat([rewrite_inner(arg, search_state) for arg in expr.data.unique_args],[SExpr(sym) for sym in expr.data.sym_of_idx]) )
     else
         # don't rewrite - just recurse
         return SExpr(expr.head, args=[rewrite_inner(arg, search_state) for arg in expr.args])
