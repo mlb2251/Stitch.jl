@@ -1,10 +1,5 @@
 using Plots
 
-mutable struct Program
-    expr::SExpr
-    id::Int
-    task::Int
-end
 
 mutable struct Corpus
     programs::Vector{Program}
@@ -190,7 +185,7 @@ function init_all_corpus_matches(corpus) :: Vector{Match}
 end
 
 function is_tracked(search_state; expansion=nothing)
-    !isnothing(search_state.config.track) || return false
+    isnothing(search_state.config.track) && return false
 
     isnothing(expansion) || expand_general!(search_state, expansion)
 

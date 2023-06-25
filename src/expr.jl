@@ -5,9 +5,15 @@ directly have Expr and Match that point to each other and without using generics
 """
 mutable struct SExprGeneric{D}
     leaf::Union{Symbol,Nothing}
-    children::Vector{SExpr{D}}
-    parent::Union{(SExpr,Int), Nothing} # parent and which index of the child it is
+    children::Vector{SExprGeneric{D}}
+    parent::Union{Tuple{SExprGeneric{D},Int}, Nothing} # parent and which index of the child it is
     match::Union{D, Nothing}
+end
+
+mutable struct ProgramGeneric{D}
+    expr::SExprGeneric{D}
+    id::Int
+    task::Int
 end
 
 mutable struct Match
@@ -18,7 +24,7 @@ mutable struct Match
     holes_stack::Vector{SExprGeneric{Match}} # expanded holes
     local_utility_stack::Vector{Float32} # past utilities
 
-    program::Program # which program this subtree appears in
+    program::ProgramGeneric{Match} # which program this subtree appears in
     size::Float32
     num_nodes::Int
     struct_hash::Int
@@ -40,12 +46,13 @@ mutable struct Match
 end
 
 const SExpr = SExprGeneric{Match}
+const Program = ProgramGeneric{Match}
 
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
     expr = SExpr(nothing, children, parent, nothing)
-    for (i,arg) in enumerate(args)
-        isnothing(arg.parent) || error("arg already has parent")
-        arg.parent = (expr,i)
+    for (i,child) in enumerate(children)
+        isnothing(child.parent) || error("arg already has parent")
+        child.parent = (expr,i)
     end
     expr 
 end
@@ -59,15 +66,15 @@ is_leaf(e::SExpr) = !isnothing(e.leaf)
 function Base.copy(e::SExpr)
     SExpr(
         e.leaf,
-        [copy(child) for child in e.children]
+        [copy(child) for child in e.children],
         nothing,
         nothing
     )
 end
 
 @auto_hash_equals struct HashNode
-    head::Symbol
-    args::Vector{Int}
+    leaf::Union{Symbol,Nothing}
+    children::Vector{Int}
 end
 
 const global_struct_hash = Dict{HashNode, Int}()
@@ -79,7 +86,7 @@ sets e.match.struct_hash. Requires .match to be set so we know this will be used
 function struct_hash(e::SExpr) :: Int
     isnothing(e.match) || isnothing(e.match.struct_hash) || return e.match.struct_hash
 
-    node = HashNode(e.head, map(struct_hash,e.args))
+    node = HashNode(e.leaf, map(struct_hash,e.children))
     if !haskey(global_struct_hash, node)
         global_struct_hash[node] = length(global_struct_hash) + 1
     end
@@ -88,15 +95,15 @@ function struct_hash(e::SExpr) :: Int
 end
 
 function curried_application(f::Symbol, args) :: SExpr
-    expr = SExpr(f)
+    expr = sexpr_leaf(f)
     for arg in args
-        expr = SExpr(:app, args=[expr, arg])
+        expr = sexpr_node([sexpr_leaf(:app), expr, arg])
     end
     expr
 end
 
 
-new_hole(parent, arg_idx) = sexpr_leaf(Symbol("??"); parent=(parent, arg_idx))
+new_hole(parent_and_argidx) = sexpr_leaf(Symbol("??"); parent=parent_and_argidx)
 
 "child-first traversal"
 function subexpressions(e::SExpr; subexprs = SExpr[])
@@ -124,12 +131,12 @@ num_nodes(e::SExpr) = 1 + sum(num_nodes, e.children, init=0)
 
 
 Base.show(io::IO, e::SExpr) = begin    
-    if isempty(e.args)
-        print(io, e.head)
-    elseif e.head === :app
+    if is_leaf(e)
+        print(io, e.leaf)
+    elseif e.leaf === :app
         print(io, "(", join(uncurry(e), " "), ")")
     else
-        print(io, "(", e.head, " ", join(e.args, " "), ")")
+        print(io, "(", join(e.children, " "), ")")
     end
 end
 
@@ -138,12 +145,9 @@ end
 takes (app (app f x) y) and returns [f, x, y]
 """
 function uncurry(e::SExpr)
-    if e.head === :app
-        res = uncurry(e.args[1])
-        return push!(res, e.args[2])
-    else
-        return [e]
-    end
+    (length(e.children) != 3 || e.children[1].leaf !== :app) && return[e]
+    res = uncurry(e.children[2])
+    return push!(res, e.children[3])
 end
 
 """
@@ -166,7 +170,7 @@ function Base.parse(::Type{SExpr}, original_s::String)
     items[1] != ")" || error("SExpr starts with a closeparen. Found in $original_s")
 
     # this is a single symbol like "foo" or "bar"
-    length(items) == 1 && return SExpr(Symbol(items[1]))
+    length(items) == 1 && return sexpr_leaf(Symbol(items[1]))
 
     i=0
     expr_stack = SExpr[]
@@ -178,12 +182,7 @@ function Base.parse(::Type{SExpr}, original_s::String)
         i <= length(items) || error("unbalanced parens: unclosed parens in $original_s")
 
         if items[i] == "("
-            # begin a new expression: push a new SExpr + head onto expr_stack
-            i += 1
-            i <= length(items) || error("unbalanced parens: too many open parens in $original_s")
-            items[i] != ")" || error("Empty parens () are not allowed. Found in $original_s")
-            items[i] != "(" || error("Each open paren must be followed directly by a head symbol like (foo ...) or ( foo ...) but instead another open paren instead like ((...) ...). Error found in $original_s")
-            push!(expr_stack, SExpr(Symbol(items[i])))
+            push!(expr_stack, sexpr_node(SExpr[]))
         elseif items[i] == ")"
             # end an expression: pop the last SExpr off of expr_stack and add it to the SExpr at one level before that
 
@@ -192,13 +191,11 @@ function Base.parse(::Type{SExpr}, original_s::String)
                 break
             end
 
-            length(expr_stack) >= 2 || error("unbalanced parens: too many close parens in $original_s")
-
             last = pop!(expr_stack)
-            push!(expr_stack[end].args, last)
+            push!(expr_stack[end].children, last)
         else
             # any other item like "foo" or "+" is a symbol
-            push!(expr_stack[end].args, SExpr(Symbol(items[i])))
+            push!(expr_stack[end].children, sexpr_leaf(Symbol(items[i])))
         end
     end
 

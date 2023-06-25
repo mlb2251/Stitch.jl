@@ -67,7 +67,8 @@ end
 function symbol_expansions!(search_state)
     matches_of_idx = Dict{Int,Vector{Match}}()
     for match in search_state.matches
-        sym = match.holes[end].head
+        is_leaf(match.holes[end]) || continue
+        sym = match.holes[end].leaf
         if !startswith(string(sym), "&") # this is not a symbol
             continue
         end
@@ -125,7 +126,7 @@ function expand_general!(search_state, expansion)
 
     # pop hole
     hole = pop!(search_state.holes)
-    hole.head === Symbol("??") || error("not a hole")
+    hole.leaf === Symbol("??") || error("not a hole")
     push!(search_state.holes_stack,hole)
 
     # save state for backtracking
@@ -189,10 +190,13 @@ function expand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpansi
 end
 
 function expand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpansion}, hole)
+
+    # make it no longer a leaf
+    hole.leaf = nothing
     
     # add fresh holes to .args and also keep track of them in search_state.abstraction.holes
     for i in 1:expansion.data.num_holes
-        h = new_hole(hole,i)
+        h = new_hole((hole,i))
         push!(hole.children, h)
         push!(search_state.holes, h)
     end
@@ -245,8 +249,8 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
 
         if length(match.sym_of_idx) < expansion.data.idx
             # this is a new symbol
-            push!(match.sym_of_idx, hole.head)
-            match.idx_of_sym[hole.head] = expansion.data.idx
+            push!(match.sym_of_idx, hole.leaf)
+            match.idx_of_sym[hole.leaf] = expansion.data.idx
             push!(match.idx_is_fresh,true)
         else
             push!(match.idx_is_fresh,false)
@@ -269,6 +273,7 @@ function unexpand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpan
 end
 
 function unexpand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpansion}, hole)
+    hole.leaf = Symbol("??")
 
     # pop from .args and search_state.holes
     for _ in 1:expansion.data.num_holes
@@ -289,7 +294,7 @@ end
 
 function unexpand!(search_state, expansion::PossibleExpansion{AbstractionExpansion}, hole)
 
-    hole.head = Symbol("??")
+    hole.leaf = Symbol("??")
     if expansion.data.fresh
         search_state.abstraction.arity -= 1
     end
@@ -307,7 +312,7 @@ end
 function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, hole)
     
     # set the head symbol of the hole
-    hole.head = Symbol("??")
+    hole.leaf = Symbol("??")
 
     for match in search_state.matches
         hole = pop!(match.holes_stack) 
@@ -315,7 +320,7 @@ function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, 
 
         if pop!(match.idx_is_fresh)
             pop!(match.sym_of_idx)
-            delete!(match.idx_of_sym, hole.head)
+            delete!(match.idx_of_sym, hole.leaf)
         end
 
     end
