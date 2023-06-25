@@ -1,19 +1,19 @@
 using Plots
 
-mutable struct Program{D}
-    expr::SExpr{D}
+mutable struct Program
+    expr::SExpr
     id::Int
     task::Int
 end
 
-mutable struct Corpus{D}
-    programs::Vector{Program{D}}
-    programs_by_task::Dict{Int, Vector{Program{D}}}
+mutable struct Corpus
+    programs::Vector{Program}
+    programs_by_task::Dict{Int, Vector{Program}}
 
     function Corpus(programs)
         tasks = unique([p.task for p in programs])
         programs_by_task = Dict(t => [p for p in programs if p.task == t] for t in tasks)
-        new{Match}(programs, programs_by_task)
+        new(programs, programs_by_task)
     end
 end
 
@@ -26,33 +26,7 @@ function size(corpus::Corpus) :: Float32
     sum(minimum.(size, values(corpus.programs_by_task)))
 end
 
-mutable struct Match
-    expr::SExpr{Match} # pointer to subtree in original corpus
-    all_args::Vector{SExpr{Match}}
-    unique_args::Vector{SExpr{Match}} # pointers to first instance of each arg within subtree ie args[1] is #0
-    holes::Vector{SExpr{Match}} # pointers to holes within subtree
-    holes_stack::Vector{SExpr{Match}} # expanded holes
-    local_utility_stack::Vector{Float32} # past utilities
-    program::Program{Match} # which program this subtree appears in
-    size::Float32
-    num_nodes::Int
-    struct_hash::Int
 
-    # Tracks Eqn 12: https://arxiv.org/pdf/2211.16605.pdf
-    local_utility::Float32
-    
-    cumulative_utility::Float32
-    accept_rewrite::Bool
-    is_active::Bool
-    id::Int
-
-    # conversions between a symbol &foo and it's index %0
-    sym_of_idx::Vector{Symbol}
-    idx_of_sym::Dict{Symbol, Int} # idx_of_sym[sym_of_idx[i]] == i
-    idx_is_fresh::Vector{Bool} # stack of whether each idx is fresh across the levels of search, used for backtracking
-
-    Match(expr, program, id) = new(expr, [], [], [expr], [], [], program, size(expr), num_nodes(expr), struct_hash(expr), local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol, Int}(), Bool[])
-end
 
 abstract type Expansion end
 
@@ -65,12 +39,16 @@ struct PossibleExpansion{T <: Expansion}
     end
 end
 
-struct SyntacticExpansion <: Expansion
-    head::Symbol
+struct SyntacticLeafExpansion <: Expansion
+    leaf::Symbol
+end
+
+struct SyntacticNodeExpansion <: Expansion
     num_holes::Int
 end
 
-Base.show(io::IO, obj::SyntacticExpansion) = pretty_show(io, obj; indent=false)
+Base.show(io::IO, obj::SyntacticLeafExpansion) = pretty_show(io, obj; indent=false)
+Base.show(io::IO, obj::SyntacticNodeExpansion) = pretty_show(io, obj; indent=false)
 
 struct AbstractionExpansion <: Expansion
     index::Int
@@ -92,9 +70,6 @@ mutable struct Abstraction
 end
 
 Base.show(io::IO, obj::Abstraction) = pretty_show(io, obj; indent=false)
-
-
-
 
 Base.copy(abstraction::Abstraction) = Abstraction(copy(abstraction.body), abstraction.arity)
 
@@ -140,8 +115,8 @@ end
 mutable struct SearchState
     # config
     config::SearchConfig
-    corpus::Corpus{Match}
-    all_nodes::Vector{SExpr{Match}} # all treenodes in bottom up order - like a version of .matches that is never filtered down
+    corpus::Corpus
+    all_nodes::Vector{SExpr} # all treenodes in bottom up order - like a version of .matches that is never filtered down
 
     # running data
     plot_data::PlotData
@@ -151,12 +126,12 @@ mutable struct SearchState
 
     # current abstraction
     abstraction::Abstraction
-    holes::Vector{SExpr{Match}}
+    holes::Vector{SExpr}
     matches::Vector{Match}
     expansions::Vector{PossibleExpansion}
 
     # backtracking data
-    holes_stack::Vector{SExpr{Match}}
+    holes_stack::Vector{SExpr}
     expansions_stack::Vector{Vector{PossibleExpansion}}
     matches_stack::Vector{Vector{Match}}
     past_expansions::Vector{PossibleExpansion}
@@ -206,7 +181,7 @@ function init_all_corpus_matches(corpus) :: Vector{Match}
     for program in corpus.programs
         for expr in subexpressions(program.expr) # child-first traversal
             match = Match(expr, program, id)
-            expr.data = match
+            expr.match = match
             push!(matches, match)
             id += 1
         end
@@ -249,7 +224,7 @@ function expand_search_state!(search_state)
 
 
     !search_state.config.verbose || printstyled(search_state, "\n", color=:yellow);
-    # !verbose || println("possible_expansions!() -> ", length(search_state.expansions), " ", [e.data for e in search_state.expansions])
+    # !verbose || println("possible_expansions!() -> ", length(search_state.expansions), " ", [e.match for e in search_state.expansions])
     search_state.stats.comparable_worklist_steps += 1
     search_state.config.plot && push!(plot_data.depth, (search_state.stats.expansions, length(search_state.past_expansions)))
     search_state.config.plot && push!(plot_data.num_matches, (search_state.stats.expansions, length(search_state.matches)))
