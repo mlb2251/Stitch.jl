@@ -42,7 +42,10 @@ mutable struct Match
     idx_of_sym::Dict{Symbol, Int} # idx_of_sym[sym_of_idx[i]] == i
     idx_is_fresh::Vector{Bool} # stack of whether each idx is fresh across the levels of search, used for backtracking
 
-    Match(expr, program, id) = new(expr, [], [], [expr], [], [], program, size(expr), num_nodes(expr), struct_hash(expr), local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol, Int}(), Bool[])
+    # metavariable for continuation
+    continuation::Union{Nothing, SExprGeneric{Match}}
+
+    Match(expr, program, id) = new(expr, SExprGeneric{Match}[], SExprGeneric{Match}[], [expr], SExprGeneric{Match}[], Float32[], program, size(expr), num_nodes(expr), struct_hash(expr), local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol, Int}(), Bool[], nothing)
 end
 
 const SExpr = SExprGeneric{Match}

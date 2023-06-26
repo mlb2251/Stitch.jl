@@ -52,6 +52,12 @@ end
 
 Base.show(io::IO, obj::AbstractionExpansion) = pretty_show(io, obj; indent=false)
 
+struct ContinuationExpansion <: Expansion
+end
+
+Base.show(io::IO, obj::AbstractionExpansion) = pretty_show(io, obj; indent=false)
+
+
 struct SymbolExpansion <: Expansion
     idx::Int
 end

@@ -97,6 +97,8 @@ function abstraction_expansions!(search_state)
     # note: abstracting out a symbol or subtree containing a symbol is okay because you can pass
     # a symbol in just fine bc ur doing it at the call site so it's bound correctly already.
 
+    isnothing(search_state.holes[end]) && return # no identity abstraction allowed
+
     # variable reuse
     for i in 0:search_state.abstraction.arity-1
         matches = copy(search_state.matches)
@@ -116,6 +118,28 @@ function abstraction_expansions!(search_state)
             AbstractionExpansion(search_state.abstraction.arity, true),
         ))
     end
+end
+
+function continuation_expansions!(search_state)
+
+    node = search_state.holes[end]
+    isnothing(node.parent) && return # no identity abstraction allowed
+
+    while !isnothing(node.parent)
+        (parent,i) = node.parent
+        # check that our parent is a semicolon and we are the righthand child
+        # so in particular parent == (semi _ node)
+        i == 3 || return
+        parent.children[1] === :semi || return
+        node = parent
+    end
+
+    isnothing(search_state.continuation) || error("shouldn't be possible to have two continuation expansions!")
+
+    push!(search_state.expansions, PossibleExpansion(
+        search_state.matches, # all the same matches
+        ContinuationExpansion(),
+    ))
 end
 
 
@@ -259,6 +283,18 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
     end
 end
 
+function expand!(search_state, expansion::PossibleExpansion{ContinuationExpansion}, hole)
+
+    hole.leaf = Symbol("#continuation")
+
+    for match in search_state.matches
+        hole = pop!(match.holes)
+        push!(match.holes_stack, hole)
+        @assert isnothing(match.continuation)
+        match.continuation = hole;
+    end
+end
+
 
 
 function unexpand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpansion}, hole)
@@ -323,6 +359,18 @@ function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, 
             delete!(match.idx_of_sym, hole.leaf)
         end
 
+    end
+end
+
+function unexpand!(search_state, expansion::PossibleExpansion{ContinuationExpansion}, hole)
+
+    hole.leaf = SYM_HOLE
+
+    for match in search_state.matches
+        hole = pop!(match.holes_stack)
+        push!(match.holes, hole)
+        @assert match.continuation === hole
+        match.continuation = nothing;
     end
 end
 

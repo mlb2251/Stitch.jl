@@ -66,6 +66,9 @@ function rewrite_inner(expr::SExpr, search_state::SearchState) :: SExpr
         for arg in expr.match.unique_args
             push!(children, rewrite_inner(arg, search_state))
         end
+        if !isnothing(expr.match.continuation)
+            push!(children, rewrite_inner(expr.match.continuation, search_state))
+        end
         return sexpr_node(children)
     else
         # don't rewrite - just recurse
