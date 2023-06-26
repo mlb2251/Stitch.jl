@@ -126,7 +126,7 @@ function expand_general!(search_state, expansion)
 
     # pop hole
     hole = pop!(search_state.holes)
-    hole.leaf === Symbol("??") || error("not a hole")
+    is_hole(hole) || error("not a hole")
     push!(search_state.holes_stack,hole)
 
     # save state for backtracking
@@ -264,7 +264,7 @@ end
 function unexpand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpansion}, hole)
     
     # set the head symbol of the hole
-    hole.leaf = Symbol("??")
+    hole.leaf = SYM_HOLE
 
     for match in search_state.matches
         hole = pop!(match.holes_stack) 
@@ -273,11 +273,11 @@ function unexpand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpan
 end
 
 function unexpand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpansion}, hole)
-    hole.leaf = Symbol("??")
+    hole.leaf = SYM_HOLE
 
     # pop from .args and search_state.holes
     for _ in 1:expansion.data.num_holes
-        pop!(hole.children).leaf === pop!(search_state.holes).leaf === Symbol("??") || error("not a hole")
+        pop!(hole.children).leaf === pop!(search_state.holes).leaf === SYM_HOLE || error("not a hole")
     end
 
     for match in search_state.matches
@@ -294,7 +294,7 @@ end
 
 function unexpand!(search_state, expansion::PossibleExpansion{AbstractionExpansion}, hole)
 
-    hole.leaf = Symbol("??")
+    hole.leaf = SYM_HOLE
     if expansion.data.fresh
         search_state.abstraction.arity -= 1
     end
@@ -312,7 +312,7 @@ end
 function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, hole)
     
     # set the head symbol of the hole
-    hole.leaf = Symbol("??")
+    hole.leaf = SYM_HOLE
 
     for match in search_state.matches
         hole = pop!(match.holes_stack) 

@@ -80,7 +80,7 @@ Base.show(io::IO, obj::Stats) = pretty_show(io, obj; indent=true)
 
 Base.@kwdef mutable struct SearchConfig
     new_abstraction_name::Symbol = :placeholder
-    track::Union{String, Nothing} = nothing
+    track::Union{SExpr, Nothing} = nothing
     max_arity::Int = 2
     upper_bound_fn::Function = upper_bound_with_conflicts
     expansion_processor::Union{Function, Nothing} = nothing
@@ -189,12 +189,14 @@ function is_tracked(search_state; expansion=nothing)
 
     isnothing(expansion) || expand_general!(search_state, expansion)
 
-    body = string(search_state.abstraction.body)
-    suffix = split(body, "??")[end]
+    # body = string(search_state.abstraction.body)
+    # suffix = split(body, "??")[end]
+    res = could_expand_to(search_state.abstraction.body, search_state.config.track)
 
     isnothing(expansion) || unexpand_general!(search_state)
 
-    endswith(search_state.config.track, suffix)
+    # endswith(search_state.config.track, suffix)
+    res
 end
 
 function is_tracked_pruned(search_state; expansion=nothing, message="message here")
@@ -261,9 +263,10 @@ function stitch_search(corpus, config)
         expand_general!(search_state, expansion)
 
         # for when we are tracking a specific abstraction
-        if is_tracked(search_state)
+        tracked = is_tracked(search_state)
+        if tracked
             silent || printstyled("TRACK: ", search_state.abstraction.body, "\n", color=:green, bold=true)
-        elseif config.follow && !is_tracked(search_state)
+        elseif config.follow && !tracked
             unexpand_general!(search_state)
             continue
         end
@@ -319,7 +322,7 @@ function stitch_search(corpus, config)
 
             # return now if this is `follow=true`
             if config.follow
-                string(search_state.abstraction.body) == config.track || error("shouldnt be possible")
+                string(search_state.abstraction.body) == string(config.track) || error("shouldnt be possible")
                 plot && break
                 return search_state
             end
@@ -352,7 +355,7 @@ function stitch_search(corpus, config)
     config = deepcopy(config)
     config.max_arity=10000
     config.verbose = config.verbose_best = config.plot = false
-    config.track = string(search_state.best_abstraction.body)
+    config.track = search_state.best_abstraction.body
     config.follow = config.silent = config.allow_single_task = true
     res = stitch_search(corpus,config)
     isnothing(res) && error("shouldnt be possible - we found it the first time around without tracking")

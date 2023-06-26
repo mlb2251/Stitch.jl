@@ -94,6 +94,21 @@ function struct_hash(e::SExpr) :: Int
     return global_struct_hash[node]
 end
 
+
+"""
+Checks if one expression could be expanded to obtain another expression
+"""
+function could_expand_to(ancestor::SExpr, descendant::SExpr)
+    is_hole(ancestor) && return true
+    is_leaf(ancestor) && return ancestor.leaf === descendant.leaf
+    length(ancestor.children) == length(descendant.children) || return false
+    for (a,d) in zip(ancestor.children, descendant.children)
+        could_expand_to(a,d) || return false
+    end
+    true
+end
+
+
 function curried_application(f::Symbol, args) :: SExpr
     expr = sexpr_leaf(f)
     for arg in args
@@ -102,8 +117,11 @@ function curried_application(f::Symbol, args) :: SExpr
     expr
 end
 
+const SYM_HOLE = Symbol("??")
+new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
 
-new_hole(parent_and_argidx) = sexpr_leaf(Symbol("??"); parent=parent_and_argidx)
+
+is_hole(e::SExpr) = e.leaf === SYM_HOLE
 
 "child-first traversal"
 function subexpressions(e::SExpr; subexprs = SExpr[])
@@ -133,13 +151,19 @@ num_nodes(e::SExpr) = 1 + sum(num_nodes, e.children, init=0)
 Base.show(io::IO, e::SExpr) = begin    
     if is_leaf(e)
         print(io, e.leaf)
+        @assert isempty(e.children)
     elseif e.leaf === :app
         print(io, "(", join(uncurry(e), " "), ")")
     else
-        print(io, "(", join(e.children, " "), ")")
+        print(io, "(")
+        for child in e.children
+            Base.show(io, child)
+            print(io, " ")
+        end
+        print(io, ")")
+        # print(io, "(", join(e.children, " "), ")")
     end
 end
-
 
 """
 takes (app (app f x) y) and returns [f, x, y]
