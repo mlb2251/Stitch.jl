@@ -6,6 +6,7 @@ function possible_expansions!(search_state)
     syntactic_expansions!(search_state)
     abstraction_expansions!(search_state)
     symbol_expansions!(search_state)
+    continuation_expansions!(search_state)
 
     # sort!(search_state.expansions, by=e -> length(e.matches)*e.matches[1].local_utility)
     # sort!(search_state.expansions, by=e -> upper_bound_fn(search_state,e))
