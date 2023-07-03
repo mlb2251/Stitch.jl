@@ -8,7 +8,7 @@ function rewrite(search_state::SearchState) :: Tuple{Corpus,Float32,Float32}
 
     compressive_utility = size(search_state.corpus) - size(rewritten)
 
-    @show rewritten
+    # @show rewritten
     if !isapprox(cumulative_utility, compressive_utility)
         # error("[$search_state] cumulative_utility != compressive_utility: $cumulative_utility != $compressive_utility")
         println("ERROR: [$search_state] cumulative_utility != compressive_utility: $cumulative_utility != $compressive_utility")

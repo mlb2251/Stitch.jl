@@ -98,5 +98,3 @@ function utility_rewrite(search_state) :: Float32
 end
 
 is_identity_abstraction(search_state) = length(search_state.past_expansions) == 1 && isa(search_state.past_expansions[1].match, AbstractionExpansion)
-
-# function utility_rewrite_local(search_state, match)

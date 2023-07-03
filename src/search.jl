@@ -55,7 +55,7 @@ Base.show(io::IO, obj::AbstractionExpansion) = pretty_show(io, obj; indent=false
 struct ContinuationExpansion <: Expansion
 end
 
-Base.show(io::IO, obj::AbstractionExpansion) = pretty_show(io, obj; indent=false)
+Base.show(io::IO, obj::ContinuationExpansion) = pretty_show(io, obj; indent=false)
 
 
 struct SymbolExpansion <: Expansion
@@ -95,6 +95,7 @@ Base.@kwdef mutable struct SearchConfig
     follow::Bool = false
     plot::Bool = false
     silent::Bool = false
+    only_match_semi::Bool = false
     allow_single_task::Bool = true
     no_opt_arg_capture::Bool = false
     no_opt_redundant_args::Bool = false
@@ -190,6 +191,14 @@ function init_all_corpus_matches(corpus) :: Vector{Match}
     matches
 end
 
+function filter_init_allowed_matches!(search_state)
+    if search_state.config.only_match_semi
+        filter!(search_state.matches) do m
+            length(m.expr.children) == 3 && m.expr.children[1].leaf === :semi
+        end
+    end
+end
+
 function is_tracked(search_state; expansion=nothing)
     isnothing(search_state.config.track) && return false
 
@@ -238,6 +247,8 @@ function stitch_search(corpus, config)
     search_state = SearchState(corpus, config)
     
     (; verbose, verbose_best, plot, silent) = config
+
+    filter_init_allowed_matches!(search_state)
 
     expand_search_state!(search_state)
 
