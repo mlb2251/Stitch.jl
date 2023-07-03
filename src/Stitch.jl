@@ -1,6 +1,6 @@
 module Stitch
 
-export SExpr, stitch_search, Corpus, Program, compress, load_corpus
+export SExpr, stitch_search, Corpus, Program, compress, load_corpus, compress_imperative
 
 using AutoHashEquals
 

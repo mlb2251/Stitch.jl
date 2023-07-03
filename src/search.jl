@@ -95,8 +95,14 @@ Base.@kwdef mutable struct SearchConfig
     follow::Bool = false
     plot::Bool = false
     silent::Bool = false
-    only_match_semi::Bool = false
     allow_single_task::Bool = true
+
+    # imperative stitch
+    imperative::Bool = false
+    only_match_semi::Bool = false
+    autoexpand_head::Bool = false # auto expand head of list
+
+    # optimizations
     no_opt_arg_capture::Bool = false
     no_opt_redundant_args::Bool = false
 end
@@ -422,6 +428,16 @@ function compress(original_corpus; iterations=3, kwargs...)
     end
     println("Total compression: ", size(original_corpus) / size(corpus), "x")
     return abstractions
+end
+
+function compress_imperative(original_corpus; kwargs...)
+    compress(
+        original_corpus;
+        autoexpand_head = true,
+        only_match_semi = true,
+        allow_single_task = false,
+        verbose_best = false,
+    )
 end
 
 function load_corpus(file;truncate=nothing, kwargs...)
