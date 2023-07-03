@@ -1,5 +1,5 @@
 using Plots
-
+using JSON
 
 mutable struct Corpus
     programs::Vector{Program}
@@ -413,4 +413,10 @@ function compress(original_corpus; iterations=3, kwargs...)
     return abstractions
 end
 
-
+function load_corpus(file;truncate=nothing, kwargs...)
+    json = JSON.parsefile(file)
+    if !isnothing(truncate)
+        json = json[1:truncate]
+    end
+    Corpus([Program(parse(SExpr, p),i,i) for (i,p) in enumerate(json)])
+end
