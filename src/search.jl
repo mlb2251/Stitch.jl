@@ -1,19 +1,14 @@
 using Plots
+using JSON
 
-mutable struct Program{D}
-    expr::SExpr{D}
-    id::Int
-    task::Int
-end
-
-mutable struct Corpus{D}
-    programs::Vector{Program{D}}
-    programs_by_task::Dict{Int, Vector{Program{D}}}
+mutable struct Corpus
+    programs::Vector{Program}
+    programs_by_task::Dict{Int, Vector{Program}}
 
     function Corpus(programs)
         tasks = unique([p.task for p in programs])
         programs_by_task = Dict(t => [p for p in programs if p.task == t] for t in tasks)
-        new{Match}(programs, programs_by_task)
+        new(programs, programs_by_task)
     end
 end
 
@@ -26,33 +21,7 @@ function size(corpus::Corpus) :: Float32
     sum(minimum.(size, values(corpus.programs_by_task)))
 end
 
-mutable struct Match
-    expr::SExpr{Match} # pointer to subtree in original corpus
-    all_args::Vector{SExpr{Match}}
-    unique_args::Vector{SExpr{Match}} # pointers to first instance of each arg within subtree ie args[1] is #0
-    holes::Vector{SExpr{Match}} # pointers to holes within subtree
-    holes_stack::Vector{SExpr{Match}} # expanded holes
-    local_utility_stack::Vector{Float32} # past utilities
-    program::Program{Match} # which program this subtree appears in
-    size::Float32
-    num_nodes::Int
-    struct_hash::Int
 
-    # Tracks Eqn 12: https://arxiv.org/pdf/2211.16605.pdf
-    local_utility::Float32
-    
-    cumulative_utility::Float32
-    accept_rewrite::Bool
-    is_active::Bool
-    id::Int
-
-    # conversions between a symbol &foo and it's index %0
-    sym_of_idx::Vector{Symbol}
-    idx_of_sym::Dict{Symbol, Int} # idx_of_sym[sym_of_idx[i]] == i
-    idx_is_fresh::Vector{Bool} # stack of whether each idx is fresh across the levels of search, used for backtracking
-
-    Match(expr, program, id) = new(expr, [], [], [expr], [], [], program, size(expr), num_nodes(expr), struct_hash(expr), local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol, Int}(), Bool[])
-end
 
 abstract type Expansion end
 
@@ -65,12 +34,16 @@ struct PossibleExpansion{T <: Expansion}
     end
 end
 
-struct SyntacticExpansion <: Expansion
-    head::Symbol
+struct SyntacticLeafExpansion <: Expansion
+    leaf::Symbol
+end
+
+struct SyntacticNodeExpansion <: Expansion
     num_holes::Int
 end
 
-Base.show(io::IO, obj::SyntacticExpansion) = pretty_show(io, obj; indent=false)
+Base.show(io::IO, obj::SyntacticLeafExpansion) = pretty_show(io, obj; indent=false)
+Base.show(io::IO, obj::SyntacticNodeExpansion) = pretty_show(io, obj; indent=false)
 
 struct AbstractionExpansion <: Expansion
     index::Int
@@ -78,6 +51,12 @@ struct AbstractionExpansion <: Expansion
 end
 
 Base.show(io::IO, obj::AbstractionExpansion) = pretty_show(io, obj; indent=false)
+
+struct ContinuationExpansion <: Expansion
+end
+
+Base.show(io::IO, obj::AbstractionExpansion) = pretty_show(io, obj; indent=false)
+
 
 struct SymbolExpansion <: Expansion
     idx::Int
@@ -93,9 +72,6 @@ end
 
 Base.show(io::IO, obj::Abstraction) = pretty_show(io, obj; indent=false)
 
-
-
-
 Base.copy(abstraction::Abstraction) = Abstraction(copy(abstraction.body), abstraction.arity)
 
 @Base.kwdef mutable struct Stats
@@ -110,7 +86,7 @@ Base.show(io::IO, obj::Stats) = pretty_show(io, obj; indent=true)
 
 Base.@kwdef mutable struct SearchConfig
     new_abstraction_name::Symbol = :placeholder
-    track::Union{String, Nothing} = nothing
+    track::Union{SExpr, Nothing} = nothing
     max_arity::Int = 2
     upper_bound_fn::Function = upper_bound_with_conflicts
     expansion_processor::Union{Function, Nothing} = nothing
@@ -140,8 +116,8 @@ end
 mutable struct SearchState
     # config
     config::SearchConfig
-    corpus::Corpus{Match}
-    all_nodes::Vector{SExpr{Match}} # all treenodes in bottom up order - like a version of .matches that is never filtered down
+    corpus::Corpus
+    all_nodes::Vector{SExpr} # all treenodes in bottom up order - like a version of .matches that is never filtered down
 
     # running data
     plot_data::PlotData
@@ -151,12 +127,12 @@ mutable struct SearchState
 
     # current abstraction
     abstraction::Abstraction
-    holes::Vector{SExpr{Match}}
+    holes::Vector{SExpr}
     matches::Vector{Match}
     expansions::Vector{PossibleExpansion}
 
     # backtracking data
-    holes_stack::Vector{SExpr{Match}}
+    holes_stack::Vector{SExpr}
     expansions_stack::Vector{Vector{PossibleExpansion}}
     matches_stack::Vector{Vector{Match}}
     past_expansions::Vector{PossibleExpansion}
@@ -206,7 +182,7 @@ function init_all_corpus_matches(corpus) :: Vector{Match}
     for program in corpus.programs
         for expr in subexpressions(program.expr) # child-first traversal
             match = Match(expr, program, id)
-            expr.data = match
+            expr.match = match
             push!(matches, match)
             id += 1
         end
@@ -215,16 +191,18 @@ function init_all_corpus_matches(corpus) :: Vector{Match}
 end
 
 function is_tracked(search_state; expansion=nothing)
-    !isnothing(search_state.config.track) || return false
+    isnothing(search_state.config.track) && return false
 
     isnothing(expansion) || expand_general!(search_state, expansion)
 
-    body = string(search_state.abstraction.body)
-    suffix = split(body, "??")[end]
+    # body = string(search_state.abstraction.body)
+    # suffix = split(body, "??")[end]
+    res = could_expand_to(search_state.abstraction.body, search_state.config.track)
 
     isnothing(expansion) || unexpand_general!(search_state)
 
-    endswith(search_state.config.track, suffix)
+    # endswith(search_state.config.track, suffix)
+    res
 end
 
 function is_tracked_pruned(search_state; expansion=nothing, message="message here")
@@ -249,7 +227,7 @@ function expand_search_state!(search_state)
 
 
     !search_state.config.verbose || printstyled(search_state, "\n", color=:yellow);
-    # !verbose || println("possible_expansions!() -> ", length(search_state.expansions), " ", [e.data for e in search_state.expansions])
+    # !verbose || println("possible_expansions!() -> ", length(search_state.expansions), " ", [e.match for e in search_state.expansions])
     search_state.stats.comparable_worklist_steps += 1
     search_state.config.plot && push!(plot_data.depth, (search_state.stats.expansions, length(search_state.past_expansions)))
     search_state.config.plot && push!(plot_data.num_matches, (search_state.stats.expansions, length(search_state.matches)))
@@ -291,9 +269,10 @@ function stitch_search(corpus, config)
         expand_general!(search_state, expansion)
 
         # for when we are tracking a specific abstraction
-        if is_tracked(search_state)
+        tracked = is_tracked(search_state)
+        if tracked
             silent || printstyled("TRACK: ", search_state.abstraction.body, "\n", color=:green, bold=true)
-        elseif config.follow && !is_tracked(search_state)
+        elseif config.follow && !tracked
             unexpand_general!(search_state)
             continue
         end
@@ -349,7 +328,7 @@ function stitch_search(corpus, config)
 
             # return now if this is `follow=true`
             if config.follow
-                string(search_state.abstraction.body) == config.track || error("shouldnt be possible")
+                string(search_state.abstraction.body) == string(config.track) || error("shouldnt be possible")
                 plot && break
                 return search_state
             end
@@ -382,7 +361,7 @@ function stitch_search(corpus, config)
     config = deepcopy(config)
     config.max_arity=10000
     config.verbose = config.verbose_best = config.plot = false
-    config.track = string(search_state.best_abstraction.body)
+    config.track = search_state.best_abstraction.body
     config.follow = config.silent = config.allow_single_task = true
     res = stitch_search(corpus,config)
     isnothing(res) && error("shouldnt be possible - we found it the first time around without tracking")
@@ -434,4 +413,10 @@ function compress(original_corpus; iterations=3, kwargs...)
     return abstractions
 end
 
-
+function load_corpus(file;truncate=nothing, kwargs...)
+    json = JSON.parsefile(file)
+    if !isnothing(truncate)
+        json = json[1:truncate]
+    end
+    Corpus([Program(parse(SExpr, p),i,i) for (i,p) in enumerate(json)])
+end

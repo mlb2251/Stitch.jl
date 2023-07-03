@@ -1,159 +1,233 @@
 """
-An expression. Contains parent pointer
+An expression. See SExpr for the version that's always used - the definition is split into
+SExprGeneric and SExpr because mutually recursive types are supported in julia so we can't
+directly have Expr and Match that point to each other and without using generics.
 """
-mutable struct SExpr{D}
-    head::Symbol
-    args::Vector{SExpr{D}}
-
-    parent::Union{SExpr, Nothing}
-    arg_idx::Union{Int, Nothing}
-
-    data::Union{D, Nothing}
-
-    # type annotation on args forces the more efficient passing in of a SExpr vector
-    function SExpr(head; args = Vector{SExpr{Match}}(), parent=nothing)
-        expr = new{Match}(head, args, parent, nothing, nothing)
-        for (i,arg) in enumerate(args)
-            isnothing(arg.parent) || error("arg already has parent")
-            arg.parent = expr
-            arg.arg_idx = i
-        end
-        expr
-    end
+mutable struct SExprGeneric{D}
+    leaf::Union{Symbol,Nothing}
+    children::Vector{SExprGeneric{D}}
+    parent::Union{Tuple{SExprGeneric{D},Int}, Nothing} # parent and which index of the child it is
+    match::Union{D, Nothing}
 end
+
+mutable struct ProgramGeneric{D}
+    expr::SExprGeneric{D}
+    id::Int
+    task::Int
+end
+
+mutable struct Match
+    expr::SExprGeneric{Match} # pointer to subtree in original corpus
+    all_args::Vector{SExprGeneric{Match}}
+    unique_args::Vector{SExprGeneric{Match}} # pointers to first instance of each arg within subtree ie args[1] is #0
+    holes::Vector{SExprGeneric{Match}} # pointers to holes within subtree
+    holes_stack::Vector{SExprGeneric{Match}} # expanded holes
+    local_utility_stack::Vector{Float32} # past utilities
+
+    program::ProgramGeneric{Match} # which program this subtree appears in
+    size::Float32
+    num_nodes::Int
+    struct_hash::Int
+
+    # Tracks Eqn 12: https://arxiv.org/pdf/2211.16605.pdf
+    local_utility::Float32
+    
+    cumulative_utility::Float32
+    accept_rewrite::Bool
+    is_active::Bool
+    id::Int
+
+    # conversions between a symbol &foo and it's index %0
+    sym_of_idx::Vector{Symbol}
+    idx_of_sym::Dict{Symbol, Int} # idx_of_sym[sym_of_idx[i]] == i
+    idx_is_fresh::Vector{Bool} # stack of whether each idx is fresh across the levels of search, used for backtracking
+
+    # metavariable for continuation
+    continuation::Union{Nothing, SExprGeneric{Match}}
+
+    Match(expr, program, id) = new(expr, SExprGeneric{Match}[], SExprGeneric{Match}[], [expr], SExprGeneric{Match}[], Float32[], program, size(expr), num_nodes(expr), struct_hash(expr), local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol, Int}(), Bool[], nothing)
+end
+
+const SExpr = SExprGeneric{Match}
+const Program = ProgramGeneric{Match}
+
+function sexpr_node(children::Vector{SExpr}; parent=nothing)
+    expr = SExpr(nothing, children, parent, nothing)
+    for (i,child) in enumerate(children)
+        isnothing(child.parent) || error("arg already has parent")
+        child.parent = (expr,i)
+    end
+    expr 
+end
+
+function sexpr_leaf(leaf::Symbol; parent=nothing)
+    SExpr(leaf, Vector{SExpr}(), parent, nothing)
+end
+
+is_leaf(e::SExpr) = !isnothing(e.leaf)
 
 function Base.copy(e::SExpr)
-    SExpr(e.head, args=[copy(arg) for arg in e.args])
+    SExpr(
+        e.leaf,
+        [copy(child) for child in e.children],
+        nothing,
+        nothing
+    )
 end
 
-# getproperty!(e::SExpr, f::Symbol) = getfield(e, f)
-
 @auto_hash_equals struct HashNode
-    head::Symbol
-    args::Vector{Int}
+    leaf::Union{Symbol,Nothing}
+    children::Vector{Int}
 end
 
 const global_struct_hash = Dict{HashNode, Int}()
 
 """
 sets structural hash value, possibly with side effects of updating the structural hash, and
-sets e.data.struct_hash. Requires .data to be set so we know this will be used immutably
+sets e.match.struct_hash. Requires .match to be set so we know this will be used immutably
 """
 function struct_hash(e::SExpr) :: Int
-    isnothing(e.data) || isnothing(e.data.struct_hash) || return e.data.struct_hash
+    isnothing(e.match) || isnothing(e.match.struct_hash) || return e.match.struct_hash
 
-    node = HashNode(e.head, map(struct_hash,e.args))
+    node = HashNode(e.leaf, map(struct_hash,e.children))
     if !haskey(global_struct_hash, node)
         global_struct_hash[node] = length(global_struct_hash) + 1
     end
-    isnothing(e.data) || (e.data.struct_hash = global_struct_hash[node])
+    isnothing(e.match) || (e.match.struct_hash = global_struct_hash[node])
     return global_struct_hash[node]
 end
 
+
+"""
+Checks if one expression could be expanded to obtain another expression
+"""
+function could_expand_to(ancestor::SExpr, descendant::SExpr)
+    is_hole(ancestor) && return true
+    is_leaf(ancestor) && return ancestor.leaf === descendant.leaf
+    length(ancestor.children) == length(descendant.children) || return false
+    for (a,d) in zip(ancestor.children, descendant.children)
+        could_expand_to(a,d) || return false
+    end
+    true
+end
+
+
 function curried_application(f::Symbol, args) :: SExpr
-    expr = SExpr(f)
+    expr = sexpr_leaf(f)
     for arg in args
-        expr = SExpr(:app, args=[expr, arg])
+        expr = sexpr_node([sexpr_leaf(:app), expr, arg])
     end
     expr
 end
 
+const SYM_HOLE = Symbol("??")
+new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
 
-new_hole(parent) = SExpr(Symbol("??"), parent=parent)
+
+is_hole(e::SExpr) = e.leaf === SYM_HOLE
 
 "child-first traversal"
 function subexpressions(e::SExpr; subexprs = SExpr[])
-    for arg in e.args
-        subexpressions(arg, subexprs=subexprs)
+    for child in e.children
+        subexpressions(child, subexprs=subexprs)
     end
     push!(subexprs, e)
 end
 
-function size(e::SExpr) :: Float32
-    if isempty(e.args) 1. else .01 + sum(size, e.args) end
-end
+size(e::SExpr) = size(e.leaf) + sum(size, e.children, init=0.)
+size(leaf::Symbol) = 1.
+size(leaf::Nothing) = 0.
 
-num_nodes(e::SExpr) = 1 + sum(num_nodes, e.args, init=0)
+num_nodes(e::SExpr) = 1 + sum(num_nodes, e.children, init=0)
 
-function size_no_abstraction_var(e::SExpr) :: Float32
-    if startswith(string(e.head), "#")
-        return 0
-    end
-    if isempty(e.args)
-        return 1.
-    end
-    return .01 + sum(size_no_abstraction_var, e.args)
-end
+# function size_no_abstraction_var(e::SExpr) :: Float32
+#     if startswith(string(e.head), "#")
+#         return 0
+#     end
+#     if isempty(e.args)
+#         return 1.
+#     end
+#     return size(e.head) + sum(size_no_abstraction_var, e.args)
+# end
 
 
 Base.show(io::IO, e::SExpr) = begin    
-    if isempty(e.args)
-        print(io, e.head)
-    elseif e.head === :app
+    if is_leaf(e)
+        print(io, e.leaf)
+        @assert isempty(e.children)
+    elseif e.leaf === :app
         print(io, "(", join(uncurry(e), " "), ")")
     else
-        print(io, "(", e.head, " ", join(e.args, " "), ")")
+        print(io, "(")
+        for child in e.children
+            Base.show(io, child)
+            print(io, " ")
+        end
+        print(io, ")")
+        # print(io, "(", join(e.children, " "), ")")
     end
 end
-
 
 """
 takes (app (app f x) y) and returns [f, x, y]
 """
 function uncurry(e::SExpr)
-    if e.head === :app
-        res = uncurry(e.args[1])
-        return push!(res, e.args[2])
-    else
-        return [e]
-    end
+    (length(e.children) != 3 || e.children[1].leaf !== :app) && return[e]
+    res = uncurry(e.children[2])
+    return push!(res, e.children[3])
 end
 
+"""
+Parse a string into an SExpr. Uses lisp-like syntax.
 
+"foo" -> SAtom(:foo)
+"(foo)" -> SList([SAtom(:foo)])
+"((foo))" -> SList([SList([SAtom(:foo)])]) 
+"(foo bar baz)" -> SList([SAtom(:foo), SAtom(:bar), SAtom(:baz)])
+"()" -> SList([])
+
+"""
 function Base.parse(::Type{SExpr}, original_s::String)
-    # add guaranteed spacing around parens so they parse into their own items
+    # add guaranteed parens around whole thing and guaranteed spacing around parens so they parse into their own items
     s = replace(original_s, "(" => " ( ", ")" => " ) ")
 
-    items = SExpr[]
-    item_counts = Int[]
-    item_count = 0
-    depth = 0
-
     # `split` will skip all quantities of all forms of whitespace
-    for item in split(s)
-        if item == "("
-            depth += 1
-            push!(item_counts, item_count)
-            item_count = 0
-        elseif item == ")"
-            depth -= 1
-            if depth < 0
-                error("unbalanced parens: too many close parens")
+    items = split(s)
+    length(items) > 2 || error("SExpr parse called on empty (or all whitespace) string")
+    items[1] != ")" || error("SExpr starts with a closeparen. Found in $original_s")
+
+    # this is a single symbol like "foo" or "bar"
+    length(items) == 1 && return sexpr_leaf(Symbol(items[1]))
+
+    i=0
+    expr_stack = SExpr[]
+    # num_open_parens = Int[]
+
+    while true
+        i += 1
+
+        i <= length(items) || error("unbalanced parens: unclosed parens in $original_s")
+
+        if items[i] == "("
+            push!(expr_stack, sexpr_node(SExpr[]))
+        elseif items[i] == ")"
+            # end an expression: pop the last SExpr off of expr_stack and add it to the SExpr at one level before that
+
+            if length(expr_stack) == 1
+                i == length(items) || error("trailing characters after final closeparen in $original_s")
+                break
             end
 
-            node = items[end-item_count+1]
-            for i in 2:item_count
-                node = SExpr(:app, args=[node, items[end-item_count+i]])
-            end
-            items = items[1:end-item_count]
-
-            push!(items, node)
-            item_count = pop!(item_counts)
-            item_count += 1
+            last = pop!(expr_stack)
+            push!(expr_stack[end].children, last)
         else
-            push!(items, SExpr(Symbol(item)))
-            item_count += 1
+            # any other item like "foo" or "+" is a symbol
+            push!(expr_stack[end].children, sexpr_leaf(Symbol(items[i])))
         end
     end
 
-    depth == 0 || error("unbalanced parens: not enough close parens")
+    length(expr_stack) != 0 || error("unreachable - should have been caught by the first check for string emptiness")
+    length(expr_stack) == 1 || error("unbalanced parens: not enough close parens in $original_s")
 
-    item_count == length(items) || error("item_count != length(items)")
-
-    node = items[1]
-    for i in 2:item_count
-        node = SExpr(:app, [node, items[i]])
-    end
-
-    return node
+    return pop!(expr_stack)
 end

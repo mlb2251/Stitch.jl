@@ -6,6 +6,7 @@ function possible_expansions!(search_state)
     syntactic_expansions!(search_state)
     abstraction_expansions!(search_state)
     symbol_expansions!(search_state)
+    continuation_expansions!(search_state)
 
     # sort!(search_state.expansions, by=e -> length(e.matches)*e.matches[1].local_utility)
     # sort!(search_state.expansions, by=e -> upper_bound_fn(search_state,e))
@@ -23,24 +24,42 @@ Adds the set of expansions to whatever terminal or nonterminal is present at the
 for example :app or :lambda or primitives or variables.
 """
 function syntactic_expansions!(search_state)
-    matches_of_sym = Dict{Symbol,Vector{Match}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
+    matches_of_leaf = Dict{Symbol,Vector{Match}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
+    matches_of_node = Dict{Int,Vector{Match}}()
     for match in search_state.matches
-        sym = match.holes[end].head
-        if startswith(string(sym), "&") # this is a symbol
-            continue
-        end
-        if haskey(matches_of_sym, sym)
-            push!(matches_of_sym[sym], match)
+        if is_leaf(match.holes[end])
+            # leaf case
+            leaf = match.holes[end].leaf
+            startswith(string(leaf), "&") && continue
+
+            if haskey(matches_of_leaf, leaf)
+                push!(matches_of_leaf[leaf], match)
+            else
+                matches_of_leaf[leaf] = [match]
+            end
         else
-            matches_of_sym[sym] = [match]
+            # node case - group with other nodes that have same number of children
+            childcount = length(match.holes[end].children)
+            if haskey(matches_of_node, childcount)
+                push!(matches_of_node[childcount], match)
+            else
+                matches_of_node[childcount] = [match]
+            end
         end
     end
 
-    for (sym, matches) in matches_of_sym
-        if isempty(matches) continue end
+    for (leaf, matches) in matches_of_leaf
+        isempty(matches) && continue
         push!(search_state.expansions, PossibleExpansion(
             matches,
-            SyntacticExpansion(sym, length(matches[1].holes[end].args)),
+            SyntacticLeafExpansion(leaf),
+        ))
+    end
+    for (childcount, matches) in matches_of_node
+        isempty(matches) && continue
+        push!(search_state.expansions, PossibleExpansion(
+            matches,
+            SyntacticNodeExpansion(childcount),
         ))
     end
 end
@@ -49,7 +68,8 @@ end
 function symbol_expansions!(search_state)
     matches_of_idx = Dict{Int,Vector{Match}}()
     for match in search_state.matches
-        sym = match.holes[end].head
+        is_leaf(match.holes[end]) || continue
+        sym = match.holes[end].leaf
         if !startswith(string(sym), "&") # this is not a symbol
             continue
         end
@@ -78,11 +98,13 @@ function abstraction_expansions!(search_state)
     # note: abstracting out a symbol or subtree containing a symbol is okay because you can pass
     # a symbol in just fine bc ur doing it at the call site so it's bound correctly already.
 
+    isnothing(search_state.holes[end]) && return # no identity abstraction allowed
+
     # variable reuse
     for i in 0:search_state.abstraction.arity-1
         matches = copy(search_state.matches)
-        filter!(m -> m.holes[end].data.struct_hash == m.unique_args[i+1].data.struct_hash, matches)
-        # matches = [m for m in search_state.matches if m.holes[end].data.struct_hash == m.unique_args[i+1].data.struct_hash]
+        filter!(m -> m.holes[end].match.struct_hash == m.unique_args[i+1].match.struct_hash, matches)
+        # matches = [m for m in search_state.matches if m.holes[end].match.struct_hash == m.unique_args[i+1].match.struct_hash]
         if isempty(matches) continue end
 
         push!(search_state.expansions, PossibleExpansion(
@@ -99,6 +121,28 @@ function abstraction_expansions!(search_state)
     end
 end
 
+function continuation_expansions!(search_state)
+
+    node = search_state.holes[end]
+    isnothing(node.parent) && return # no identity abstraction allowed
+
+    while !isnothing(node.parent)
+        (parent,i) = node.parent
+        # check that our parent is a semicolon and we are the righthand child
+        # so in particular parent == (semi _ node)
+        i == 3 || return
+        parent.children[1] === :semi || return
+        node = parent
+    end
+
+    isnothing(search_state.continuation) || error("shouldn't be possible to have two continuation expansions!")
+
+    push!(search_state.expansions, PossibleExpansion(
+        search_state.matches, # all the same matches
+        ContinuationExpansion(),
+    ))
+end
+
 
 """
 Saves current state to the stack, and reinitializes as a fresh state
@@ -107,7 +151,7 @@ function expand_general!(search_state, expansion)
 
     # pop hole
     hole = pop!(search_state.holes)
-    hole.head === Symbol("??") || error("not a hole")
+    is_hole(hole) || error("not a hole")
     push!(search_state.holes_stack,hole)
 
     # save state for backtracking
@@ -157,34 +201,50 @@ function unexpand_general!(search_state::SearchState)
 end
 
 
-function expand!(search_state, expansion::PossibleExpansion{SyntacticExpansion}, hole)
+function expand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpansion}, hole)
     
     # set the head symbol of the hole
-    hole.head = expansion.data.head
+    hole.leaf = expansion.data.leaf
 
+    for match in search_state.matches
+        # pop next hole and save it for future backtracking
+        hole = pop!(match.holes)
+        push!(match.holes_stack, hole)
+        @assert is_leaf(hole)
+    end
+end
+
+function expand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpansion}, hole)
+
+    # make it no longer a leaf
+    hole.leaf = nothing
+    
     # add fresh holes to .args and also keep track of them in search_state.abstraction.holes
-    for _ in 1:expansion.data.num_holes
-        h = new_hole(hole)
-        push!(hole.args, h)
+    for i in 1:expansion.data.num_holes
+        h = new_hole((hole,i))
+        push!(hole.children, h)
         push!(search_state.holes, h)
     end
+
     # reverse holes so they go left to right
     # @views reverse!(search_state.holes[end-expansion.data.num_holes+1:end])
 
     for match in search_state.matches
         # pop next hole and save it for future backtracking
         hole = pop!(match.holes)
-        length(hole.args) == expansion.data.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion.data)")
+        length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion.data)")
         push!(match.holes_stack, hole)
 
         # add all the children of the hole as new holes
-        append!(match.holes, hole.args)
+        append!(match.holes, hole.children)
     end
 end
 
+
+
 function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion}, hole)
 
-    hole.head = Symbol("#$(expansion.data.index)")
+    hole.leaf = Symbol("#$(expansion.data.index)")
 
     if expansion.data.fresh
         search_state.abstraction.arity += 1
@@ -203,19 +263,19 @@ end
 function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, hole)
     
     # set the head symbol of the hole
-    hole.head = Symbol("%$(expansion.data.idx)")
+    hole.leaf = Symbol("%$(expansion.data.idx)")
 
     for match in search_state.matches
         # pop next hole and save it for future backtracking
         hole = pop!(match.holes)
         push!(match.holes_stack, hole)
 
-        @assert string(hole.head)[1] == '&'
+        @assert string(hole.leaf)[1] == '&'
 
         if length(match.sym_of_idx) < expansion.data.idx
             # this is a new symbol
-            push!(match.sym_of_idx, hole.head)
-            match.idx_of_sym[hole.head] = expansion.data.idx
+            push!(match.sym_of_idx, hole.leaf)
+            match.idx_of_sym[hole.leaf] = expansion.data.idx
             push!(match.idx_is_fresh,true)
         else
             push!(match.idx_is_fresh,false)
@@ -224,16 +284,37 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
     end
 end
 
+function expand!(search_state, expansion::PossibleExpansion{ContinuationExpansion}, hole)
+
+    hole.leaf = Symbol("#continuation")
+
+    for match in search_state.matches
+        hole = pop!(match.holes)
+        push!(match.holes_stack, hole)
+        @assert isnothing(match.continuation)
+        match.continuation = hole;
+    end
+end
 
 
-function unexpand!(search_state, expansion::PossibleExpansion{SyntacticExpansion}, hole)
+
+function unexpand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpansion}, hole)
     
     # set the head symbol of the hole
-    hole.head = Symbol("??")
+    hole.leaf = SYM_HOLE
+
+    for match in search_state.matches
+        hole = pop!(match.holes_stack) 
+        push!(match.holes, hole)
+    end
+end
+
+function unexpand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpansion}, hole)
+    hole.leaf = SYM_HOLE
 
     # pop from .args and search_state.holes
     for _ in 1:expansion.data.num_holes
-        pop!(hole.args).head === pop!(search_state.holes).head === Symbol("??") || error("not a hole")
+        pop!(hole.children).leaf === pop!(search_state.holes).leaf === SYM_HOLE || error("not a hole")
     end
 
     for match in search_state.matches
@@ -242,14 +323,15 @@ function unexpand!(search_state, expansion::PossibleExpansion{SyntacticExpansion
         end
 
         hole = pop!(match.holes_stack) 
-        length(hole.args) == expansion.data.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
+        length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
         push!(match.holes, hole)
     end
 end
 
+
 function unexpand!(search_state, expansion::PossibleExpansion{AbstractionExpansion}, hole)
 
-    hole.head = Symbol("??")
+    hole.leaf = SYM_HOLE
     if expansion.data.fresh
         search_state.abstraction.arity -= 1
     end
@@ -267,7 +349,7 @@ end
 function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, hole)
     
     # set the head symbol of the hole
-    hole.head = Symbol("??")
+    hole.leaf = SYM_HOLE
 
     for match in search_state.matches
         hole = pop!(match.holes_stack) 
@@ -275,9 +357,21 @@ function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, 
 
         if pop!(match.idx_is_fresh)
             pop!(match.sym_of_idx)
-            delete!(match.idx_of_sym, hole.head)
+            delete!(match.idx_of_sym, hole.leaf)
         end
 
+    end
+end
+
+function unexpand!(search_state, expansion::PossibleExpansion{ContinuationExpansion}, hole)
+
+    hole.leaf = SYM_HOLE
+
+    for match in search_state.matches
+        hole = pop!(match.holes_stack)
+        push!(match.holes, hole)
+        @assert match.continuation === hole
+        match.continuation = nothing;
     end
 end
 
@@ -293,7 +387,7 @@ function redundant_arg_elim(search_state)
     search_state.config.no_opt_redundant_args && return false
     for i in 1:search_state.abstraction.arity
         for j in i+1:search_state.abstraction.arity
-            if all(match -> match.unique_args[i].data.struct_hash == match.unique_args[j].data.struct_hash, search_state.matches)
+            if all(match -> match.unique_args[i].match.struct_hash == match.unique_args[j].match.struct_hash, search_state.matches)
                 return true
             end
         end
@@ -305,8 +399,8 @@ end
 function arg_capture(search_state)
     search_state.config.no_opt_arg_capture && return false
     for i in 1:search_state.abstraction.arity
-        first_match = search_state.matches[1].unique_args[i].data.struct_hash;
-        if all(match -> match.unique_args[i].data.struct_hash == first_match, search_state.matches)
+        first_match = search_state.matches[1].unique_args[i].match.struct_hash;
+        if all(match -> match.unique_args[i].match.struct_hash == first_match, search_state.matches)
             return true
         end
     end 
