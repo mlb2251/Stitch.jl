@@ -447,3 +447,14 @@ function load_corpus(file;truncate=nothing, kwargs...)
     end
     Corpus([Program(parse(SExpr, p),i,i) for (i,p) in enumerate(json)])
 end
+
+
+export uncurry_corpus, curry_corpus
+
+function curry_corpus(corpus)
+    Corpus([Program(curry(program.expr), program.id, program.task) for program in corpus.programs])
+end
+
+function uncurry_corpus(corpus)
+    Corpus([Program(uncurry(program.expr), program.id, program.task) for program in corpus.programs])
+end

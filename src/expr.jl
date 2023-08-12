@@ -112,13 +112,6 @@ function could_expand_to(ancestor::SExpr, descendant::SExpr)
 end
 
 
-function curried_application(f::Symbol, args) :: SExpr
-    expr = sexpr_leaf(f)
-    for arg in args
-        expr = sexpr_node([sexpr_leaf(:app), expr, arg])
-    end
-    expr
-end
 
 const SYM_HOLE = Symbol("??")
 new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
@@ -155,13 +148,13 @@ Base.show(io::IO, e::SExpr) = begin
     if is_leaf(e)
         print(io, e.leaf)
         @assert isempty(e.children)
-    elseif e.leaf === :app
-        print(io, "(", join(uncurry(e), " "), ")")
+    # elseif e.leaf === :app
+        # print(io, "(", join(uncurry(e), " "), ")")
     else
         print(io, "(")
-        for child in e.children
-            Base.show(io, child)
-            print(io, " ")
+        for i in eachindex(e.children)
+            print(io, e.children[i])
+            i != lastindex(e.children) && print(io, " ")
         end
         print(io, ")")
         # print(io, "(", join(e.children, " "), ")")
@@ -169,12 +162,54 @@ Base.show(io::IO, e::SExpr) = begin
 end
 
 """
-takes (app (app f x) y) and returns [f, x, y]
+takes (app (app f x) y) and returns (f x y)
+"""
+function uncurry_app(e::SExpr)
+    (length(e.children) != 3 || e.children[1].leaf !== :app) && return[e]
+    res = uncurry_app(e.children[2])
+    return push!(res, e.children[3])
+end
+
+"""
+takes ((f x) y) and returns (f x y)
+
+of course (f (g x)) stays as is
+
+(f (g x) y)
+
 """
 function uncurry(e::SExpr)
-    (length(e.children) != 3 || e.children[1].leaf !== :app) && return[e]
-    res = uncurry(e.children[2])
-    return push!(res, e.children[3])
+    is_leaf(e) && return copy(e)
+    @assert length(e.children) == 2
+    f = uncurry(e.children[1])
+    x = uncurry(e.children[2])
+    if is_leaf(f)
+        return sexpr_node([f, x])
+    else
+        return push_child!(f, x)
+    end
+end
+
+"""
+Binarizes an expression. Starting from (f x y) the result is ((f x) y).
+Applications are implicit in the tree structure, there are not explicit :app symbols
+as otherwise these might get abstracted over and aren't particularly useful
+"""
+function curry(e::SExpr) :: SExpr
+    is_leaf(e) && return copy(e)
+    @assert length(e.children) > 1
+
+    expr = curry(e.children[1])
+    for child in e.children[2:end]
+        expr = sexpr_node([expr, curry(child)])
+    end
+    expr
+end
+
+function push_child!(parent::SExpr, child::SExpr)
+    push!(parent.children, child)
+    child.parent = (parent, length(parent.children))
+    parent
 end
 
 """
