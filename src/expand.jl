@@ -32,19 +32,13 @@ function syntactic_expansions!(search_state)
             leaf = match.holes[end].leaf
             startswith(string(leaf), "&") && continue
 
-            if haskey(matches_of_leaf, leaf)
-                push!(matches_of_leaf[leaf], match)
-            else
-                matches_of_leaf[leaf] = [match]
-            end
+            matches = get!(matches_of_leaf, leaf) do; [] end
+            push!(matches, match)
         else
             # node case - group with other nodes that have same number of children
             childcount = length(match.holes[end].children)
-            if haskey(matches_of_node, childcount)
-                push!(matches_of_node[childcount], match)
-            else
-                matches_of_node[childcount] = [match]
-            end
+            matches = get!(matches_of_node, childcount) do; [] end
+            push!(matches, match)
         end
     end
 
@@ -74,14 +68,9 @@ function symbol_expansions!(search_state)
             continue
         end
 
-
         idx = get(match.idx_of_sym, sym, length(match.sym_of_idx) + 1)
-
-        if haskey(matches_of_idx, idx)
-            push!(matches_of_idx[idx], match)
-        else
-            matches_of_idx[idx] = [match]
-        end
+        matches = get!(matches_of_idx, idx) do; [] end
+        push!(matches,match)
     end
 
     for (idx, matches) in matches_of_idx
