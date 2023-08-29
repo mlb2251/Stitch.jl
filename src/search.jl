@@ -99,7 +99,7 @@ Base.@kwdef mutable struct SearchConfig
 
     # imperative stitch
     imperative::Bool = false
-    only_match_semi::Bool = false
+    # only_match_semi::Bool = false
     autoexpand_head::Bool = false # auto expand head of list
 
     # optimizations
@@ -198,11 +198,11 @@ function init_all_corpus_matches(corpus) :: Vector{Match}
 end
 
 function filter_init_allowed_matches!(search_state)
-    if search_state.config.only_match_semi
-        filter!(search_state.matches) do m
-            length(m.expr.children) == 3 && m.expr.children[1].leaf === :semi
-        end
-    end
+    # if search_state.config.only_match_semi
+    #     filter!(search_state.matches) do m
+    #         length(m.expr.children) == 3 && m.expr.children[1].leaf === :semi
+    #     end
+    # end
 end
 
 function is_tracked(search_state; expansion=nothing)
@@ -434,7 +434,7 @@ function compress_imperative(original_corpus; kwargs...)
     compress(
         original_corpus;
         autoexpand_head = true,
-        only_match_semi = true,
+        # only_match_semi = true,
         allow_single_task = false,
         verbose_best = false,
     )
