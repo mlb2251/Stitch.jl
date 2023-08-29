@@ -458,3 +458,17 @@ end
 function uncurry_corpus(corpus)
     Corpus([Program(uncurry(program.expr), program.id, program.task) for program in corpus.programs])
 end
+
+function load_dfa(file)
+    json = JSON.parsefile(file)
+    # dfa tells you given your current state and current head symbol, what is the vector of next states for each of your children
+    dfa = Dict{Symbol, Dict{Symbol,Vector{Symbol}}}()
+    for (state_str, transitions) in json
+        state = Symbol(state_str)
+        dfa[state] = Dict{Symbol,Vector{Symbol}}()
+        for (head, next_states) in transitions
+            dfa[state][Symbol(head)] = [Symbol(s) for s in next_states]
+        end
+    end
+    dfa
+end
