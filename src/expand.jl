@@ -267,7 +267,7 @@ end
 
 
 
-function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion}, hole, dfa_state)
+function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion}, hole)
 
     hole.leaf = Symbol("#$(expansion.data.index)")
 
