@@ -21,23 +21,24 @@ end
 
 """
 Adds the set of expansions to whatever terminal or nonterminal is present at the match locations,
-for example :app or :lambda or primitives or variables.
+for example primitives or variables.
 """
 function syntactic_expansions!(search_state)
     matches_of_leaf = Dict{Symbol,Vector{Match}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
-    matches_of_node = Dict{Int,Vector{Match}}()
+    matches_of_node = Dict{Tuple{Symbol,Int},Vector{Match}}()
     for match in search_state.matches
         if is_leaf(match.holes[end])
             # leaf case
             leaf = match.holes[end].leaf
             startswith(string(leaf), "&") && continue
 
-            matches = get!(matches_of_leaf, leaf) do; [] end
+            matches = get!(matches_of_leaf, leaf) do; Match[] end
             push!(matches, match)
         else
-            # node case - group with other nodes that have same number of children
+            # node case - group with other nodes that have same number of children (and head if autoexpand_head is on)
+            head = if search_state.config.autoexpand_head match.holes[end].children[1].leaf else :no_expand_head end
             childcount = length(match.holes[end].children)
-            matches = get!(matches_of_node, childcount) do; [] end
+            matches = get!(matches_of_node, (head,childcount)) do; Match[] end
             push!(matches, match)
         end
     end
@@ -49,11 +50,11 @@ function syntactic_expansions!(search_state)
             SyntacticLeafExpansion(leaf),
         ))
     end
-    for (childcount, matches) in matches_of_node
+    for ((head,childcount), matches) in matches_of_node
         isempty(matches) && continue
         push!(search_state.expansions, PossibleExpansion(
             matches,
-            SyntacticNodeExpansion(childcount),
+            SyntacticNodeExpansion(head, childcount),
         ))
     end
 end
@@ -87,11 +88,23 @@ function abstraction_expansions!(search_state)
     # note: abstracting out a symbol or subtree containing a symbol is okay because you can pass
     # a symbol in just fine bc ur doing it at the call site so it's bound correctly already.
 
+    # todo this line confuses me how could a hole be nothing???
     isnothing(search_state.holes[end]) && return # no identity abstraction allowed
+
+    # only allow matches in :E dfa state
+    matches_after_dfa = if isnothing(search_state.config.dfa)
+        search_state.matches
+    else
+        filter(search_state.matches) do m
+            m.holes[end] === :E
+        end
+    end
+
+    isempty(matches_after_dfa) && return
 
     # variable reuse
     for i in 0:search_state.abstraction.arity-1
-        matches = copy(search_state.matches)
+        matches = copy(matches_after_dfa)
         filter!(m -> m.holes[end].match.struct_hash == m.unique_args[i+1].match.struct_hash, matches)
         # matches = [m for m in search_state.matches if m.holes[end].match.struct_hash == m.unique_args[i+1].match.struct_hash]
         if isempty(matches) continue end
@@ -104,7 +117,7 @@ function abstraction_expansions!(search_state)
     if search_state.abstraction.arity < search_state.config.max_arity
         # fresh variable
         push!(search_state.expansions, PossibleExpansion(
-            search_state.matches, # all the same matches
+            matches_after_dfa, # all the same matches
             AbstractionExpansion(search_state.abstraction.arity, true),
         ))
     end
@@ -140,8 +153,10 @@ function expand_general!(search_state, expansion)
 
     # pop hole
     hole = pop!(search_state.holes)
+    # hole_dfa_state = pop!(search_state.hole_dfa_states)
     is_hole(hole) || error("not a hole")
     push!(search_state.holes_stack,hole)
+    # push!(search_state.hole_dfa_states_stack,hole_dfa_state)
 
     # save state for backtracking
     push!(search_state.expansions_stack,search_state.expansions)
@@ -167,6 +182,7 @@ end
 function unexpand_general!(search_state::SearchState)
 
     hole = pop!(search_state.holes_stack);
+    # hole_dfa_state = pop!(search_state.hole_dfa_states_stack);
 
     # pop the expansion to undo
     expansion = pop!(search_state.past_expansions)
@@ -183,6 +199,7 @@ function unexpand_general!(search_state::SearchState)
     search_state.expansions = pop!(search_state.expansions_stack)
     search_state.matches = pop!(search_state.matches_stack)
     push!(search_state.holes, hole)
+    # push!(search_state.hole_dfa_states, hole_dfa_state)
 
     all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes");
     # all(match -> length(match.args) == length(search_state.args), search_state.matches) || error("mismatched number of holes")    
@@ -212,7 +229,22 @@ function expand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpansi
     for i in 1:expansion.data.num_holes
         h = new_hole((hole,i))
         push!(hole.children, h)
-        push!(search_state.holes, h)
+        if i == 1 && expansion.data.head !== :no_expand_head
+            # set the head symbol of the hole and dont push it to the list of search state holes
+            h.leaf = expansion.data.head
+        else
+            push!(search_state.holes, h)
+            # state = if expansion.data.head === :no_expand_head || isnothing(search_state.config.dfa)
+            #     :no_dfa_state
+            # else
+            #     @show i
+            #     @show dfa_state
+            #     @show expansion.data.head
+            #     @show search_state.config.dfa[dfa_state][expansion.data.head]
+            #     search_state.config.dfa[dfa_state][expansion.data.head][i-1]
+            # end
+            # push!(search_state.hole_dfa_states, state)
+        end
     end
 
     # reverse holes so they go left to right
@@ -224,14 +256,18 @@ function expand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpansi
         length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion.data)")
         push!(match.holes_stack, hole)
 
-        # add all the children of the hole as new holes
-        append!(match.holes, hole.children)
+        # add all the children of the hole as new holes (except possibly the head)
+        if expansion.data.head !== :no_expand_head
+            append!(match.holes, hole.children[2:end])
+        else
+            append!(match.holes, hole.children)
+        end
     end
 end
 
 
 
-function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion}, hole)
+function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion}, hole, dfa_state)
 
     hole.leaf = Symbol("#$(expansion.data.index)")
 
@@ -302,12 +338,17 @@ function unexpand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpan
     hole.leaf = SYM_HOLE
 
     # pop from .args and search_state.holes
-    for _ in 1:expansion.data.num_holes
-        pop!(hole.children).leaf === pop!(search_state.holes).leaf === SYM_HOLE || error("not a hole")
+    for i in 1:expansion.data.num_holes
+        if expansion.data.head !== :no_expand_head && i == expansion.data.num_holes
+            pop!(hole.children).leaf === expansion.data.head || error("expected same head")
+        else
+            pop!(hole.children).leaf === pop!(search_state.holes).leaf === SYM_HOLE || error("not a hole")
+        end
     end
 
     for match in search_state.matches
-        for _ in 1:expansion.data.num_holes
+        num_remove = if expansion.data.head !== :no_expand_head expansion.data.num_holes-1 else expansion.data.num_holes end
+        for _ in 1:num_remove
             pop!(match.holes)
         end
 

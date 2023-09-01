@@ -28,6 +28,7 @@ mutable struct Match
     size::Float32
     num_nodes::Int
     struct_hash::Int
+    dfa_state::Symbol
 
     # Tracks Eqn 12: https://arxiv.org/pdf/2211.16605.pdf
     local_utility::Float32
@@ -45,7 +46,7 @@ mutable struct Match
     # metavariable for continuation
     continuation::Union{Nothing, SExprGeneric{Match}}
 
-    Match(expr, program, id) = new(expr, SExprGeneric{Match}[], SExprGeneric{Match}[], [expr], SExprGeneric{Match}[], Float32[], program, size(expr), num_nodes(expr), struct_hash(expr), local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol, Int}(), Bool[], nothing)
+    Match(expr, program, id) = new(expr, SExprGeneric{Match}[], SExprGeneric{Match}[], [expr], SExprGeneric{Match}[], Float32[], program, size(expr), num_nodes(expr), struct_hash(expr), :uninit_state, local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol, Int}(), Bool[], nothing)
 end
 
 const SExpr = SExprGeneric{Match}

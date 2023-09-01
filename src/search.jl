@@ -39,6 +39,7 @@ struct SyntacticLeafExpansion <: Expansion
 end
 
 struct SyntacticNodeExpansion <: Expansion
+    head::Symbol
     num_holes::Int
 end
 
@@ -101,6 +102,7 @@ Base.@kwdef mutable struct SearchConfig
     imperative::Bool = false
     # only_match_semi::Bool = false
     autoexpand_head::Bool = false # auto expand head of list
+    dfa::Union{Dict{Symbol, Dict{Symbol,Vector{Symbol}}}, Nothing} = nothing
 
     # optimizations
     no_opt_arg_capture::Bool = false
@@ -135,11 +137,13 @@ mutable struct SearchState
     # current abstraction
     abstraction::Abstraction
     holes::Vector{SExpr}
+    # hole_dfa_states::Vector{Symbol}
     matches::Vector{Match}
     expansions::Vector{PossibleExpansion}
 
     # backtracking data
     holes_stack::Vector{SExpr}
+    # hole_dfa_states_stack::Vector{Symbol}
     expansions_stack::Vector{Vector{PossibleExpansion}}
     matches_stack::Vector{Vector{Match}}
     past_expansions::Vector{PossibleExpansion}
@@ -147,6 +151,11 @@ mutable struct SearchState
     function SearchState(corpus, config)
         abstraction = Abstraction(new_hole(nothing), 0)
         matches = init_all_corpus_matches(corpus)
+        if !isnothing(config.dfa)
+            for program in corpus.programs
+                run_dfa!(program.expr, config.dfa, :M)
+            end
+        end
         all_nodes = map(m -> m.expr, matches)
         best_util = Float32(0)
         best_abstraction = nothing
@@ -154,6 +163,33 @@ mutable struct SearchState
             PlotData(), best_util, best_abstraction, Stats(),
             abstraction, [abstraction.body], matches, PossibleExpansion[],
             SExpr[], PossibleExpansion[], Match[], PossibleExpansion[])
+    end
+end
+
+function run_dfa!(expr, dfa, state)
+    @assert expr.match.dfa_state === :uninit_state
+    expr.match.dfa_state = state
+    is_leaf(expr) && return
+    head = expr.children[1]
+    @assert is_leaf(head)
+
+    # if head === :list
+        
+    # end
+
+    child_states = dfa[state][head.leaf]
+    # if length(child_states) != length(expr.children) - 1 # a state for everything except the head
+    #     @show head
+    #     @show child_states
+    #     @show expr.children
+    #     error()
+    # end
+    for (i,child) in enumerate(expr.children[2:end])
+        if i > length(child_states)
+            i %= length(child_states)
+            i += 1
+        end
+        run_dfa!(child, dfa, child_states[i])
     end
 end
 
@@ -437,6 +473,7 @@ function compress_imperative(original_corpus; kwargs...)
         # only_match_semi = true,
         allow_single_task = false,
         verbose_best = false,
+        dfa = load_dfa("/Users/matthewbowers/proj/python/imperative-stitch/transitions.json")
     )
 end
 

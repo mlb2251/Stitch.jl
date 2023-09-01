@@ -57,6 +57,10 @@ end
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticNodeExpansion})
     # let it be zero?
     # match.local_utility += 0.;
+    if expansion.data.head !== :no_expand_head
+        match.local_utility += 1.;
+    end
+    nothing
 end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{AbstractionExpansion})
@@ -70,6 +74,7 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{AbstractionEx
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (multiuse utility; (usages-1)*cost(arg))
         match.local_utility += match.holes[end].match.size;
     end
+    nothing
 end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{ContinuationExpansion})
