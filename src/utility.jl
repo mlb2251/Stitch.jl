@@ -51,7 +51,13 @@ end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    match.local_utility += 1.;
+    zero_utility_leaves = [:Name, :Load, :Store, :None, :list]
+    leaf_name = expansion.data.leaf
+    if leaf_name in zero_utility_leaves
+        match.local_utility += 0.;
+    else
+        match.local_utility += 1.;
+    end
 end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticNodeExpansion})
