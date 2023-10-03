@@ -49,12 +49,14 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansi
     match.local_utility += 1.0;
 end
 
+zero_utility_leaves_set = Set([:Name, :Load, :Store, :None, :list, :nil])
+zero_utility_leaves_value = 0
+
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    zero_utility_leaves = [:Name, :Load, :Store, :None, :list]
     leaf_name = expansion.data.leaf
-    if leaf_name in zero_utility_leaves
-        match.local_utility += 0.;
+    if leaf_name in zero_utility_leaves_set
+        match.local_utility += zero_utility_leaves_value;
     else
         match.local_utility += 1.;
     end

@@ -129,7 +129,12 @@ function subexpressions(e::SExpr; subexprs = SExpr[])
 end
 
 size(e::SExpr) = size(e.leaf) + sum(size, e.children, init=0.)
-size(leaf::Symbol) = 1.
+function size(leaf::Symbol) :: Float32
+    if leaf in zero_utility_leaves_set
+        return zero_utility_leaves_value
+    end
+    return 1.
+end
 size(leaf::Nothing) = 0.
 
 num_nodes(e::SExpr) = 1 + sum(num_nodes, e.children, init=0)
