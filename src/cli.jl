@@ -19,9 +19,14 @@ function cli()
     line = readline()
     json = JSON.parse(line)
     corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(json)])
-    result = compress(corpus, iterations=args["iterations"])
+    abstractions, corpus = compress(corpus, iterations=args["iterations"])
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    println(JSON.json(result))
+    println(JSON.json([
+        Dict([("arity", abstraction.arity), ("body", string(abstraction.body))])
+        for abstraction in abstractions
+    ]))
+    println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    println(JSON.json([string(p) for p in corpus.programs]))
 end
 
 cli()
