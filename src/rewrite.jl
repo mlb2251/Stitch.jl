@@ -54,7 +54,8 @@ function bottom_up_utility(search_state::SearchState) :: Float32
     end
 
     # Eqn 18 from https://arxiv.org/pdf/2211.16605.pdf
-    sum(programs -> minimum(p -> p.expr.match.cumulative_utility, programs), values(search_state.corpus.programs_by_task))
+    corpus_util = sum(programs -> minimum(p -> p.expr.match.cumulative_utility, programs), values(search_state.corpus.programs_by_task))
+    corpus_util
 end
 
 rewrite_program(program, search_state) = Program(rewrite_inner(program.expr, search_state), program.id, program.task)
