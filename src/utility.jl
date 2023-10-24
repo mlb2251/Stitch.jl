@@ -49,7 +49,7 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansi
     match.local_utility += 1.0;
 end
 
-zero_utility_leaves_set = Set([:Name, :Load, :Store, :None, :list, :nil])
+zero_utility_leaves_set = Set([:Name, :Load, :Store, :None, :list, :nil, :semi, :Constant])
 zero_utility_leaves_value = 0
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
