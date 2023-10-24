@@ -46,7 +46,7 @@ end
 function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansion})
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
     # node from the corpus.
-    match.local_utility += 1.0;
+    match.local_utility += 0;
 end
 
 zero_utility_leaves_set = Set([:Name, :Load, :Store, :None, :list, :nil, :semi, :Constant])

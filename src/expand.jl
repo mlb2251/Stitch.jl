@@ -290,6 +290,8 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
     # set the head symbol of the hole
     hole.leaf = Symbol("%$(expansion.data.idx)")
 
+    new_symbol = false
+
     for match in search_state.matches
         # pop next hole and save it for future backtracking
         hole = pop!(match.holes)
@@ -302,11 +304,17 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
             push!(match.sym_of_idx, hole.leaf)
             match.idx_of_sym[hole.leaf] = expansion.data.idx
             push!(match.idx_is_fresh,true)
+            new_symbol = true
         else
             push!(match.idx_is_fresh,false)
         end
 
     end
+
+    if new_symbol
+        search_state.abstraction.sym_arity += 1
+    end
+
 end
 
 function expand!(search_state, expansion::PossibleExpansion{ContinuationExpansion}, hole)
@@ -381,6 +389,8 @@ function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, 
     # set the head symbol of the hole
     hole.leaf = SYM_HOLE
 
+    new_symbol = false
+
     for match in search_state.matches
         hole = pop!(match.holes_stack) 
         push!(match.holes, hole)
@@ -388,8 +398,13 @@ function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, 
         if pop!(match.idx_is_fresh)
             pop!(match.sym_of_idx)
             delete!(match.idx_of_sym, hole.leaf)
+            new_symbol = true
         end
 
+    end
+
+    if new_symbol
+        search_state.abstraction.sym_arity -= 1
     end
 end
 

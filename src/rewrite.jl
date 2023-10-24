@@ -70,6 +70,9 @@ function rewrite_inner(expr::SExpr, search_state::SearchState) :: SExpr
         for arg in expr.match.unique_args
             push!(children, rewrite_inner(arg, search_state))
         end
+        for sym in expr.match.sym_of_idx
+            push!(children, sexpr_leaf(sym))
+        end
         if !isnothing(expr.match.continuation)
             push!(children, rewrite_inner(expr.match.continuation, search_state))
         end
