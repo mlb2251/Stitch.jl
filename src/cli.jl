@@ -15,14 +15,21 @@ function cli()
             arg_type=Int
     end
 
+    @add_arg_table s begin
+        "--max-arity"
+            help="Maximum arity of abstractions"
+            default=2
+            arg_type=Int
+    end
+
     args = parse_args(s)
     line = readline()
     json = JSON.parse(line)
     corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(json)])
-    abstractions, corpus = compress(corpus, iterations=args["iterations"])
+    abstractions, corpus = compress(corpus, iterations=args["iterations"], max_arity=args["max-arity"])
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     println(JSON.json([
-        Dict([("arity", abstraction.arity), ("body", string(abstraction.body))])
+        Dict([("arity", abstraction.arity), ("sym_arity", abstraction.sym_arity), ("body", string(abstraction.body))])
         for abstraction in abstractions
     ]))
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
