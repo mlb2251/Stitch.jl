@@ -466,14 +466,14 @@ function compress(original_corpus; iterations=3, kwargs...)
     return abstractions, corpus
 end
 
-function compress_imperative(original_corpus; kwargs...)
+function compress_imperative(original_corpus, dfa_path; kwargs...)
     compress(
         original_corpus;
         autoexpand_head = true,
         # only_match_semi = true,
         allow_single_task = false,
         verbose_best = false,
-        dfa = load_dfa("/Users/matthewbowers/proj/python/imperative-stitch/transitions.json")
+        dfa = load_dfa(dfa_path),
     )
 end
 
