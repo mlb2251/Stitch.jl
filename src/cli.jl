@@ -16,7 +16,6 @@ function cli()
     end
 
     args = parse_args(s)
-    println(args)
     line = readline()
     json = JSON.parse(line)
     corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(json)])
