@@ -474,6 +474,7 @@ function compress_imperative(original_corpus, dfa_path; kwargs...)
         allow_single_task = false,
         verbose_best = false,
         dfa = load_dfa(dfa_path),
+        kwargs...
     )
 end
 
