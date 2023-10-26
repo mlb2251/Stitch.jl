@@ -62,15 +62,23 @@ end
 
 function symbol_expansions!(search_state)
     matches_of_idx = Dict{Int,Vector{Match}}()
+    freshness_of_idx = Dict{Int,Bool}()
     for match in search_state.matches
         is_leaf(match.holes[end]) || continue
         sym = match.holes[end].leaf
         if !startswith(string(sym), "&") # this is not a symbol
             continue
         end
-
+        fresh = !haskey(match.idx_of_sym, sym)
         idx = get(match.idx_of_sym, sym, length(match.sym_of_idx) + 1)
-        matches = get!(matches_of_idx, idx) do; [] end
+        matches = get!(matches_of_idx, idx) do
+            []
+        end
+        if !haskey(freshness_of_idx, idx)
+            freshness_of_idx[idx] = fresh
+        else
+            @assert freshness_of_idx[idx] == fresh
+        end
         push!(matches,match)
     end
 
@@ -78,7 +86,7 @@ function symbol_expansions!(search_state)
         if isempty(matches) continue end
         push!(search_state.expansions, PossibleExpansion(
             matches,
-            SymbolExpansion(idx),
+            SymbolExpansion(idx, freshness_of_idx[idx]),
         ))
     end
 

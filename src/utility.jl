@@ -46,7 +46,11 @@ end
 function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansion})
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
     # node from the corpus.
-    match.local_utility += 1.0;
+    if expansion.data.fresh
+        match.local_utility += 0;
+    else
+        match.local_utility += 1;
+    end
 end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
