@@ -61,24 +61,26 @@ end
 
 
 function symbol_expansions!(search_state)
-    matches_of_idx = Dict{Int,Vector{Match}}()
+    matches_of_idx_and_freshness = Dict{Tuple{Int, Bool},Vector{Match}}()
     for match in search_state.matches
         is_leaf(match.holes[end]) || continue
         sym = match.holes[end].leaf
         if !startswith(string(sym), "&") # this is not a symbol
             continue
         end
-
+        fresh = !haskey(match.idx_of_sym, sym)
         idx = get(match.idx_of_sym, sym, length(match.sym_of_idx) + 1)
-        matches = get!(matches_of_idx, idx) do; [] end
+        matches = get!(matches_of_idx_and_freshness, (idx, fresh)) do
+            []
+        end
         push!(matches,match)
     end
 
-    for (idx, matches) in matches_of_idx
+    for ((idx, fresh), matches) in matches_of_idx_and_freshness
         if isempty(matches) continue end
         push!(search_state.expansions, PossibleExpansion(
             matches,
-            SymbolExpansion(idx),
+            SymbolExpansion(idx, fresh),
         ))
     end
 
