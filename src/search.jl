@@ -69,11 +69,12 @@ Base.show(io::IO, obj::SymbolExpansion) = pretty_show(io, obj; indent=false)
 mutable struct Abstraction
     body::SExpr
     arity::Int
+    sym_arity::Int
 end
 
 Base.show(io::IO, obj::Abstraction) = pretty_show(io, obj; indent=false)
 
-Base.copy(abstraction::Abstraction) = Abstraction(copy(abstraction.body), abstraction.arity)
+Base.copy(abstraction::Abstraction) = Abstraction(copy(abstraction.body), abstraction.arity, abstraction.sym_arity)
 
 @Base.kwdef mutable struct Stats
     expansions::Int = 0
@@ -149,7 +150,7 @@ mutable struct SearchState
     past_expansions::Vector{PossibleExpansion}
 
     function SearchState(corpus, config)
-        abstraction = Abstraction(new_hole(nothing), 0)
+        abstraction = Abstraction(new_hole(nothing), 0, 0)
         matches = init_all_corpus_matches(corpus)
         if !isnothing(config.dfa)
             for program in corpus.programs
