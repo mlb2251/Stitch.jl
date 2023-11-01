@@ -9,8 +9,14 @@ function rewrite(search_state::SearchState) :: Tuple{Corpus,Float32,Float32}
     size_by_symbol = search_state.config.size_by_symbol
     corpus_compression_utility = size(search_state.corpus, size_by_symbol) - size(rewritten, size_by_symbol)
     abstraction_size_utility = -size(search_state.abstraction.body, size_by_symbol)
-    # adding 1 because that's already handled in the corpus compression utility by the fn_K symbol
-    additional_per_match_utility = (1 + search_state.config.application_utility_fixed) * length(search_state.matches)
+    additional_per_match_utility = (
+        # adding 1 because that's already handled in the corpus compression utility by the fn_K symbol
+        1 + search_state.config.application_utility_fixed
+        # per-metavariable utility
+        + search_state.config.application_utility_metavar * search_state.abstraction.arity
+        # per-symvar utility
+        + search_state.config.application_utility_symvar * search_state.abstraction.sym_arity
+    ) * length(search_state.matches)
     compressive_utility = corpus_compression_utility + abstraction_size_utility + additional_per_match_utility
 
     # @show rewritten

@@ -114,6 +114,8 @@ Base.@kwdef mutable struct SearchConfig
     # utility
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility first term; -cost_t(t_A))
     application_utility_fixed::Float32 = -1.0
+    application_utility_metavar::Float32 = 0
+    application_utility_symvar::Float32 = 0
 end
 
 

@@ -60,7 +60,7 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansi
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
     # node from the corpus.
     if expansion.data.fresh
-        match.local_utility += 0;
+        match.local_utility += match.application_utility_symvar
     else
         match.local_utility += 1;
     end
@@ -85,7 +85,7 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{AbstractionEx
     if expansion.data.fresh
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility second term; cost_app * arity)
         # note: commented out with switch away from application penalty
-        # match.local_utility -= .01;
+        match.local_utility += match.application_utility_metavar
 
         # actually do nothing here
     else
