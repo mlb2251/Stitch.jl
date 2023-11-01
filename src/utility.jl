@@ -1,8 +1,4 @@
 
-struct SizeBySymbol
-    symbol_to_size::Dict{Symbol,Float32}
-end
-
 function symbol_size(sym::Symbol, size_by_symbol::SizeBySymbol)
     if sym in keys(size_by_symbol.symbol_to_size)
         return size_by_symbol.symbol_to_size[sym]
@@ -70,27 +66,17 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansi
     end
 end
 
-sbs = SizeBySymbol(Dict(
-    :Name => 0.0,
-    :Load => 0.0,
-    :Store => 0.0,
-    :None => 0.0,
-    :list => 0.0,
-    :nil => 0.0,
-    :semi => 0.0,
-    :Constant => 0.0,
-))
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    match.local_utility += symbol_size(expansion.data.leaf, sbs)
+    match.local_utility += symbol_size(expansion.data.leaf, match.size_by_symbol)
 end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticNodeExpansion})
     # let it be zero?
     # match.local_utility += 0.;
     if expansion.data.head !== :no_expand_head
-        match.local_utility += symbol_size(expansion.data.head, sbs)
+        match.local_utility += symbol_size(expansion.data.head, match.size_by_symbol)
     end
     nothing
 end
@@ -131,7 +117,8 @@ function utility_rewrite(search_state) :: Float32
     end
 
     rewritten = rewrite(search_state)
-    size(search_state.corpus, sbs) - size(rewritten, sbs)
+    size_by_symbol = search_state.config.size_by_symbol
+    size(search_state.corpus, size_by_symbol) - size(rewritten, size_by_symbol)
 end
 
 is_identity_abstraction(search_state) = length(search_state.past_expansions) == 1 && isa(search_state.past_expansions[1].match, AbstractionExpansion)

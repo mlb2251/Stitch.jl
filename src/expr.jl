@@ -16,6 +16,10 @@ mutable struct ProgramGeneric{D}
     task::Int
 end
 
+struct SizeBySymbol
+    symbol_to_size::Dict{Symbol,Float32}
+end
+
 mutable struct Match
     expr::SExprGeneric{Match} # pointer to subtree in original corpus
     all_args::Vector{SExprGeneric{Match}}
@@ -46,7 +50,9 @@ mutable struct Match
     # metavariable for continuation
     continuation::Union{Nothing, SExprGeneric{Match}}
 
-    Match(expr, program, id) = new(expr, SExprGeneric{Match}[], SExprGeneric{Match}[], [expr], SExprGeneric{Match}[], Float32[], program, size(expr, sbs), num_nodes(expr), struct_hash(expr), :uninit_state, local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol, Int}(), Bool[], nothing)
+    size_by_symbol::Union{Nothing,SizeBySymbol}
+
+    Match(expr, program, id, size_by_symbol) = new(expr, SExprGeneric{Match}[], SExprGeneric{Match}[], [expr], SExprGeneric{Match}[], Float32[], program, size(expr, size_by_symbol), num_nodes(expr), struct_hash(expr), :uninit_state, local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol,Int}(), Bool[], nothing, size_by_symbol)
 end
 
 const SExpr = SExprGeneric{Match}

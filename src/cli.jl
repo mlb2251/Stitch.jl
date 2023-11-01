@@ -36,7 +36,17 @@ function cli()
         corpus,
         args["dfa"],
         iterations=args["iterations"],
-        max_arity=args["max-arity"]
+        max_arity=args["max-arity"],
+        size_by_symbol=SizeBySymbol(Dict(
+            :Name => 0.0,
+            :Load => 0.0,
+            :Store => 0.0,
+            :None => 0.0,
+            :list => 0.0,
+            :nil => 0.0,
+            :semi => 0.0,
+            :Constant => 0.0,
+        ))
     )
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     println(JSON.json([
