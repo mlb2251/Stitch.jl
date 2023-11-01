@@ -48,7 +48,29 @@ mutable struct Match
 
     size_by_symbol::Union{Nothing,Dict{Symbol,Float32}}
 
-    Match(expr, program, id, size_by_symbol) = new(expr, SExprGeneric{Match}[], SExprGeneric{Match}[], [expr], SExprGeneric{Match}[], Float32[], program, size(expr, size_by_symbol), num_nodes(expr), struct_hash(expr), :uninit_state, local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol,Int}(), Bool[], nothing, size_by_symbol)
+    Match(expr, program, id, config) = new(
+        expr,
+        SExprGeneric{Match}[],
+        SExprGeneric{Match}[],
+        [expr],
+        SExprGeneric{Match}[],
+        Float32[],
+        program,
+        size(expr, config.size_by_symbol),
+        num_nodes(expr),
+        struct_hash(expr),
+        :uninit_state,
+        local_utility_init(),
+        NaN32,
+        false,
+        false,
+        id,
+        Symbol[],
+        Dict{Symbol,Int}(),
+        Bool[],
+        nothing,
+        config.size_by_symbol
+    )
 end
 
 const SExpr = SExprGeneric{Match}

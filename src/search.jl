@@ -153,7 +153,7 @@ mutable struct SearchState
 
     function SearchState(corpus, config)
         abstraction = Abstraction(new_hole(nothing), 0, 0)
-        matches = init_all_corpus_matches(corpus, config.size_by_symbol)
+        matches = init_all_corpus_matches(corpus, config)
         if !isnothing(config.dfa)
             for program in corpus.programs
                 run_dfa!(program.expr, config.dfa, :M)
@@ -222,12 +222,12 @@ Initializes a Match at every subtree in the corpus
 Note any filtering to the initial match set should NOT be done here because
 downstream we need this for SearchState.all_nodes
 """
-function init_all_corpus_matches(corpus, size_by_symbol)::Vector{Match}
+function init_all_corpus_matches(corpus, config::SearchConfig)::Vector{Match}
     matches = Match[]
     id = 1
     for program in corpus.programs
         for expr in subexpressions(program.expr) # child-first traversal
-            match = Match(expr, program, id, size_by_symbol)
+            match = Match(expr, program, id, config)
             expr.match = match
             push!(matches, match)
             id += 1
