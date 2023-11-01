@@ -15,10 +15,10 @@ end
 Base.show(io::IO, obj::Corpus) = print(io, "\n\t", join(obj.programs, "\n\t"))
 Base.show(io::IO, obj::Program) = print(io, obj.expr)
 
-size(p::Program) = size(p.expr)
+size(p::Program, size_by_symbol) = size(p.expr, size_by_symbol)
 
-function size(corpus::Corpus) :: Float32
-    sum(minimum.(size, values(corpus.programs_by_task)))
+function size(corpus::Corpus, size_by_symbol)::Float32
+    sum(minimum.(x -> size(x, size_by_symbol), values(corpus.programs_by_task)))
 end
 
 
@@ -397,7 +397,7 @@ function stitch_search(corpus, config)
     if isnothing(search_state.best_abstraction)
         silent || println("No abstractions found")
     else 
-        silent || println("Best abstraction: ", search_state.best_abstraction.body, " with utility ", search_state.best_util, " compressed by ", size(search_state.corpus) / (size(search_state.corpus) - search_state.best_util), "x");
+        silent || println("Best abstraction: ", search_state.best_abstraction.body, " with utility ", search_state.best_util, " compressed by ", size(search_state.corpus, sbs) / (size(search_state.corpus, sbs) - search_state.best_util), "x");
     end
 
     silent || println(search_state.stats);
@@ -464,7 +464,7 @@ function compress(original_corpus; iterations=3, kwargs...)
         corpus = rewritten
         push!(abstractions, search_res.abstraction)
     end
-    println("Total compression: ", size(original_corpus) / size(corpus), "x")
+    println("Total compression: ", size(original_corpus, sbs) / size(corpus, sbs), "x")
     return abstractions, corpus
 end
 

@@ -131,7 +131,7 @@ function utility_rewrite(search_state) :: Float32
     end
 
     rewritten = rewrite(search_state)
-    size(search_state.corpus) - size(rewritten)
+    size(search_state.corpus, sbs) - size(rewritten, sbs)
 end
 
 is_identity_abstraction(search_state) = length(search_state.past_expansions) == 1 && isa(search_state.past_expansions[1].match, AbstractionExpansion)

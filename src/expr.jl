@@ -46,7 +46,7 @@ mutable struct Match
     # metavariable for continuation
     continuation::Union{Nothing, SExprGeneric{Match}}
 
-    Match(expr, program, id) = new(expr, SExprGeneric{Match}[], SExprGeneric{Match}[], [expr], SExprGeneric{Match}[], Float32[], program, size(expr), num_nodes(expr), struct_hash(expr), :uninit_state, local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol, Int}(), Bool[], nothing)
+    Match(expr, program, id) = new(expr, SExprGeneric{Match}[], SExprGeneric{Match}[], [expr], SExprGeneric{Match}[], Float32[], program, size(expr, sbs), num_nodes(expr), struct_hash(expr), :uninit_state, local_utility_init(), NaN32, false, false, id, Symbol[], Dict{Symbol, Int}(), Bool[], nothing)
 end
 
 const SExpr = SExprGeneric{Match}
@@ -128,11 +128,11 @@ function subexpressions(e::SExpr; subexprs = SExpr[])
     push!(subexprs, e)
 end
 
-size(e::SExpr) = size(e.leaf) + sum(size, e.children, init=0.)
-function size(leaf::Symbol) :: Float32
-    symbol_size(leaf, sbs)
+size(e::SExpr, size_by_symbol) = size(e.leaf, size_by_symbol) + sum(x -> size(x, size_by_symbol), e.children, init=0.0)
+function size(leaf::Symbol, size_by_symbol)::Float32
+    symbol_size(leaf, size_by_symbol)
 end
-size(leaf::Nothing) = 0.
+size(leaf::Nothing, size_by_symbol) = 0.0
 
 num_nodes(e::SExpr) = 1 + sum(num_nodes, e.children, init=0)
 
