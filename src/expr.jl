@@ -46,7 +46,7 @@ mutable struct Match
     # metavariable for continuation
     continuation::Union{Nothing, SExprGeneric{Match}}
 
-    config::Dict{Symbol,Float32}
+    size_by_symbol::Union{Nothing,Dict{Symbol,Float32}}
 
     Match(expr, program, id, config) = new(
         expr,
@@ -69,7 +69,7 @@ mutable struct Match
         Dict{Symbol,Int}(),
         Bool[],
         nothing,
-        config
+        config.size_by_symbol
     )
 end
 
