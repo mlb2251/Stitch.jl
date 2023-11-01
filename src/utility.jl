@@ -1,7 +1,7 @@
 
-function symbol_size(sym::Symbol, size_by_symbol::SizeBySymbol)
-    if sym in keys(size_by_symbol.symbol_to_size)
-        return size_by_symbol.symbol_to_size[sym]
+function symbol_size(sym::Symbol, size_by_symbol::Dict{Symbol,Float32})
+    if sym in keys(size_by_symbol)
+        return size_by_symbol[sym]
     else
         return 1.0
     end

@@ -109,7 +109,7 @@ Base.@kwdef mutable struct SearchConfig
     # optimizations
     no_opt_arg_capture::Bool = false
     no_opt_redundant_args::Bool = false
-    size_by_symbol::Union{SizeBySymbol, Nothing} = nothing
+    size_by_symbol::Union{Nothing,Dict{Symbol,Float32}} = nothing
 end
 
 

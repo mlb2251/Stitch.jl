@@ -37,7 +37,7 @@ function cli()
         args["dfa"],
         iterations=args["iterations"],
         max_arity=args["max-arity"],
-        size_by_symbol=SizeBySymbol(Dict(
+        size_by_symbol=Dict(
             :Name => 0.0,
             :Load => 0.0,
             :Store => 0.0,
@@ -46,7 +46,7 @@ function cli()
             :nil => 0.0,
             :semi => 0.0,
             :Constant => 0.0,
-        ))
+        )
     )
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     println(JSON.json([
