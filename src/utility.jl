@@ -49,7 +49,7 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansi
     if expansion.data.fresh
         match.local_utility += 0;
     else
-        match.local_utility += 0;
+        match.local_utility += 1;
     end
 end
 
