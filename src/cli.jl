@@ -34,6 +34,13 @@ function cli()
         arg_type = String
     end
 
+    @add_arg_table s begin
+        "--application-utility-fixed"
+        help = "Application utility fixed"
+        default = Float32(-1.0)
+        arg_type = Float32
+    end
+
 
     args = parse_args(s)
 
@@ -49,7 +56,8 @@ function cli()
         args["dfa"],
         iterations=args["iterations"],
         max_arity=args["max-arity"],
-        size_by_symbol=size_by_symbol
+        size_by_symbol=size_by_symbol,
+        application_utility_fixed=args["application-utility-fixed"]
     )
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     println(JSON.json([

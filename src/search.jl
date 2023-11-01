@@ -110,6 +110,10 @@ Base.@kwdef mutable struct SearchConfig
     no_opt_arg_capture::Bool = false
     no_opt_redundant_args::Bool = false
     size_by_symbol::Union{Nothing,Dict{Symbol,Float32}} = nothing
+
+    # utility
+    # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility first term; -cost_t(t_A))
+    application_utility_fixed::Float32 = -1.0
 end
 
 

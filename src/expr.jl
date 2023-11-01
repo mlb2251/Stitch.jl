@@ -60,7 +60,7 @@ mutable struct Match
         num_nodes(expr),
         struct_hash(expr),
         :uninit_state,
-        local_utility_init(),
+        local_utility_init(config),
         NaN32,
         false,
         false,

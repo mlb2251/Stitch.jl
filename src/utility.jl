@@ -99,8 +99,7 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{ContinuationE
     # zero
 end
 
-# Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility first term; -cost_t(t_A))
-local_utility_init() = -1.0
+local_utility_init(config::SearchConfig) = config.application_utility_fixed
 
 
 """
