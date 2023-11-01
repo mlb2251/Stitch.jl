@@ -1,3 +1,20 @@
+
+struct UtilityByLeaf
+    utility_by_leaf::Dict{Symbol,Float32}
+end
+
+function leaf_util(sym::Symbol, utility_by_leaf::UtilityByLeaf)
+    if sym in keys(utility_by_leaf.utility_by_leaf)
+        return utility_by_leaf.utility_by_leaf[sym]
+    else
+        return 1.0
+    end
+end
+
+function leaf_util(sym::Symbol, utility_by_leaf::Nothing)
+    1.0
+end
+
 function upper_bound_inf(search_state, expansion) :: Float32
     Inf32
 end
@@ -53,16 +70,27 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansi
     end
 end
 
+utility_by_leaf = UtilityByLeaf(Dict(
+    :Name => 0.99,
+    :Load => 0.99,
+    :Store => 0.99,
+    :None => 0.99,
+    :list => 0.99,
+    :nil => 0.99,
+    :semi => 0.99,
+    :Constant => 0.99,
+))
+
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    match.local_utility += 1.;
+    match.local_utility += leaf_util(expansion.data.leaf, utility_by_leaf)
 end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticNodeExpansion})
     # let it be zero?
     # match.local_utility += 0.;
     if expansion.data.head !== :no_expand_head
-        match.local_utility += 1.;
+        match.local_utility += leaf_util(expansion.data.head, utility_by_leaf)
     end
     nothing
 end
@@ -72,7 +100,7 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{AbstractionEx
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility second term; cost_app * arity)
         # note: commented out with switch away from application penalty
         # match.local_utility -= .01;
-        
+
         # actually do nothing here
     else
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (multiuse utility; (usages-1)*cost(arg))
