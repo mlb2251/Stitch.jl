@@ -71,14 +71,14 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansi
 end
 
 size_by_symbol = SizeBySymbol(Dict(
-    :Name => 0.99,
-    :Load => 0.99,
-    :Store => 0.99,
-    :None => 0.99,
-    :list => 0.99,
-    :nil => 0.99,
-    :semi => 0.99,
-    :Constant => 0.99,
+    :Name => 0.0,
+    :Load => 0.0,
+    :Store => 0.0,
+    :None => 0.0,
+    :list => 0.0,
+    :nil => 0.0,
+    :semi => 0.0,
+    :Constant => 0.0,
 ))
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
