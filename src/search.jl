@@ -506,6 +506,9 @@ function uncurry_corpus(corpus)
 end
 
 function load_dfa(file)
+    if isnothing(file)
+        return nothing
+    end
     json = JSON.parsefile(file)
     # dfa tells you given your current state and current head symbol, what is the vector of next states for each of your children
     dfa = Dict{Symbol, Dict{Symbol,Vector{Symbol}}}()
