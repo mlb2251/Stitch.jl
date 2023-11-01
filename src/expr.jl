@@ -130,7 +130,7 @@ end
 
 size(e::SExpr) = size(e.leaf) + sum(size, e.children, init=0.)
 function size(leaf::Symbol) :: Float32
-    symbol_size(leaf, size_by_symbol)
+    symbol_size(leaf, sbs)
 end
 size(leaf::Nothing) = 0.
 

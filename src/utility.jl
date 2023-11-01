@@ -1,11 +1,11 @@
 
 struct SizeBySymbol
-    size_by_symbol::Dict{Symbol,Float32}
+    symbol_to_size::Dict{Symbol,Float32}
 end
 
 function symbol_size(sym::Symbol, size_by_symbol::SizeBySymbol)
-    if sym in keys(size_by_symbol.size_by_symbol)
-        return size_by_symbol.size_by_symbol[sym]
+    if sym in keys(size_by_symbol.symbol_to_size)
+        return size_by_symbol.symbol_to_size[sym]
     else
         return 1.0
     end
@@ -70,7 +70,7 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansi
     end
 end
 
-size_by_symbol = SizeBySymbol(Dict(
+sbs = SizeBySymbol(Dict(
     :Name => 0.0,
     :Load => 0.0,
     :Store => 0.0,
@@ -83,14 +83,14 @@ size_by_symbol = SizeBySymbol(Dict(
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    match.local_utility += symbol_size(expansion.data.leaf, size_by_symbol)
+    match.local_utility += symbol_size(expansion.data.leaf, sbs)
 end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticNodeExpansion})
     # let it be zero?
     # match.local_utility += 0.;
     if expansion.data.head !== :no_expand_head
-        match.local_utility += symbol_size(expansion.data.head, size_by_symbol)
+        match.local_utility += symbol_size(expansion.data.head, sbs)
     end
     nothing
 end
