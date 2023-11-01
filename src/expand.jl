@@ -104,7 +104,8 @@ function abstraction_expansions!(search_state)
         search_state.matches
     else
         filter(search_state.matches) do m
-            m.holes[end] === :E
+            dfa_state = m.holes[end].match.dfa_state
+            dfa_state === :E || dfa_state === :S
         end
     end
 
