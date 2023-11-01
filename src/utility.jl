@@ -1,17 +1,17 @@
 
-struct UtilityByLeaf
-    utility_by_leaf::Dict{Symbol,Float32}
+struct SizeBySymbol
+    size_by_symbol::Dict{Symbol,Float32}
 end
 
-function leaf_util(sym::Symbol, utility_by_leaf::UtilityByLeaf)
-    if sym in keys(utility_by_leaf.utility_by_leaf)
-        return utility_by_leaf.utility_by_leaf[sym]
+function symbol_size(sym::Symbol, size_by_symbol::SizeBySymbol)
+    if sym in keys(size_by_symbol.size_by_symbol)
+        return size_by_symbol.size_by_symbol[sym]
     else
         return 1.0
     end
 end
 
-function leaf_util(sym::Symbol, utility_by_leaf::Nothing)
+function symbol_size(sym::Symbol, size_by_symbol::Nothing)
     1.0
 end
 
@@ -70,7 +70,7 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansi
     end
 end
 
-utility_by_leaf = UtilityByLeaf(Dict(
+size_by_symbol = SizeBySymbol(Dict(
     :Name => 0.99,
     :Load => 0.99,
     :Store => 0.99,
@@ -83,14 +83,14 @@ utility_by_leaf = UtilityByLeaf(Dict(
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    match.local_utility += leaf_util(expansion.data.leaf, utility_by_leaf)
+    match.local_utility += symbol_size(expansion.data.leaf, size_by_symbol)
 end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticNodeExpansion})
     # let it be zero?
     # match.local_utility += 0.;
     if expansion.data.head !== :no_expand_head
-        match.local_utility += leaf_util(expansion.data.head, utility_by_leaf)
+        match.local_utility += symbol_size(expansion.data.head, size_by_symbol)
     end
     nothing
 end
