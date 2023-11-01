@@ -69,14 +69,14 @@ end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    match.local_utility += symbol_size(expansion.data.leaf, match.size_by_symbol)
+    match.local_utility += symbol_size(expansion.data.leaf, match.config.size_by_symbol)
 end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticNodeExpansion})
     # let it be zero?
     # match.local_utility += 0.;
     if expansion.data.head !== :no_expand_head
-        match.local_utility += symbol_size(expansion.data.head, match.size_by_symbol)
+        match.local_utility += symbol_size(expansion.data.head, match.config.size_by_symbol)
     end
     nothing
 end
