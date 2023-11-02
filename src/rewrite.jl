@@ -6,7 +6,8 @@ function rewrite(search_state::SearchState) :: Tuple{Corpus,Float32,Float32}
     rewritten_programs = rewrite_program.(search_state.corpus.programs, search_state)
     rewritten = Corpus(rewritten_programs)
 
-    compressive_utility = size(search_state.corpus) - size(rewritten) - size(search_state.abstraction.body)
+    size_by_symbol = search_state.config.size_by_symbol
+    compressive_utility = size(search_state.corpus, size_by_symbol) - size(rewritten, size_by_symbol) - size(search_state.abstraction.body, size_by_symbol)
 
     # @show rewritten
     if !isapprox(cumulative_utility, compressive_utility)
@@ -55,7 +56,7 @@ function bottom_up_utility(search_state::SearchState) :: Float32
 
     # Eqn 18 from https://arxiv.org/pdf/2211.16605.pdf
     corpus_util = sum(programs -> minimum(p -> p.expr.match.cumulative_utility, programs), values(search_state.corpus.programs_by_task))
-    corpus_util - size(search_state.abstraction.body)
+    corpus_util - size(search_state.abstraction.body, search_state.config.size_by_symbol)
 end
 
 rewrite_program(program, search_state) = Program(rewrite_inner(program.expr, search_state), program.id, program.task)

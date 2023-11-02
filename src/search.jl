@@ -15,10 +15,10 @@ end
 Base.show(io::IO, obj::Corpus) = print(io, "\n\t", join(obj.programs, "\n\t"))
 Base.show(io::IO, obj::Program) = print(io, obj.expr)
 
-size(p::Program) = size(p.expr)
+size(p::Program, size_by_symbol) = size(p.expr, size_by_symbol)
 
-function size(corpus::Corpus) :: Float32
-    sum(minimum.(size, values(corpus.programs_by_task)))
+function size(corpus::Corpus, size_by_symbol)::Float32
+    sum(minimum.(x -> size(x, size_by_symbol), values(corpus.programs_by_task)))
 end
 
 
@@ -109,6 +109,7 @@ Base.@kwdef mutable struct SearchConfig
     # optimizations
     no_opt_arg_capture::Bool = false
     no_opt_redundant_args::Bool = false
+    size_by_symbol::Union{Nothing,Dict{Symbol,Float32}} = nothing
 end
 
 
@@ -152,7 +153,7 @@ mutable struct SearchState
 
     function SearchState(corpus, config)
         abstraction = Abstraction(new_hole(nothing), 0, 0)
-        matches = init_all_corpus_matches(corpus)
+        matches = init_all_corpus_matches(corpus, config)
         if !isnothing(config.dfa)
             for program in corpus.programs
                 run_dfa!(program.expr, config.dfa, :M)
@@ -221,12 +222,12 @@ Initializes a Match at every subtree in the corpus
 Note any filtering to the initial match set should NOT be done here because
 downstream we need this for SearchState.all_nodes
 """
-function init_all_corpus_matches(corpus) :: Vector{Match}
+function init_all_corpus_matches(corpus, config::SearchConfig)::Vector{Match}
     matches = Match[]
     id = 1
     for program in corpus.programs
         for expr in subexpressions(program.expr) # child-first traversal
-            match = Match(expr, program, id)
+            match = Match(expr, program, id, config)
             expr.match = match
             push!(matches, match)
             id += 1
@@ -288,6 +289,7 @@ end
 
 function stitch_search(corpus, config)
 
+    size_by_symbol = config.size_by_symbol
     search_state = SearchState(corpus, config)
     
     (; verbose, verbose_best, plot, silent) = config
@@ -397,7 +399,7 @@ function stitch_search(corpus, config)
     if isnothing(search_state.best_abstraction)
         silent || println("No abstractions found")
     else 
-        silent || println("Best abstraction: ", search_state.best_abstraction.body, " with utility ", search_state.best_util, " compressed by ", size(search_state.corpus) / (size(search_state.corpus) - search_state.best_util), "x");
+        silent || println("Best abstraction: ", search_state.best_abstraction.body, " with utility ", search_state.best_util, " compressed by ", size(search_state.corpus, size_by_symbol) / (size(search_state.corpus, size_by_symbol) - search_state.best_util), "x")
     end
 
     silent || println(search_state.stats);
@@ -450,7 +452,7 @@ end
 
 function compress(original_corpus; iterations=3, kwargs...)
     corpus = original_corpus
-    config = SearchConfig(;kwargs...)
+    config = SearchConfig(; kwargs...)
     abstractions = Abstraction[]
     for i in 1:iterations
         println("===Iteration $i===")
@@ -464,7 +466,7 @@ function compress(original_corpus; iterations=3, kwargs...)
         corpus = rewritten
         push!(abstractions, search_res.abstraction)
     end
-    println("Total compression: ", size(original_corpus) / size(corpus), "x")
+    println("Total compression: ", size(original_corpus, config.size_by_symbol) / size(corpus, config.size_by_symbol), "x")
     return abstractions, corpus
 end
 

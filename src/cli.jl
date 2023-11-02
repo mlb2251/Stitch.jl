@@ -28,15 +28,28 @@ function cli()
         arg_type = String
     end
 
+    @add_arg_table s begin
+        "--size-by-symbol"
+        help = "Size of each symbol"
+        arg_type = String
+    end
+
+
     args = parse_args(s)
+
+    size_by_symbol_json = JSON.parse(args["size-by-symbol"])
+
     line = readline()
     json = JSON.parse(line)
     corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(json)])
+
+    size_by_symbol = Dict(Symbol(k) => Float32(v) for (k, v) in size_by_symbol_json)
     abstractions, corpus = compress_imperative(
         corpus,
         args["dfa"],
         iterations=args["iterations"],
-        max_arity=args["max-arity"]
+        max_arity=args["max-arity"],
+        size_by_symbol=size_by_symbol
     )
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     println(JSON.json([

@@ -1,3 +1,16 @@
+
+function symbol_size(sym::Symbol, size_by_symbol::Dict{Symbol,Float32})
+    if sym in keys(size_by_symbol)
+        return size_by_symbol[sym]
+    else
+        return 1.0
+    end
+end
+
+function symbol_size(sym::Symbol, size_by_symbol::Nothing)
+    1.0
+end
+
 function upper_bound_inf(search_state, expansion) :: Float32
     Inf32
 end
@@ -53,16 +66,17 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansi
     end
 end
 
+
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    match.local_utility += 1.;
+    match.local_utility += symbol_size(expansion.data.leaf, match.size_by_symbol)
 end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticNodeExpansion})
     # let it be zero?
     # match.local_utility += 0.;
     if expansion.data.head !== :no_expand_head
-        match.local_utility += 1.;
+        match.local_utility += symbol_size(expansion.data.head, match.size_by_symbol)
     end
     nothing
 end
@@ -72,7 +86,7 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{AbstractionEx
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility second term; cost_app * arity)
         # note: commented out with switch away from application penalty
         # match.local_utility -= .01;
-        
+
         # actually do nothing here
     else
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (multiuse utility; (usages-1)*cost(arg))
@@ -103,7 +117,8 @@ function utility_rewrite(search_state) :: Float32
     end
 
     rewritten = rewrite(search_state)
-    size(search_state.corpus) - size(rewritten)
+    size_by_symbol = search_state.config.size_by_symbol
+    size(search_state.corpus, size_by_symbol) - size(rewritten, size_by_symbol)
 end
 
 is_identity_abstraction(search_state) = length(search_state.past_expansions) == 1 && isa(search_state.past_expansions[1].match, AbstractionExpansion)
