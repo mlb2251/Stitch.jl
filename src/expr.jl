@@ -47,6 +47,8 @@ mutable struct Match
     continuation::Union{Nothing, SExprGeneric{Match}}
 
     size_by_symbol::Union{Nothing,Dict{Symbol,Float32}}
+    application_utility_metavar::Float32
+    application_utility_symvar::Float32
 
     Match(expr, program, id, config) = new(
         expr,
@@ -60,7 +62,7 @@ mutable struct Match
         num_nodes(expr),
         struct_hash(expr),
         :uninit_state,
-        local_utility_init(),
+        local_utility_init(config),
         NaN32,
         false,
         false,
@@ -69,7 +71,9 @@ mutable struct Match
         Dict{Symbol,Int}(),
         Bool[],
         nothing,
-        config.size_by_symbol
+        config.size_by_symbol,
+        config.application_utility_metavar,
+        config.application_utility_symvar
     )
 end
 
