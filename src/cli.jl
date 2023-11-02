@@ -28,15 +28,51 @@ function cli()
         arg_type = String
     end
 
+    @add_arg_table s begin
+        "--size-by-symbol"
+        help = "Size of each symbol"
+        arg_type = String
+    end
+
+    @add_arg_table s begin
+        "--application-utility-fixed"
+        help = "Application utility fixed"
+        default = Float32(-1.0)
+        arg_type = Float32
+    end
+
+    @add_arg_table s begin
+        "--application-utility-metavar"
+        help = "Application utility metavar"
+        default = Float32(0)
+        arg_type = Float32
+    end
+
+    @add_arg_table s begin
+        "--application-utility-symvar"
+        help = "Application utility symvar"
+        default = Float32(0)
+        arg_type = Float32
+    end
+
     args = parse_args(s)
+
+    size_by_symbol_json = JSON.parse(args["size-by-symbol"])
+
     line = readline()
     json = JSON.parse(line)
     corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(json)])
+
+    size_by_symbol = Dict(Symbol(k) => Float32(v) for (k, v) in size_by_symbol_json)
     abstractions, corpus = compress_imperative(
         corpus,
         args["dfa"],
         iterations=args["iterations"],
-        max_arity=args["max-arity"]
+        max_arity=args["max-arity"],
+        size_by_symbol=size_by_symbol,
+        application_utility_fixed=args["application-utility-fixed"],
+        application_utility_metavar=args["application-utility-metavar"],
+        application_utility_symvar=args["application-utility-symvar"]
     )
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     println(JSON.json([

@@ -1,3 +1,16 @@
+
+function symbol_size(sym::Symbol, size_by_symbol::Dict{Symbol,Float32})
+    if sym in keys(size_by_symbol)
+        return size_by_symbol[sym]
+    else
+        return 1.0
+    end
+end
+
+function symbol_size(sym::Symbol, size_by_symbol::Nothing)
+    1.0
+end
+
 function upper_bound_inf(search_state, expansion) :: Float32
     Inf32
 end
@@ -47,30 +60,23 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansi
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
     # node from the corpus.
     if expansion.data.fresh
-        match.local_utility += 0;
+        match.local_utility += match.application_utility_symvar
     else
         match.local_utility += 1;
     end
 end
 
-zero_utility_leaves_set = Set([:Name, :Load, :Store, :None, :list, :nil, :semi, :Constant])
-zero_utility_leaves_value = 0
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    leaf_name = expansion.data.leaf
-    if leaf_name in zero_utility_leaves_set
-        match.local_utility += zero_utility_leaves_value;
-    else
-        match.local_utility += 1.;
-    end
+    match.local_utility += symbol_size(expansion.data.leaf, match.size_by_symbol)
 end
 
 function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticNodeExpansion})
     # let it be zero?
     # match.local_utility += 0.;
     if expansion.data.head !== :no_expand_head
-        match.local_utility += 1.;
+        match.local_utility += symbol_size(expansion.data.head, match.size_by_symbol)
     end
     nothing
 end
@@ -79,8 +85,8 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{AbstractionEx
     if expansion.data.fresh
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility second term; cost_app * arity)
         # note: commented out with switch away from application penalty
-        # match.local_utility -= .01;
-        
+        match.local_utility += match.application_utility_metavar
+
         # actually do nothing here
     else
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (multiuse utility; (usages-1)*cost(arg))
@@ -93,8 +99,7 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{ContinuationE
     # zero
 end
 
-# Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility first term; -cost_t(t_A))
-local_utility_init() = -1.0
+local_utility_init(config::SearchConfig) = config.application_utility_fixed
 
 
 """
@@ -111,7 +116,8 @@ function utility_rewrite(search_state) :: Float32
     end
 
     rewritten = rewrite(search_state)
-    size(search_state.corpus) - size(rewritten)
+    size_by_symbol = search_state.config.size_by_symbol
+    size(search_state.corpus, size_by_symbol) - size(rewritten, size_by_symbol)
 end
 
 is_identity_abstraction(search_state) = length(search_state.past_expansions) == 1 && isa(search_state.past_expansions[1].match, AbstractionExpansion)
