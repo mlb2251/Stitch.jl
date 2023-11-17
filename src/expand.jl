@@ -284,13 +284,20 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
         search_state.abstraction.arity += 1
     end
 
+    dfa_sym = nothing
+
     for match in search_state.matches
         hole = pop!(match.holes)
         push!(match.holes_stack, hole)
         push!(match.all_args, hole);
         if expansion.data.fresh
+            dfa_sym = hole.match.dfa_state
             push!(match.unique_args, hole); # move the hole to be an argument
         end
+    end
+
+    if expansion.data.fresh
+        push!(search_state.abstraction.dfa_metavars, dfa_sym)
     end
 end
 
@@ -300,6 +307,7 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
     hole.leaf = Symbol("%$(expansion.data.idx)")
 
     new_symbol = false
+    dfa_sym = nothing
 
     for match in search_state.matches
         # pop next hole and save it for future backtracking
@@ -314,6 +322,7 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
             match.idx_of_sym[hole.leaf] = expansion.data.idx
             push!(match.idx_is_fresh,true)
             new_symbol = true
+            dfa_sym = hole.match.dfa_state
         else
             push!(match.idx_is_fresh,false)
         end
@@ -322,6 +331,7 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
 
     if new_symbol
         search_state.abstraction.sym_arity += 1
+        push!(search_state.abstraction.dfa_symvars, dfa_sym)
     end
 
 end
@@ -381,6 +391,7 @@ function unexpand!(search_state, expansion::PossibleExpansion{AbstractionExpansi
     hole.leaf = SYM_HOLE
     if expansion.data.fresh
         search_state.abstraction.arity -= 1
+        pop!(search_state.abstraction.dfa_metavars)
     end
 
     for match in search_state.matches
@@ -414,6 +425,7 @@ function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, 
 
     if new_symbol
         search_state.abstraction.sym_arity -= 1
+        pop!(search_state.abstraction.dfa_symvars)
     end
 end
 

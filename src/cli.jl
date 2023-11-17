@@ -76,7 +76,14 @@ function cli()
     )
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     println(JSON.json([
-        Dict([("arity", abstraction.arity), ("sym_arity", abstraction.sym_arity), ("body", string(abstraction.body))])
+        Dict([
+            ("arity", abstraction.arity),
+            ("sym_arity", abstraction.sym_arity),
+            ("body", string(abstraction.body)),
+            ("dfa_root", abstraction.dfa_root),
+            ("dfa_metavars", abstraction.dfa_metavars),
+            ("dfa_symvars", abstraction.dfa_symvars),
+        ])
         for abstraction in abstractions
     ]))
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")

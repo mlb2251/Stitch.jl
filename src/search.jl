@@ -71,11 +71,16 @@ mutable struct Abstraction
     body::SExpr
     arity::Int
     sym_arity::Int
+    dfa_root::Symbol
+    dfa_metavars::Vector{Symbol}
+    dfa_symvars::Vector{Symbol}
 end
 
 Base.show(io::IO, obj::Abstraction) = pretty_show(io, obj; indent=false)
 
-Base.copy(abstraction::Abstraction) = Abstraction(copy(abstraction.body), abstraction.arity, abstraction.sym_arity)
+Base.copy(abstraction::Abstraction) = Abstraction(
+    copy(abstraction.body), abstraction.arity, abstraction.sym_arity,
+    abstraction.dfa_root, copy(abstraction.dfa_metavars), copy(abstraction.dfa_symvars))
 
 @Base.kwdef mutable struct Stats
     expansions::Int = 0
@@ -158,7 +163,7 @@ mutable struct SearchState
     past_expansions::Vector{PossibleExpansion}
 
     function SearchState(corpus, config)
-        abstraction = Abstraction(new_hole(nothing), 0, 0)
+        abstraction = Abstraction(new_hole(nothing), 0, 0, :uninit_state, [], [])
         matches = init_all_corpus_matches(corpus, config)
         if !isnothing(config.dfa)
             for program in corpus.programs
@@ -456,10 +461,31 @@ mutable struct SearchResult
     util::Float32
 end
 
-function compress(original_corpus; iterations=3, kwargs...)
+function root_dfa_state(search_res)
+    dfa_states = [m.dfa_state for m in search_res.matches]
+    dfa_states = unique(dfa_states)
+    if length(dfa_states) > 1
+        error("multiple dfa states for a single abstraction")
+    end
+    dfa_state = dfa_states[1]
+    dfa_state
+end
+
+function add_abstraction_to_dfa(dfa, symbol, abstraction)
+    if isnothing(dfa)
+        return nothing
+    end
+    dfa = deepcopy(dfa)
+    symbols = vcat(abstraction.dfa_metavars, abstraction.dfa_symvars)
+    dfa[abstraction.dfa_root][symbol] = symbols
+    dfa
+end
+
+
+function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
     corpus = original_corpus
-    config = SearchConfig(; kwargs...)
     abstractions = Abstraction[]
+    config = SearchConfig(; dfa=dfa, kwargs...)
     for i in 1:iterations
         println("===Iteration $i===")
         config.new_abstraction_name = Symbol("fn_$i")
@@ -468,8 +494,11 @@ function compress(original_corpus; iterations=3, kwargs...)
             println("No more abstractions")
             break
         end
+        search_res.abstraction.dfa_root = root_dfa_state(search_res)
         (rewritten, compressive, cumulative) = rewrite(search_res)
         corpus = rewritten
+        dfa = add_abstraction_to_dfa(dfa, config.new_abstraction_name, search_res.abstraction)
+        config = SearchConfig(; dfa=dfa, kwargs...)
         push!(abstractions, search_res.abstraction)
     end
     println("Total compression: ", size(original_corpus, config.size_by_symbol) / size(corpus, config.size_by_symbol), "x")
