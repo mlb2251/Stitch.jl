@@ -1,0 +1,18 @@
+{
+    "abstractions": [
+        [
+            1,
+            0,
+            "(Y (lam (lam ((is_nil $0) nil (cons (#0 $0))))))",
+            "uninit_state",
+            [
+                "uninit_state"
+            ],
+            []
+        ]
+    ],
+    "programs": [
+        "(fn_1 +)",
+        "(fn_1 -)"
+    ]
+}

@@ -1,0 +1,7 @@
+{
+    "abstractions": [],
+    "programs": [
+        "(+ &x &x)",
+        "(+ &y &y)"
+    ]
+}

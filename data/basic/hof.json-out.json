@@ -1,0 +1,19 @@
+{
+    "abstractions": [
+        [
+            1,
+            0,
+            "(lam (app (app cons (app #0 $0)) (app (app cons (app #0 $0)) empty)))",
+            "uninit_state",
+            [
+                "uninit_state"
+            ],
+            []
+        ]
+    ],
+    "programs": [
+        "(fn_1 inc)",
+        "(fn_1 dec)",
+        "(fn_1 (app plus $0))"
+    ]
+}

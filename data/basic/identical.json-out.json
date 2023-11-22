@@ -1,0 +1,16 @@
+{
+    "abstractions": [
+        [
+            0,
+            0,
+            "(a b c d e)",
+            "uninit_state",
+            [],
+            []
+        ]
+    ],
+    "programs": [
+        "(fn_1)",
+        "(fn_1)"
+    ]
+}

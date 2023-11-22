@@ -1,0 +1,18 @@
+{
+    "abstractions": [
+        [
+            1,
+            0,
+            "(a (lam (#0 #0)))",
+            "uninit_state",
+            [
+                "uninit_state"
+            ],
+            []
+        ]
+    ],
+    "programs": [
+        "(fn_1 (a $0))",
+        "(fn_1 ($0 b))"
+    ]
+}
