@@ -105,8 +105,6 @@ Base.@kwdef mutable struct SearchConfig
     silent::Bool = false
     allow_single_task::Bool = true
 
-    # imperative stitch
-    imperative::Bool = false
     # only_match_semi::Bool = false
     autoexpand_head::Bool = false # auto expand head of list
     dfa::Union{Dict{Symbol, Dict{Symbol,Vector{Symbol}}}, Nothing} = nothing
