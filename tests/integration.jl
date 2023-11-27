@@ -17,7 +17,15 @@ function abstraction_to_list(abstraction)
 end
 
 function proc_args(args)
-    args = Dict(Symbol(k) => v for (k, v) in args)
+    args = Dict{Symbol,Any}(Symbol(k) => v for (k, v) in args)
+    if :dfa in keys(args)
+        args[:dfa] = load_dfa(args[:dfa])
+    end
+    if :size_by_symbol in keys(args)
+        sbs = JSON.parsefile(args[:size_by_symbol])
+        sbs = Dict{Symbol,Float32}(Symbol(k) => v for (k, v) in sbs)
+        args[:size_by_symbol] = sbs
+    end
     args
 end
 
@@ -29,13 +37,13 @@ function integrate(in_file, out_file)
 
     if isfile(arguments)
         argument_sets = JSON.parsefile(arguments)
-        argument_sets = [proc_args(args) for args in argument_sets]
     else
         argument_sets = [Dict()]
     end
     out = []
     for kwargs in argument_sets
-        abstractions, compressed_corpus = compress(corpus; kwargs...)
+        println(in_file, " ", kwargs)
+        abstractions, compressed_corpus = compress(corpus; proc_args(kwargs)...)
         abstractions = [abstraction_to_list(x) for x in abstractions]
         out_per = Dict(
             "args" => kwargs,
