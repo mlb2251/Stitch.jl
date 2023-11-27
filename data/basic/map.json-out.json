@@ -18,5 +18,58 @@
             "(fn_1 (app car $0) +)",
             "(fn_1 1 -)"
         ]
+    },
+    {
+        "args": {
+            "max_arity": 1
+        },
+        "abstractions": [
+            [
+                1,
+                0,
+                "(app Y (lam (lam (app (app (app if (app is_nil $0)) nil) (app (app cons #0) (app $1 (app cdr $0)))))))",
+                "uninit_state",
+                [
+                    "uninit_state"
+                ],
+                []
+            ],
+            [
+                1,
+                0,
+                "(app #0 (app car $0))",
+                "uninit_state",
+                [
+                    "uninit_state"
+                ],
+                []
+            ]
+        ],
+        "programs": [
+            "(fn_1 (fn_2 (fn_2 +)))",
+            "(fn_1 (app (fn_2 -) 1))"
+        ]
+    },
+    {
+        "args": {
+            "max_arity": 3
+        },
+        "abstractions": [
+            [
+                2,
+                0,
+                "(app Y (lam (lam (app (app (app if (app is_nil $0)) nil) (app (app cons (app (app #1 (app car $0)) #0)) (app $1 (app cdr $0)))))))",
+                "uninit_state",
+                [
+                    "uninit_state",
+                    "uninit_state"
+                ],
+                []
+            ]
+        ],
+        "programs": [
+            "(fn_1 (app car $0) +)",
+            "(fn_1 1 -)"
+        ]
     }
 ]
