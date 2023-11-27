@@ -1,28 +1,31 @@
-{
-    "abstractions": [
-        [
-            1,
-            0,
-            "(Module (semi (Assign #0 (Constant i2 None) None) (semi (Assign #0 (Constant i3 None) None) (semi (Assign #0 (Constant i4 None) None) nil))) nil)",
-            "uninit_state",
+[
+    {
+        "args": {},
+        "abstractions": [
             [
-                "uninit_state"
+                1,
+                0,
+                "(Module (semi (Assign #0 (Constant i2 None) None) (semi (Assign #0 (Constant i3 None) None) (semi (Assign #0 (Constant i4 None) None) nil))) nil)",
+                "uninit_state",
+                [
+                    "uninit_state"
+                ],
+                []
             ],
-            []
-        ],
-        [
-            0,
-            1,
-            "(fn_1 (list (Name %1 Store)))",
-            "uninit_state",
-            [],
             [
-                "uninit_state"
+                0,
+                1,
+                "(fn_1 (list (Name %1 Store)))",
+                "uninit_state",
+                [],
+                [
+                    "uninit_state"
+                ]
             ]
+        ],
+        "programs": [
+            "(fn_2 &x:0)",
+            "(fn_2 &y:0)"
         ]
-    ],
-    "programs": [
-        "(fn_2 &x:0)",
-        "(fn_2 &y:0)"
-    ]
-}
+    }
+]

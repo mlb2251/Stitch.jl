@@ -1,17 +1,20 @@
-{
-    "abstractions": [
-        [
-            1,
-            0,
-            "(lam (a (lam #0) 0))",
-            "uninit_state",
+[
+    {
+        "args": {},
+        "abstractions": [
             [
-                "uninit_state"
-            ],
-            []
+                1,
+                0,
+                "(lam (a (lam #0) 0))",
+                "uninit_state",
+                [
+                    "uninit_state"
+                ],
+                []
+            ]
+        ],
+        "programs": [
+            "(fn_1 (fn_1 (fn_1 (lam ($5 b)))))"
         ]
-    ],
-    "programs": [
-        "(fn_1 (fn_1 (fn_1 (lam ($5 b)))))"
-    ]
-}
+    }
+]

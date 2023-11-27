@@ -1,19 +1,22 @@
-{
-    "abstractions": [
-        [
-            2,
-            0,
-            "(lam (app (app cons (app (app #1 (app car $0)) #0)) (app rec (app cdr $0))))",
-            "uninit_state",
+[
+    {
+        "args": {},
+        "abstractions": [
             [
+                2,
+                0,
+                "(lam (app (app cons (app (app #1 (app car $0)) #0)) (app rec (app cdr $0))))",
                 "uninit_state",
-                "uninit_state"
-            ],
-            []
+                [
+                    "uninit_state",
+                    "uninit_state"
+                ],
+                []
+            ]
+        ],
+        "programs": [
+            "(fn_1 (app car $0) +)",
+            "(fn_1 t1 -)"
         ]
-    ],
-    "programs": [
-        "(fn_1 (app car $0) +)",
-        "(fn_1 t1 -)"
-    ]
-}
+    }
+]
