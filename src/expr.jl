@@ -82,7 +82,6 @@ mutable struct Match
     Match(expr, program, id, config) = new(
         expr,
         SExprGeneric{Match,Metadata}[],
-        SExprGeneric{Match,Metadata}[],
         [expr],
         SExprGeneric{Match,Metadata}[],
         Float32[],
