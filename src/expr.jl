@@ -44,6 +44,9 @@ mutable struct Match
     num_nodes::Int
     struct_hash::Int
     dfa_state::Symbol
+    # postorder location of the underlying node in the corpus. Should be placed alongside other
+    # node metadata (see above)
+    id::Int
 
     # Local utility: utility if you rewrite at this location specifically. Match specific
     # Tracks Eqn 12: https://arxiv.org/pdf/2211.16605.pdf
@@ -58,10 +61,6 @@ mutable struct Match
     cumulative_utility::Float32
     accept_rewrite::Bool
     is_active::Bool
-
-    # postorder location of the underlying node in the corpus. Should be placed alongside other
-    # node metadata (see above)
-    id::Int
 
     # conversions between a symbol &foo and it's index %0
     sym_of_idx::Vector{Symbol}
@@ -88,11 +87,11 @@ mutable struct Match
         num_nodes(expr),
         struct_hash(expr),
         :uninit_state,
+        id,
         local_utility_init(config),
         NaN32,
         false,
         false,
-        id,
         Symbol[],
         Dict{Symbol,Int}(),
         Bool[],
