@@ -8,7 +8,7 @@ mutable struct SExprGeneric{D,M}
     children::Vector{SExprGeneric{D,M}}
     parent::Union{Tuple{SExprGeneric{D,M},Int}, Nothing} # parent and which index of the child it is
     match::Union{D, Nothing}
-    metadata::M
+    metadata::Union{M,Nothing}
 end
 
 mutable struct ProgramGeneric{D,M}
@@ -43,7 +43,7 @@ mutable struct Match
 
     # metadata about the node that the match appears in.
     # TODO move to its own struct
-    program::ProgramGeneric{Match} # which program this subtree appears in
+    program::ProgramGeneric{Match,Metadata} # which program this subtree appears in
     size::Float32
     num_nodes::Int
     struct_hash::Int
@@ -107,10 +107,10 @@ mutable struct Match
 end
 
 const SExpr = SExprGeneric{Match,Metadata}
-const Program = ProgramGeneric{Match}
+const Program = ProgramGeneric{Match,Metadata}
 
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
-    expr = SExpr(nothing, children, parent, nothing)
+    expr = SExpr(nothing, children, parent, nothing, nothing)
     for (i,child) in enumerate(children)
         isnothing(child.parent) || error("arg already has parent")
         child.parent = (expr,i)
@@ -119,17 +119,19 @@ function sexpr_node(children::Vector{SExpr}; parent=nothing)
 end
 
 function sexpr_leaf(leaf::Symbol; parent=nothing)
-    SExpr(leaf, Vector{SExpr}(), parent, nothing)
+    SExpr(leaf, Vector{SExpr}(), parent, nothing, nothing)
 end
 
 is_leaf(e::SExpr) = !isnothing(e.leaf)
 
+# TODO document why isn't this copying all the fields??
 function Base.copy(e::SExpr)
     SExpr(
         e.leaf,
         [copy(child) for child in e.children],
         nothing,
-        nothing
+        nothing,
+        nothing,
     )
 end
 
