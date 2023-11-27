@@ -3,17 +3,21 @@ An expression. See SExpr for the version that's always used - the definition is 
 SExprGeneric and SExpr because mutually recursive types are supported in julia so we can't
 directly have Expr and Match that point to each other and without using generics.
 """
-mutable struct SExprGeneric{D}
+mutable struct SExprGeneric{D,M}
     leaf::Union{Symbol,Nothing}
-    children::Vector{SExprGeneric{D}}
-    parent::Union{Tuple{SExprGeneric{D},Int}, Nothing} # parent and which index of the child it is
+    children::Vector{SExprGeneric{D,M}}
+    parent::Union{Tuple{SExprGeneric{D,M},Int}, Nothing} # parent and which index of the child it is
     match::Union{D, Nothing}
+    metadata::M
 end
 
-mutable struct ProgramGeneric{D}
-    expr::SExprGeneric{D}
+mutable struct ProgramGeneric{D,M}
+    expr::SExprGeneric{D,M}
     id::Int
     task::Int
+end
+
+mutable struct Metadata
 end
 
 mutable struct Match
@@ -27,13 +31,13 @@ mutable struct Match
     #   - what are the holes that need to be expanded at the current location, etc.
     # Fields:
     # pointer to subtree in original corpus
-    expr::SExprGeneric{Match}
+    expr::SExprGeneric{Match,Metadata}
     # pointers to first instance of each arg within subtree ie args[1] is the thing that #0 matches
-    unique_args::Vector{SExprGeneric{Match}}
+    unique_args::Vector{SExprGeneric{Match,Metadata}}
     # pointer to the place that each hole matches.
-    holes::Vector{SExprGeneric{Match}}
+    holes::Vector{SExprGeneric{Match,Metadata}}
     # history of the holes
-    holes_stack::Vector{SExprGeneric{Match}}
+    holes_stack::Vector{SExprGeneric{Match,Metadata}}
     # history of the local utilities of the match
     local_utility_stack::Vector{Float32}
 
@@ -68,7 +72,7 @@ mutable struct Match
     idx_is_fresh::Vector{Bool} # stack of whether each idx is fresh across the levels of search, used for backtracking
 
     # metavariable for continuation
-    continuation::Union{Nothing, SExprGeneric{Match}}
+    continuation::Union{Nothing,SExprGeneric{Match,Metadata}}
 
     # TODO move this way out to something entirely different
     size_by_symbol::Union{Nothing,Dict{Symbol,Float32}}
@@ -77,10 +81,10 @@ mutable struct Match
 
     Match(expr, program, id, config) = new(
         expr,
-        SExprGeneric{Match}[],
-        SExprGeneric{Match}[],
+        SExprGeneric{Match,Metadata}[],
+        SExprGeneric{Match,Metadata}[],
         [expr],
-        SExprGeneric{Match}[],
+        SExprGeneric{Match,Metadata}[],
         Float32[],
         program,
         size(expr, config.size_by_symbol),
@@ -102,7 +106,7 @@ mutable struct Match
     )
 end
 
-const SExpr = SExprGeneric{Match}
+const SExpr = SExprGeneric{Match,Metadata}
 const Program = ProgramGeneric{Match}
 
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
