@@ -472,8 +472,8 @@ function arg_capture(search_state)
 end
 
 function is_single_task(search_state)
-    first = search_state.matches[1].program.task
-    all(match -> match.program.task == first, search_state.matches)
+    first = search_state.matches[1].expr.metadata.program.task
+    all(match -> match.expr.metadata.program.task == first, search_state.matches)
 end
 
 mutable struct SamplingProcessor{F <: Function}

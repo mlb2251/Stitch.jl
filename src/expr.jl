@@ -17,7 +17,8 @@ mutable struct ProgramGeneric{D,M}
     task::Int
 end
 
-mutable struct Metadata
+mutable struct MetadataGeneric{D}
+    program::ProgramGeneric{D,MetadataGeneric{D}} # which program this subtree appears in
 end
 
 mutable struct Match
@@ -31,19 +32,18 @@ mutable struct Match
     #   - what are the holes that need to be expanded at the current location, etc.
     # Fields:
     # pointer to subtree in original corpus
-    expr::SExprGeneric{Match,Metadata}
+    expr::SExprGeneric{Match,MetadataGeneric{Match}}
     # pointers to first instance of each arg within subtree ie args[1] is the thing that #0 matches
-    unique_args::Vector{SExprGeneric{Match,Metadata}}
+    unique_args::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
     # pointer to the place that each hole matches.
-    holes::Vector{SExprGeneric{Match,Metadata}}
+    holes::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
     # history of the holes
-    holes_stack::Vector{SExprGeneric{Match,Metadata}}
+    holes_stack::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
     # history of the local utilities of the match
     local_utility_stack::Vector{Float32}
 
     # metadata about the node that the match appears in.
     # TODO move to its own struct
-    program::ProgramGeneric{Match,Metadata} # which program this subtree appears in
     size::Float32
     num_nodes::Int
     struct_hash::Int
@@ -72,20 +72,19 @@ mutable struct Match
     idx_is_fresh::Vector{Bool} # stack of whether each idx is fresh across the levels of search, used for backtracking
 
     # metavariable for continuation
-    continuation::Union{Nothing,SExprGeneric{Match,Metadata}}
+    continuation::Union{Nothing,SExprGeneric{Match,MetadataGeneric{Match}}}
 
     # TODO move this way out to something entirely different
     size_by_symbol::Union{Nothing,Dict{Symbol,Float32}}
     application_utility_metavar::Float32
     application_utility_symvar::Float32
 
-    Match(expr, program, id, config) = new(
+    Match(expr, id, config) = new(
         expr,
-        SExprGeneric{Match,Metadata}[],
+        SExprGeneric{Match,MetadataGeneric{Match}}[],
         [expr],
-        SExprGeneric{Match,Metadata}[],
+        SExprGeneric{Match,MetadataGeneric{Match}}[],
         Float32[],
-        program,
         size(expr, config.size_by_symbol),
         num_nodes(expr),
         struct_hash(expr),
@@ -105,6 +104,7 @@ mutable struct Match
     )
 end
 
+const Metadata = MetadataGeneric{Match}
 const SExpr = SExprGeneric{Match,Metadata}
 const Program = ProgramGeneric{Match,Metadata}
 
