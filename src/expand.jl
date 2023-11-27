@@ -289,7 +289,6 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
     for match in search_state.matches
         hole = pop!(match.holes)
         push!(match.holes_stack, hole)
-        push!(match.all_args, hole);
         if expansion.data.fresh
             dfa_sym = hole.match.dfa_state
             push!(match.unique_args, hole); # move the hole to be an argument
@@ -400,7 +399,6 @@ function unexpand!(search_state, expansion::PossibleExpansion{AbstractionExpansi
         if expansion.data.fresh
             pop!(match.unique_args) === hole || error("expected same hole");
         end
-        pop!(match.all_args) === hole || error("expected same hole");
     end
 end
 

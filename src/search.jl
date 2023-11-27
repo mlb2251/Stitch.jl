@@ -237,7 +237,7 @@ function init_all_corpus_matches(corpus, config::SearchConfig)::Vector{Match}
     matches = Match[]
     id = 1
     for program in corpus.programs
-        for expr in subexpressions(program.expr) # child-first traversal
+        for expr in subexpressions(program.expr) # child-first traversal (postorder)
             match = Match(expr, program, id, config)
             expr.match = match
             push!(matches, match)

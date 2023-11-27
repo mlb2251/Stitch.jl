@@ -17,25 +17,50 @@ mutable struct ProgramGeneric{D}
 end
 
 mutable struct Match
-    expr::SExprGeneric{Match} # pointer to subtree in original corpus
-    all_args::Vector{SExprGeneric{Match}}
-    unique_args::Vector{SExprGeneric{Match}} # pointers to first instance of each arg within subtree ie args[1] is #0
-    holes::Vector{SExprGeneric{Match}} # pointers to holes within subtree
-    holes_stack::Vector{SExprGeneric{Match}} # expanded holes
-    local_utility_stack::Vector{Float32} # past utilities
+    # represents a match of the current abstraction being constructed
+    # match objects are created once at the start of each iteration, which each match
+    #   corresponding to a node in the corpus
+    #   not all match objects are active at any given time
+    #   e.g., when ?? is the abstraction, every match object is active, but
+    #   if it's (+ 2 ??), only the match objects for locations matching (+ 2 ??) are active
+    # the match object contains information regarding match location specific information
+    #   - what are the holes that need to be expanded at the current location, etc.
+    # Fields:
+    # pointer to subtree in original corpus
+    expr::SExprGeneric{Match}
+    # pointers to first instance of each arg within subtree ie args[1] is the thing that #0 matches
+    unique_args::Vector{SExprGeneric{Match}}
+    # pointer to the place that each hole matches.
+    holes::Vector{SExprGeneric{Match}}
+    # history of the holes
+    holes_stack::Vector{SExprGeneric{Match}}
+    # history of the local utilities of the match
+    local_utility_stack::Vector{Float32}
 
+    # metadata about the node that the match appears in.
+    # TODO move to its own struct
     program::ProgramGeneric{Match} # which program this subtree appears in
     size::Float32
     num_nodes::Int
     struct_hash::Int
     dfa_state::Symbol
 
+    # Local utility: utility if you rewrite at this location specifically. Match specific
     # Tracks Eqn 12: https://arxiv.org/pdf/2211.16605.pdf
     local_utility::Float32
     
+    # handling rewrite conflicts. When the same abstraction can be used in two overlapping places, we need to pick one.
+    # e.g., program = (foo (foo (foo x))). abstraction = (foo (foo #0)). abstraction can either match
+    # as (fn_1 (foo x)) or (foo (fn_1 x)). We need to pick one.
+
+    # Simple bottom-up dynamic programming to figure out which is best
+    # TODO move to a separate rewritematch struct?
     cumulative_utility::Float32
     accept_rewrite::Bool
     is_active::Bool
+
+    # postorder location of the underlying node in the corpus. Should be placed alongside other
+    # node metadata (see above)
     id::Int
 
     # conversions between a symbol &foo and it's index %0
@@ -46,6 +71,7 @@ mutable struct Match
     # metavariable for continuation
     continuation::Union{Nothing, SExprGeneric{Match}}
 
+    # TODO move this way out to something entirely different
     size_by_symbol::Union{Nothing,Dict{Symbol,Float32}}
     application_utility_metavar::Float32
     application_utility_symvar::Float32
