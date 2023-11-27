@@ -1,16 +1,19 @@
-{
-    "abstractions": [
-        [
-            0,
-            0,
-            "(a b c d e f g h (A B C) (A B C) (A B C) (A B C))",
-            "uninit_state",
-            [],
-            []
+[
+    {
+        "args": {},
+        "abstractions": [
+            [
+                0,
+                0,
+                "(a b c d e f g h (A B C) (A B C) (A B C) (A B C))",
+                "uninit_state",
+                [],
+                []
+            ]
+        ],
+        "programs": [
+            "(fn_1)",
+            "(fn_1)"
         ]
-    ],
-    "programs": [
-        "(fn_1)",
-        "(fn_1)"
-    ]
-}
+    }
+]

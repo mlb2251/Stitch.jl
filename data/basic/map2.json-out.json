@@ -1,26 +1,29 @@
-{
-    "abstractions": [
-        [
-            1,
-            0,
-            "(Y (lam (lam (if (nil? $0) nil (cons #0 (r (cdr $0)))))))",
-            "uninit_state",
+[
+    {
+        "args": {},
+        "abstractions": [
             [
-                "uninit_state"
+                1,
+                0,
+                "(Y (lam (lam (if (nil? $0) nil (cons #0 (r (cdr $0)))))))",
+                "uninit_state",
+                [
+                    "uninit_state"
+                ],
+                []
             ],
-            []
+            [
+                0,
+                0,
+                "(car $0)",
+                "uninit_state",
+                [],
+                []
+            ]
         ],
-        [
-            0,
-            0,
-            "(car $0)",
-            "uninit_state",
-            [],
-            []
+        "programs": [
+            "(fn_1 (+ 2 (fn_2) (fn_2)))",
+            "(fn_1 (- (fn_2) (fn_2) 3 (fn_2) 4))"
         ]
-    ],
-    "programs": [
-        "(fn_1 (+ 2 (fn_2) (fn_2)))",
-        "(fn_1 (- (fn_2) (fn_2) 3 (fn_2) 4))"
-    ]
-}
+    }
+]

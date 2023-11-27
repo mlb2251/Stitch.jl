@@ -1,7 +1,10 @@
-{
-    "abstractions": [],
-    "programs": [
-        "(a a a)",
-        "(b b b)"
-    ]
-}
+[
+    {
+        "args": {},
+        "abstractions": [],
+        "programs": [
+            "(a a a)",
+            "(b b b)"
+        ]
+    }
+]

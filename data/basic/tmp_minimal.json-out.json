@@ -1,17 +1,29 @@
-{
-    "abstractions": [
-        [
-            1,
-            0,
-            "(2x1 (left 6 (2x1 (right 4 (2x1 #0)))))",
-            "uninit_state",
+[
+    {
+        "args": {},
+        "abstractions": [
             [
-                "uninit_state"
-            ],
-            []
+                1,
+                0,
+                "(2x1 (left 6 (2x1 (right 4 (2x1 #0)))))",
+                "uninit_state",
+                [
+                    "uninit_state"
+                ],
+                []
+            ]
+        ],
+        "programs": [
+            "(right (right (left 1 (1x2 (right 10 (1x2 (left 9 (2x1 (right 2 (2x1 (right 6 (2x1 (left 2 (fn_1 (right 4 (fn_1 (left 6)))))))))))))))))"
         ]
-    ],
-    "programs": [
-        "(right (right (left 1 (1x2 (right 10 (1x2 (left 9 (2x1 (right 2 (2x1 (right 6 (2x1 (left 2 (fn_1 (right 4 (fn_1 (left 6)))))))))))))))))"
-    ]
-}
+    },
+    {
+        "args": {
+            "allow_single_task": false
+        },
+        "abstractions": [],
+        "programs": [
+            "(right (right (left 1 (1x2 (right 10 (1x2 (left 9 (2x1 (right 2 (2x1 (right 6 (2x1 (left 2 (2x1 (left 6 (2x1 (right 4 (2x1 (right 4 (2x1 (left 6 (2x1 (right 4 (2x1 (left 6)))))))))))))))))))))))))"
+        ]
+    }
+]
