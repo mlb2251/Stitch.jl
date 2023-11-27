@@ -16,6 +16,11 @@ function abstraction_to_list(abstraction)
     ]
 end
 
+function proc_args(args)
+    args = Dict(Symbol(k) => v for (k, v) in args)
+    args
+end
+
 function integrate(in_file, out_file)
     # read in the corpus
     corpus = load_corpus(in_file)
@@ -24,7 +29,7 @@ function integrate(in_file, out_file)
 
     if isfile(arguments)
         argument_sets = JSON.parsefile(arguments)
-        argument_sets = [Dict(Symbol(k) => v for (k, v) in args) for args in argument_sets]
+        argument_sets = [proc_args(args) for args in argument_sets]
     else
         argument_sets = [Dict()]
     end
