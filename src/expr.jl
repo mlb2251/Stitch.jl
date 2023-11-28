@@ -71,11 +71,6 @@ mutable struct Match
     # metavariable for continuation
     continuation::Union{Nothing,SExprGeneric{Match,MetadataGeneric{Match}}}
 
-    # TODO move this way out to something entirely different
-    size_by_symbol::Union{Nothing,Dict{Symbol,Float32}}
-    application_utility_metavar::Float32
-    application_utility_symvar::Float32
-
     Match(expr, id, config) = new(
         expr,
         SExprGeneric{Match,MetadataGeneric{Match}}[],
@@ -89,10 +84,7 @@ mutable struct Match
         Symbol[],
         Dict{Symbol,Int}(),
         Bool[],
-        nothing,
-        config.size_by_symbol,
-        config.application_utility_metavar,
-        config.application_utility_symvar
+        nothing
     )
 end
 

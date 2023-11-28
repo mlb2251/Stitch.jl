@@ -56,36 +56,36 @@ function upper_bound_with_conflicts(search_state, expansion=nothing) :: Float32
     bound
 end
 
-function expand_utility!(match, hole, expansion::PossibleExpansion{SymbolExpansion})
+function expand_utility!(config, match, hole, expansion::PossibleExpansion{SymbolExpansion})
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
     # node from the corpus.
     if expansion.data.fresh
-        match.local_utility += match.application_utility_symvar
+        match.local_utility += config.application_utility_symvar
     else
         match.local_utility += 1;
     end
 end
 
 
-function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
+function expand_utility!(config, match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    match.local_utility += symbol_size(expansion.data.leaf, match.size_by_symbol)
+    match.local_utility += symbol_size(expansion.data.leaf, config.size_by_symbol)
 end
 
-function expand_utility!(match, hole, expansion::PossibleExpansion{SyntacticNodeExpansion})
+function expand_utility!(config, match, hole, expansion::PossibleExpansion{SyntacticNodeExpansion})
     # let it be zero?
     # match.local_utility += 0.;
     if expansion.data.head !== :no_expand_head
-        match.local_utility += symbol_size(expansion.data.head, match.size_by_symbol)
+        match.local_utility += symbol_size(expansion.data.head, config.size_by_symbol)
     end
     nothing
 end
 
-function expand_utility!(match, hole, expansion::PossibleExpansion{AbstractionExpansion})
+function expand_utility!(config, match, hole, expansion::PossibleExpansion{AbstractionExpansion})
     if expansion.data.fresh
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility second term; cost_app * arity)
         # note: commented out with switch away from application penalty
-        match.local_utility += match.application_utility_metavar
+        match.local_utility += config.application_utility_metavar
 
         # actually do nothing here
     else
@@ -95,7 +95,7 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{AbstractionEx
     nothing
 end
 
-function expand_utility!(match, hole, expansion::PossibleExpansion{ContinuationExpansion})
+function expand_utility!(config, match, hole, expansion::PossibleExpansion{ContinuationExpansion})
     # zero
 end
 
