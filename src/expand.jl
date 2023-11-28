@@ -104,7 +104,7 @@ function abstraction_expansions!(search_state)
         search_state.matches
     else
         filter(search_state.matches) do m
-            dfa_state = m.holes[end].match.dfa_state
+            dfa_state = m.holes[end].metadata.dfa_state
             dfa_state === :E || dfa_state === :S
         end
     end
@@ -114,8 +114,8 @@ function abstraction_expansions!(search_state)
     # variable reuse
     for i in 0:search_state.abstraction.arity-1
         matches = copy(matches_after_dfa)
-        filter!(m -> m.holes[end].match.struct_hash == m.unique_args[i+1].match.struct_hash, matches)
-        # matches = [m for m in search_state.matches if m.holes[end].match.struct_hash == m.unique_args[i+1].match.struct_hash]
+        filter!(m -> m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash, matches)
+        # matches = [m for m in search_state.matches if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
         if isempty(matches) continue end
 
         push!(search_state.expansions, PossibleExpansion(
@@ -290,7 +290,7 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
         hole = pop!(match.holes)
         push!(match.holes_stack, hole)
         if expansion.data.fresh
-            dfa_sym = hole.match.dfa_state
+            dfa_sym = hole.metadata.dfa_state
             push!(match.unique_args, hole); # move the hole to be an argument
         end
     end
@@ -321,7 +321,7 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
             match.idx_of_sym[hole.leaf] = expansion.data.idx
             push!(match.idx_is_fresh,true)
             new_symbol = true
-            dfa_sym = hole.match.dfa_state
+            dfa_sym = hole.metadata.dfa_state
         else
             push!(match.idx_is_fresh,false)
         end
@@ -451,7 +451,7 @@ function redundant_arg_elim(search_state)
     search_state.config.no_opt_redundant_args && return false
     for i in 1:search_state.abstraction.arity
         for j in i+1:search_state.abstraction.arity
-            if all(match -> match.unique_args[i].match.struct_hash == match.unique_args[j].match.struct_hash, search_state.matches)
+            if all(match -> match.unique_args[i].metadata.struct_hash == match.unique_args[j].metadata.struct_hash, search_state.matches)
                 return true
             end
         end
@@ -463,8 +463,8 @@ end
 function arg_capture(search_state)
     search_state.config.no_opt_arg_capture && return false
     for i in 1:search_state.abstraction.arity
-        first_match = search_state.matches[1].unique_args[i].match.struct_hash;
-        if all(match -> match.unique_args[i].match.struct_hash == first_match, search_state.matches)
+        first_match = search_state.matches[1].unique_args[i].metadata.struct_hash
+        if all(match -> match.unique_args[i].metadata.struct_hash == first_match, search_state.matches)
             return true
         end
     end 

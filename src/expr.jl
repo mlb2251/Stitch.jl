@@ -21,6 +21,10 @@ mutable struct MetadataGeneric{D}
     program::ProgramGeneric{D,MetadataGeneric{D}} # which program this subtree appears in
     size::Float32
     num_nodes::Int
+    struct_hash::Int
+    dfa_state::Symbol
+    # postorder location of the underlying node in the corpus.
+    id::Int
 end
 
 mutable struct Match
@@ -44,13 +48,6 @@ mutable struct Match
     # history of the local utilities of the match
     local_utility_stack::Vector{Float32}
 
-    # metadata about the node that the match appears in.
-    # TODO move to its own struct
-    struct_hash::Int
-    dfa_state::Symbol
-    # postorder location of the underlying node in the corpus. Should be placed alongside other
-    # node metadata (see above)
-    id::Int
 
     # Local utility: utility if you rewrite at this location specifically. Match specific
     # Tracks Eqn 12: https://arxiv.org/pdf/2211.16605.pdf
@@ -85,9 +82,6 @@ mutable struct Match
         [expr],
         SExprGeneric{Match,MetadataGeneric{Match}}[],
         Float32[],
-        struct_hash(expr),
-        :uninit_state,
-        id,
         local_utility_init(config),
         NaN32,
         false,
@@ -141,16 +135,16 @@ const global_struct_hash = Dict{HashNode, Int}()
 
 """
 sets structural hash value, possibly with side effects of updating the structural hash, and
-sets e.match.struct_hash. Requires .match to be set so we know this will be used immutably
+sets e.metadata.struct_hash. Requires .metadata to be set so we know this will be used immutably
 """
 function struct_hash(e::SExpr) :: Int
-    isnothing(e.match) || isnothing(e.match.struct_hash) || return e.match.struct_hash
+    isnothing(e.metadata) || isnothing(e.metadata.struct_hash) || return e.metadata.struct_hash
 
     node = HashNode(e.leaf, map(struct_hash,e.children))
     if !haskey(global_struct_hash, node)
         global_struct_hash[node] = length(global_struct_hash) + 1
     end
-    isnothing(e.match) || (e.match.struct_hash = global_struct_hash[node])
+    isnothing(e.metadata) || (e.metadata.struct_hash = global_struct_hash[node])
     return global_struct_hash[node]
 end
 

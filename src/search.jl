@@ -179,8 +179,8 @@ mutable struct SearchState
 end
 
 function run_dfa!(expr, dfa, state)
-    @assert expr.match.dfa_state === :uninit_state
-    expr.match.dfa_state = state
+    @assert expr.metadata.dfa_state === :uninit_state
+    expr.metadata.dfa_state = state
     is_leaf(expr) && return
     head = expr.children[1]
     @assert is_leaf(head)
@@ -241,7 +241,10 @@ function init_all_corpus_matches(corpus, config::SearchConfig)::Vector{Match}
             expr.metadata = Metadata(
                 program,
                 size(expr, config.size_by_symbol),
-                num_nodes(expr)
+                num_nodes(expr),
+                struct_hash(expr),
+                :uninit_state,
+                id
             )
             push!(matches, match)
             id += 1
@@ -465,7 +468,7 @@ mutable struct SearchResult
 end
 
 function root_dfa_state(search_res)
-    dfa_states = [m.dfa_state for m in search_res.matches]
+    dfa_states = [m.expr.metadata.dfa_state for m in search_res.matches]
     dfa_states = unique(dfa_states)
     if length(dfa_states) > 1
         error("multiple dfa states for a single abstraction")
