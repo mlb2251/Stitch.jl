@@ -19,6 +19,7 @@ end
 
 mutable struct MetadataGeneric{D}
     program::ProgramGeneric{D,MetadataGeneric{D}} # which program this subtree appears in
+    size::Float32
 end
 
 mutable struct Match
@@ -44,7 +45,6 @@ mutable struct Match
 
     # metadata about the node that the match appears in.
     # TODO move to its own struct
-    size::Float32
     num_nodes::Int
     struct_hash::Int
     dfa_state::Symbol
@@ -85,7 +85,6 @@ mutable struct Match
         [expr],
         SExprGeneric{Match,MetadataGeneric{Match}}[],
         Float32[],
-        size(expr, config.size_by_symbol),
         num_nodes(expr),
         struct_hash(expr),
         :uninit_state,

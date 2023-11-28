@@ -20,7 +20,7 @@ sum over match locations of size of match location
 """
 function upper_bound_sum_subtree_sizes(search_state, expansion=nothing) :: Float32
     matches = if isnothing(expansion) search_state.matches else expansion.matches end
-    sum(m -> m.size, matches)
+    sum(m -> m.expr.metadata.size, matches)
 end
 
 """
@@ -34,7 +34,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing) :: Float32
     offset = length(matches)
 
     while true
-        bound += matches[offset].size
+        bound += matches[offset].expr.metadata.size
         # since matches is sorted in child-first order, children are always to the left of parents. We
         # can use .num_nodes to see how many children a match has (how big the subtree is) and skip over that many
         # things.
@@ -90,7 +90,7 @@ function expand_utility!(match, hole, expansion::PossibleExpansion{AbstractionEx
         # actually do nothing here
     else
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (multiuse utility; (usages-1)*cost(arg))
-        match.local_utility += match.holes[end].match.size;
+        match.local_utility += match.holes[end].metadata.size;
     end
     nothing
 end
