@@ -38,7 +38,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing) :: Float32
         # since matches is sorted in child-first order, children are always to the left of parents. We
         # can use .num_nodes to see how many children a match has (how big the subtree is) and skip over that many
         # things.
-        next_id = matches[offset].id - matches[offset].num_nodes
+        next_id = matches[offset].id - matches[offset].expr.metadata.num_nodes
         next_id == 0 && break
         search_state.all_nodes[next_id].match.id == next_id || error("all_nodes is not in the right order")
 

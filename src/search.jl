@@ -238,7 +238,11 @@ function init_all_corpus_matches(corpus, config::SearchConfig)::Vector{Match}
         for expr in subexpressions(program.expr) # child-first traversal (postorder)
             match = Match(expr, id, config)
             expr.match = match
-            expr.metadata = Metadata(program, size(expr, config.size_by_symbol))
+            expr.metadata = Metadata(
+                program,
+                size(expr, config.size_by_symbol),
+                num_nodes(expr)
+            )
             push!(matches, match)
             id += 1
         end
