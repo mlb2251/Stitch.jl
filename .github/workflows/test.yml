@@ -15,9 +15,6 @@ jobs:
         julia-version: ["1.7.3", "1.9.3"]
         julia-arch: [x64]
         os: [ubuntu-latest, windows-latest, macOS-latest]
-        exclude:
-          - os: macOS-latest
-            julia-arch: x86
 
     steps:
       - uses: actions/checkout@v2
