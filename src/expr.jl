@@ -53,16 +53,6 @@ mutable struct Match
     # Tracks Eqn 12: https://arxiv.org/pdf/2211.16605.pdf
     local_utility::Float32
     
-    # handling rewrite conflicts. When the same abstraction can be used in two overlapping places, we need to pick one.
-    # e.g., program = (foo (foo (foo x))). abstraction = (foo (foo #0)). abstraction can either match
-    # as (fn_1 (foo x)) or (foo (fn_1 x)). We need to pick one.
-
-    # Simple bottom-up dynamic programming to figure out which is best
-    # TODO move to a separate rewritematch struct?
-    cumulative_utility::Float32
-    accept_rewrite::Bool
-    is_active::Bool
-
     # conversions between a symbol &foo and it's index %0
     sym_of_idx::Vector{Symbol}
     idx_of_sym::Dict{Symbol, Int} # idx_of_sym[sym_of_idx[i]] == i
@@ -78,9 +68,6 @@ mutable struct Match
         SExprGeneric{Match,MetadataGeneric{Match}}[],
         Float32[],
         local_utility_init(config),
-        NaN32,
-        false,
-        false,
         Symbol[],
         Dict{Symbol,Int}(),
         Bool[],
