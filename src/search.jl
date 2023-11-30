@@ -26,7 +26,7 @@ end
 abstract type Expansion end
 
 struct PossibleExpansion{T <: Expansion}
-    matches::Vector{Match}
+    matches::Vector{MatchPossibilities}
     data::T
 
     function PossibleExpansion(matches, data::T) where {T}
@@ -150,14 +150,14 @@ mutable struct SearchState
     abstraction::Abstraction
     holes::Vector{SExpr}
     # hole_dfa_states::Vector{Symbol}
-    matches::Vector{Match}
+    matches::Vector{MatchPossibilities}
     expansions::Vector{PossibleExpansion}
 
     # backtracking data
     holes_stack::Vector{SExpr}
     # hole_dfa_states_stack::Vector{Symbol}
     expansions_stack::Vector{Vector{PossibleExpansion}}
-    matches_stack::Vector{Vector{Match}}
+    matches_stack::Vector{Vector{MatchPossibilities}}
     past_expansions::Vector{PossibleExpansion}
 
     function SearchState(corpus, config)
@@ -168,7 +168,7 @@ mutable struct SearchState
                 run_dfa!(program.expr, config.dfa, :M)
             end
         end
-        all_nodes = map(m -> m.expr, matches)
+        all_nodes = map(expr_of, matches)
         best_util = Float32(0)
         best_abstraction = nothing
         new(config, corpus, all_nodes,
@@ -231,12 +231,12 @@ Initializes a Match at every subtree in the corpus
 Note any filtering to the initial match set should NOT be done here because
 downstream we need this for SearchState.all_nodes
 """
-function init_all_corpus_matches(corpus, config::SearchConfig)::Vector{Match}
-    matches = Match[]
+function init_all_corpus_matches(corpus, config::SearchConfig)::Vector{MatchPossibilities}
+    matches = MatchPossibilities[]
     id = 1
     for program in corpus.programs
         for expr in subexpressions(program.expr) # child-first traversal (postorder)
-            match = Match(expr, id, config)
+            match = fresh_match_possibilities(expr, id, config)
             expr.match = match
             expr.metadata = Metadata(
                 program,
@@ -377,7 +377,7 @@ function stitch_search(corpus, config)
             !verbose || println("completed: ", search_state.abstraction.body, " with utility ", bottom_up_utility(search_state), " used in $(length(search_state.matches)) places")
             
             # cheaply upper bounded version of util that uses no conflict resolution
-            approx_util = sum(match -> max(match.local_utility,0.), search_state.matches)
+            approx_util = sum(match -> max(max_local_utility(match),0.), search_state.matches)
 
             plot && push!(plot_data.completed_approx_util, (search_state.stats.expansions, approx_util))
 
@@ -468,7 +468,7 @@ mutable struct SearchResult
 end
 
 function root_dfa_state(search_res)
-    dfa_states = [m.expr.metadata.dfa_state for m in search_res.matches]
+    dfa_states = [expr_of(m).metadata.dfa_state for m in search_res.matches]
     dfa_states = unique(dfa_states)
     if length(dfa_states) > 1
         error("multiple dfa states for a single abstraction")

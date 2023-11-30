@@ -27,7 +27,7 @@ mutable struct MetadataGeneric{D}
     id::Int
 end
 
-mutable struct Match
+mutable struct MatchGeneric{M}
     # represents a match of the current abstraction being constructed
     # match objects are created once at the start of each iteration, which each match
     #   corresponding to a node in the corpus
@@ -38,13 +38,13 @@ mutable struct Match
     #   - what are the holes that need to be expanded at the current location, etc.
     # Fields:
     # pointer to subtree in original corpus
-    expr::SExprGeneric{Match,MetadataGeneric{Match}}
+    expr::SExprGeneric{M,MetadataGeneric{M}}
     # pointers to first instance of each arg within subtree ie args[1] is the thing that #0 matches
-    unique_args::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
+    unique_args::Vector{SExprGeneric{M,MetadataGeneric{M}}}
     # pointer to the place that each hole matches.
-    holes::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
+    holes::Vector{SExprGeneric{M,MetadataGeneric{M}}}
     # history of the holes
-    holes_stack::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
+    holes_stack::Vector{SExprGeneric{M,MetadataGeneric{M}}}
     # history of the local utilities of the match
     local_utility_stack::Vector{Float32}
 
@@ -59,13 +59,13 @@ mutable struct Match
     idx_is_fresh::Vector{Bool} # stack of whether each idx is fresh across the levels of search, used for backtracking
 
     # metavariable for continuation
-    continuation::Union{Nothing,SExprGeneric{Match,MetadataGeneric{Match}}}
+    continuation::Union{Nothing,SExprGeneric{M,MetadataGeneric{M}}}
 
-    Match(expr, id, config) = new(
+    MatchGeneric{M}(expr, id, config) where {M} = new(
         expr,
-        SExprGeneric{Match,MetadataGeneric{Match}}[],
+        SExprGeneric{M,MetadataGeneric{M}}[],
         [expr],
-        SExprGeneric{Match,MetadataGeneric{Match}}[],
+        SExprGeneric{M,MetadataGeneric{M}}[],
         Float32[],
         local_utility_init(config),
         Symbol[],
@@ -75,9 +75,23 @@ mutable struct Match
     )
 end
 
-const Metadata = MetadataGeneric{Match}
-const SExpr = SExprGeneric{Match,Metadata}
-const Program = ProgramGeneric{Match,Metadata}
+mutable struct MatchPossibilities
+    # represents the set of possible matches that could be made at a given location
+    alternatives::Vector{MatchGeneric{MatchPossibilities}}
+end
+
+fresh_match_possibilities(expr, id, config) = MatchPossibilities(
+    [MatchGeneric{MatchPossibilities}(expr, id, config)]
+)
+
+const Match = MatchGeneric{MatchPossibilities}
+const Metadata = MetadataGeneric{MatchPossibilities}
+const SExpr = SExprGeneric{MatchPossibilities,Metadata}
+const Program = ProgramGeneric{MatchPossibilities,Metadata}
+
+expr_of(m :: MatchPossibilities) = m.alternatives[1].expr
+
+max_local_utility(m :: MatchPossibilities) = maximum([match.local_utility for match in m.alternatives])
 
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
     expr = SExpr(nothing, children, parent, nothing, nothing)

@@ -24,22 +24,25 @@ Adds the set of expansions to whatever terminal or nonterminal is present at the
 for example primitives or variables.
 """
 function syntactic_expansions!(search_state)
-    matches_of_leaf = Dict{Symbol,Vector{Match}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
-    matches_of_node = Dict{Tuple{Symbol,Int},Vector{Match}}()
-    for match in search_state.matches
+    matches_of_leaf = Dict{Symbol,Vector{MatchPossibilities}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
+    matches_of_node = Dict{Tuple{Symbol,Int},Vector{MatchPossibilities}}()
+    for match_poss in search_state.matches
+        # TODO actually handle multiple alternatives
+        @assert length(match_poss.alternatives) == 1
+        match = match_poss.alternatives[1]
         if is_leaf(match.holes[end])
             # leaf case
             leaf = match.holes[end].leaf
             startswith(string(leaf), "&") && continue
 
             matches = get!(matches_of_leaf, leaf) do; Match[] end
-            push!(matches, match)
+            push!(matches, MatchPossibilities([match]))
         else
             # node case - group with other nodes that have same number of children (and head if autoexpand_head is on)
             head = if search_state.config.autoexpand_head match.holes[end].children[1].leaf else :no_expand_head end
             childcount = length(match.holes[end].children)
             matches = get!(matches_of_node, (head,childcount)) do; Match[] end
-            push!(matches, match)
+            push!(matches, MatchPossibilities([match]))
         end
     end
 
@@ -61,9 +64,12 @@ end
 
 
 function symbol_expansions!(search_state)
-    matches_of_idx = Dict{Int,Vector{Match}}()
+    matches_of_idx = Dict{Int,Vector{MatchPossibilities}}()
     freshness_of_idx = Dict{Int,Bool}()
-    for match in search_state.matches
+    for match_poss in search_state.matches
+        # TODO actually handle multiple alternatives
+        @assert length(match_poss.alternatives) == 1
+        match = match_poss.alternatives[1]
         is_leaf(match.holes[end]) || continue
         sym = match.holes[end].leaf
         if !startswith(string(sym), "&") # this is not a symbol
@@ -79,7 +85,7 @@ function symbol_expansions!(search_state)
         else
             @assert freshness_of_idx[idx] == fresh
         end
-        push!(matches,match)
+        push!(matches,MatchPossibilities([match]))
     end
 
     for (idx, matches) in matches_of_idx
@@ -103,7 +109,10 @@ function abstraction_expansions!(search_state)
     matches_after_dfa = if isnothing(search_state.config.dfa)
         search_state.matches
     else
-        filter(search_state.matches) do m
+        filter(search_state.matches) do m_poss
+            # TODO actually handle multiple alternatives
+            @assert length(m_poss.alternatives) == 1
+            m = m_poss.alternatives[1]
             dfa_state = m.holes[end].metadata.dfa_state
             dfa_state === :E || dfa_state === :S
         end
@@ -114,7 +123,12 @@ function abstraction_expansions!(search_state)
     # variable reuse
     for i in 0:search_state.abstraction.arity-1
         matches = copy(matches_after_dfa)
-        filter!(m -> m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash, matches)
+        filter!(matches) do m_poss
+            # TODO actually handle multiple alternatives
+            @assert length(m_poss.alternatives) == 1
+            m = m_poss.alternatives[1]
+            m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash
+        end
         # matches = [m for m in search_state.matches if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
         if isempty(matches) continue end
 
@@ -177,15 +191,18 @@ function expand_general!(search_state, expansion)
     # set .matches properly
     search_state.matches = expansion.matches;
 
-    for match in expansion.matches
-        push!(match.local_utility_stack, match.local_utility)
-        expand_utility!(search_state.config, match, hole, expansion)
+    for match_poss in expansion.matches
+        for match in match_poss.alternatives
+            # save the local utility for backtracking
+            push!(match.local_utility_stack, match.local_utility)
+            expand_utility!(search_state.config, match, hole, expansion)
+        end
     end
 
     # expand the state
     expand!(search_state, expansion, hole)
 
-    all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes");
+    check_number_of_holes(search_state)
 end
 
 function unexpand_general!(search_state::SearchState)
@@ -200,8 +217,11 @@ function unexpand_general!(search_state::SearchState)
     search_state.matches === expansion.matches || error("mismatched matches")
     unexpand!(search_state, expansion, hole)
 
-    for match in search_state.matches
-        match.local_utility = pop!(match.local_utility_stack)
+    for match_poss in search_state.matches
+        for match in match_poss.alternatives
+            # restore the local utility
+            match.local_utility = pop!(match.local_utility_stack)
+        end
     end
 
     # restore other state
@@ -210,18 +230,24 @@ function unexpand_general!(search_state::SearchState)
     push!(search_state.holes, hole)
     # push!(search_state.hole_dfa_states, hole_dfa_state)
 
-    all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes");
+    check_number_of_holes(search_state)
     # all(match -> length(match.args) == length(search_state.args), search_state.matches) || error("mismatched number of holes")    
 
 end
 
+function check_number_of_holes(search_state)
+    all(match_poss -> all(match -> length(match.holes) == length(search_state.holes), match_poss.alternatives), search_state.matches) || error("mismatched number of holes")
+end
 
 function expand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpansion}, hole)
     
     # set the head symbol of the hole
     hole.leaf = expansion.data.leaf
 
-    for match in search_state.matches
+    for match_poss in search_state.matches
+        # TODO actually handle multiple alternatives
+        @assert length(match_poss.alternatives) == 1
+        match = match_poss.alternatives[1]
         # pop next hole and save it for future backtracking
         hole = pop!(match.holes)
         push!(match.holes_stack, hole)
@@ -259,7 +285,10 @@ function expand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpansi
     # reverse holes so they go left to right
     # @views reverse!(search_state.holes[end-expansion.data.num_holes+1:end])
 
-    for match in search_state.matches
+    for match_poss in search_state.matches
+        # TODO actually handle multiple alternatives
+        @assert length(match_poss.alternatives) == 1
+        match = match_poss.alternatives[1]
         # pop next hole and save it for future backtracking
         hole = pop!(match.holes)
         length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion.data)")
@@ -286,7 +315,10 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
 
     dfa_sym = nothing
 
-    for match in search_state.matches
+    for match_poss in search_state.matches
+        # TODO actually handle multiple alternatives
+        @assert length(match_poss.alternatives) == 1
+        match = match_poss.alternatives[1]
         hole = pop!(match.holes)
         push!(match.holes_stack, hole)
         if expansion.data.fresh
@@ -308,7 +340,10 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
     new_symbol = false
     dfa_sym = nothing
 
-    for match in search_state.matches
+    for match_poss in search_state.matches
+        # TODO actually handle multiple alternatives
+        @assert length(match_poss.alternatives) == 1
+        match = match_poss.alternatives[1]
         # pop next hole and save it for future backtracking
         hole = pop!(match.holes)
         push!(match.holes_stack, hole)
@@ -339,7 +374,10 @@ function expand!(search_state, expansion::PossibleExpansion{ContinuationExpansio
 
     hole.leaf = Symbol("#continuation")
 
-    for match in search_state.matches
+    for match_poss in search_state.matches
+        # TODO actually handle multiple alternatives
+        @assert length(match_poss.alternatives) == 1
+        match = match_poss.alternatives[1]
         hole = pop!(match.holes)
         push!(match.holes_stack, hole)
         @assert isnothing(match.continuation)
@@ -347,16 +385,23 @@ function expand!(search_state, expansion::PossibleExpansion{ContinuationExpansio
     end
 end
 
-
+function unexpand_match_poss!(per_match!, match_poss)
+    for match in match_poss.alternatives
+        per_match!(match)
+    end
+    # TODO rollback the match narrowing, once we have that
+end
 
 function unexpand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpansion}, hole)
     
     # set the head symbol of the hole
     hole.leaf = SYM_HOLE
 
-    for match in search_state.matches
-        hole = pop!(match.holes_stack) 
-        push!(match.holes, hole)
+    for match_poss in search_state.matches
+        unexpand_match_poss!(match_poss) do match
+            hole = pop!(match.holes_stack) 
+            push!(match.holes, hole)
+        end
     end
 end
 
@@ -372,15 +417,21 @@ function unexpand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpan
         end
     end
 
-    for match in search_state.matches
-        num_remove = if expansion.data.head !== :no_expand_head expansion.data.num_holes-1 else expansion.data.num_holes end
-        for _ in 1:num_remove
-            pop!(match.holes)
-        end
+    for match_poss in search_state.matches
+        unexpand_match_poss!(match_poss) do match
+            num_remove = if expansion.data.head !== :no_expand_head
+                expansion.data.num_holes - 1
+            else
+                expansion.data.num_holes
+            end
+            for _ in 1:num_remove
+                pop!(match.holes)
+            end
 
-        hole = pop!(match.holes_stack) 
-        length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
-        push!(match.holes, hole)
+            hole = pop!(match.holes_stack)
+            length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
+            push!(match.holes, hole)
+        end
     end
 end
 
@@ -393,11 +444,13 @@ function unexpand!(search_state, expansion::PossibleExpansion{AbstractionExpansi
         pop!(search_state.abstraction.dfa_metavars)
     end
 
-    for match in search_state.matches
-        hole = pop!(match.holes_stack)
-        push!(match.holes, hole)
-        if expansion.data.fresh
-            pop!(match.unique_args) === hole || error("expected same hole");
+    for match_poss in search_state.matches
+        unexpand_match_poss!(match_poss) do match
+            hole = pop!(match.holes_stack)
+            push!(match.holes, hole)
+            if expansion.data.fresh
+                pop!(match.unique_args) === hole || error("expected same hole")
+            end
         end
     end
 end
@@ -409,16 +462,17 @@ function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, 
 
     new_symbol = false
 
-    for match in search_state.matches
-        hole = pop!(match.holes_stack) 
-        push!(match.holes, hole)
+    for match_poss in search_state.matches
+        unexpand_match_poss!(match_poss) do match
+            hole = pop!(match.holes_stack) 
+            push!(match.holes, hole)
 
-        if pop!(match.idx_is_fresh)
-            pop!(match.sym_of_idx)
-            delete!(match.idx_of_sym, hole.leaf)
-            new_symbol = true
+            if pop!(match.idx_is_fresh)
+                pop!(match.sym_of_idx)
+                delete!(match.idx_of_sym, hole.leaf)
+                new_symbol = true
+            end
         end
-
     end
 
     if new_symbol
@@ -431,11 +485,13 @@ function unexpand!(search_state, expansion::PossibleExpansion{ContinuationExpans
 
     hole.leaf = SYM_HOLE
 
-    for match in search_state.matches
-        hole = pop!(match.holes_stack)
-        push!(match.holes, hole)
-        @assert match.continuation === hole
-        match.continuation = nothing;
+    for match_poss in search_state.matches
+        unexpand_match_poss!(match_poss) do match
+            hole = pop!(match.holes_stack)
+            push!(match.holes, hole)
+            @assert match.continuation === hole
+            match.continuation = nothing;
+        end
     end
 end
 
@@ -451,7 +507,7 @@ function redundant_arg_elim(search_state)
     search_state.config.no_opt_redundant_args && return false
     for i in 1:search_state.abstraction.arity
         for j in i+1:search_state.abstraction.arity
-            if all(match -> match.unique_args[i].metadata.struct_hash == match.unique_args[j].metadata.struct_hash, search_state.matches)
+            if args_match(search_state.matches, i, j)
                 return true
             end
         end
@@ -459,12 +515,20 @@ function redundant_arg_elim(search_state)
     false
 end
 
+function args_match(matches::Vector{MatchPossibilities}, i, j)
+    all(match_poss -> args_match(match_poss.alternatives, i, j), matches)
+end
+
+function args_match(matches::Vector{Match}, i, j)
+    all(match -> match.unique_args[i].metadata.struct_hash == match.unique_args[j].metadata.struct_hash, matches)
+end
+
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
 function arg_capture(search_state)
     search_state.config.no_opt_arg_capture && return false
     for i in 1:search_state.abstraction.arity
-        first_match = search_state.matches[1].unique_args[i].metadata.struct_hash
-        if all(match -> match.unique_args[i].metadata.struct_hash == first_match, search_state.matches)
+        first_match = search_state.matches[1].alternatives[1].unique_args[i].metadata.struct_hash
+        if all(match_poss -> all(match -> match.unique_args[i].metadata.struct_hash == first_match, match_poss.alternatives), search_state.matches)
             return true
         end
     end 
@@ -472,8 +536,8 @@ function arg_capture(search_state)
 end
 
 function is_single_task(search_state)
-    first = search_state.matches[1].expr.metadata.program.task
-    all(match -> match.expr.metadata.program.task == first, search_state.matches)
+    first = expr_of(search_state.matches[1]).metadata.program.task
+    all(match -> expr_of(match).metadata.program.task == first, search_state.matches)
 end
 
 mutable struct SamplingProcessor{F <: Function}

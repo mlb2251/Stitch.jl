@@ -28,17 +28,17 @@ Same as summing over sizes of subtrees, but not doublecounting matches within ch
 """
 function upper_bound_with_conflicts(search_state, expansion=nothing) :: Float32
     matches = if isnothing(expansion) search_state.matches else expansion.matches end
-    issorted(matches, by=m -> m.expr.metadata.id) || error("matches is not sorted")
+    issorted(matches, by=m -> expr_of(m).metadata.id) || error("matches is not sorted")
 
     bound = 0.
     offset = length(matches)
 
     while true
-        bound += matches[offset].expr.metadata.size
+        bound += expr_of(matches[offset]).metadata.size
         # since matches is sorted in child-first order, children are always to the left of parents. We
         # can use .num_nodes to see how many children a match has (how big the subtree is) and skip over that many
         # things.
-        next_id = matches[offset].expr.metadata.id - matches[offset].expr.metadata.num_nodes
+        next_id = expr_of(matches[offset]).metadata.id - expr_of(matches[offset]).metadata.num_nodes
         next_id == 0 && break
         search_state.all_nodes[next_id].metadata.id == next_id || error("all_nodes is not in the right order")
 
@@ -47,10 +47,10 @@ function upper_bound_with_conflicts(search_state, expansion=nothing) :: Float32
         # this is what it would return anyways
         offset -= 1
         offset == 0 && break
-        matches[offset].expr.metadata.id <= next_id && continue
+        expr_of(matches[offset]).metadata.id <= next_id && continue
 
         # rarer case: run binary search to find the rightmost non-child of the previous match
-        offset = searchsortedlast(matches, search_state.all_nodes[next_id].match, by=m -> m.expr.metadata.id)
+        offset = searchsortedlast(matches, search_state.all_nodes[next_id].match, by=m -> expr_of(m).metadata.id)
         offset == 0 && break
     end
     bound
