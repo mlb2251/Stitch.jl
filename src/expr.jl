@@ -3,85 +3,84 @@ An expression. See SExpr for the version that's always used - the definition is 
 SExprGeneric and SExpr because mutually recursive types are supported in julia so we can't
 directly have Expr and Match that point to each other and without using generics.
 """
-mutable struct SExprGeneric{D}
+mutable struct SExprGeneric{D,M}
     leaf::Union{Symbol,Nothing}
-    children::Vector{SExprGeneric{D}}
-    parent::Union{Tuple{SExprGeneric{D},Int}, Nothing} # parent and which index of the child it is
+    children::Vector{SExprGeneric{D,M}}
+    parent::Union{Tuple{SExprGeneric{D,M},Int}, Nothing} # parent and which index of the child it is
     match::Union{D, Nothing}
+    metadata::Union{M,Nothing}
 end
 
-mutable struct ProgramGeneric{D}
-    expr::SExprGeneric{D}
+mutable struct ProgramGeneric{D,M}
+    expr::SExprGeneric{D,M}
     id::Int
     task::Int
 end
 
-mutable struct Match
-    expr::SExprGeneric{Match} # pointer to subtree in original corpus
-    all_args::Vector{SExprGeneric{Match}}
-    unique_args::Vector{SExprGeneric{Match}} # pointers to first instance of each arg within subtree ie args[1] is #0
-    holes::Vector{SExprGeneric{Match}} # pointers to holes within subtree
-    holes_stack::Vector{SExprGeneric{Match}} # expanded holes
-    local_utility_stack::Vector{Float32} # past utilities
-
-    program::ProgramGeneric{Match} # which program this subtree appears in
+mutable struct MetadataGeneric{D}
+    program::ProgramGeneric{D,MetadataGeneric{D}} # which program this subtree appears in
     size::Float32
     num_nodes::Int
     struct_hash::Int
     dfa_state::Symbol
+    # postorder location of the underlying node in the corpus.
+    id::Int
+end
 
+mutable struct Match
+    # represents a match of the current abstraction being constructed
+    # match objects are created once at the start of each iteration, which each match
+    #   corresponding to a node in the corpus
+    #   not all match objects are active at any given time
+    #   e.g., when ?? is the abstraction, every match object is active, but
+    #   if it's (+ 2 ??), only the match objects for locations matching (+ 2 ??) are active
+    # the match object contains information regarding match location specific information
+    #   - what are the holes that need to be expanded at the current location, etc.
+    # Fields:
+    # pointer to subtree in original corpus
+    expr::SExprGeneric{Match,MetadataGeneric{Match}}
+    # pointers to first instance of each arg within subtree ie args[1] is the thing that #0 matches
+    unique_args::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
+    # pointer to the place that each hole matches.
+    holes::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
+    # history of the holes
+    holes_stack::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
+    # history of the local utilities of the match
+    local_utility_stack::Vector{Float32}
+
+
+    # Local utility: utility if you rewrite at this location specifically. Match specific
     # Tracks Eqn 12: https://arxiv.org/pdf/2211.16605.pdf
     local_utility::Float32
     
-    cumulative_utility::Float32
-    accept_rewrite::Bool
-    is_active::Bool
-    id::Int
-
     # conversions between a symbol &foo and it's index %0
     sym_of_idx::Vector{Symbol}
     idx_of_sym::Dict{Symbol, Int} # idx_of_sym[sym_of_idx[i]] == i
     idx_is_fresh::Vector{Bool} # stack of whether each idx is fresh across the levels of search, used for backtracking
 
     # metavariable for continuation
-    continuation::Union{Nothing, SExprGeneric{Match}}
+    continuation::Union{Nothing,SExprGeneric{Match,MetadataGeneric{Match}}}
 
-    size_by_symbol::Union{Nothing,Dict{Symbol,Float32}}
-    application_utility_metavar::Float32
-    application_utility_symvar::Float32
-
-    Match(expr, program, id, config) = new(
+    Match(expr, id, config) = new(
         expr,
-        SExprGeneric{Match}[],
-        SExprGeneric{Match}[],
+        SExprGeneric{Match,MetadataGeneric{Match}}[],
         [expr],
-        SExprGeneric{Match}[],
+        SExprGeneric{Match,MetadataGeneric{Match}}[],
         Float32[],
-        program,
-        size(expr, config.size_by_symbol),
-        num_nodes(expr),
-        struct_hash(expr),
-        :uninit_state,
         local_utility_init(config),
-        NaN32,
-        false,
-        false,
-        id,
         Symbol[],
         Dict{Symbol,Int}(),
         Bool[],
-        nothing,
-        config.size_by_symbol,
-        config.application_utility_metavar,
-        config.application_utility_symvar
+        nothing
     )
 end
 
-const SExpr = SExprGeneric{Match}
-const Program = ProgramGeneric{Match}
+const Metadata = MetadataGeneric{Match}
+const SExpr = SExprGeneric{Match,Metadata}
+const Program = ProgramGeneric{Match,Metadata}
 
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
-    expr = SExpr(nothing, children, parent, nothing)
+    expr = SExpr(nothing, children, parent, nothing, nothing)
     for (i,child) in enumerate(children)
         isnothing(child.parent) || error("arg already has parent")
         child.parent = (expr,i)
@@ -90,17 +89,19 @@ function sexpr_node(children::Vector{SExpr}; parent=nothing)
 end
 
 function sexpr_leaf(leaf::Symbol; parent=nothing)
-    SExpr(leaf, Vector{SExpr}(), parent, nothing)
+    SExpr(leaf, Vector{SExpr}(), parent, nothing, nothing)
 end
 
 is_leaf(e::SExpr) = !isnothing(e.leaf)
 
+# TODO document why isn't this copying all the fields??
 function Base.copy(e::SExpr)
     SExpr(
         e.leaf,
         [copy(child) for child in e.children],
         nothing,
-        nothing
+        nothing,
+        nothing,
     )
 end
 
@@ -113,16 +114,16 @@ const global_struct_hash = Dict{HashNode, Int}()
 
 """
 sets structural hash value, possibly with side effects of updating the structural hash, and
-sets e.match.struct_hash. Requires .match to be set so we know this will be used immutably
+sets e.metadata.struct_hash. Requires .metadata to be set so we know this will be used immutably
 """
 function struct_hash(e::SExpr) :: Int
-    isnothing(e.match) || isnothing(e.match.struct_hash) || return e.match.struct_hash
+    isnothing(e.metadata) || isnothing(e.metadata.struct_hash) || return e.metadata.struct_hash
 
     node = HashNode(e.leaf, map(struct_hash,e.children))
     if !haskey(global_struct_hash, node)
         global_struct_hash[node] = length(global_struct_hash) + 1
     end
-    isnothing(e.match) || (e.match.struct_hash = global_struct_hash[node])
+    isnothing(e.metadata) || (e.metadata.struct_hash = global_struct_hash[node])
     return global_struct_hash[node]
 end
 
