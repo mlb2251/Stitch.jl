@@ -262,7 +262,7 @@ function expand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpansi
     for match in search_state.matches
         # pop next hole and save it for future backtracking
         hole = pop!(match.holes)
-        length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion.data)")
+        length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to at location: $(expr_of_match(match)) with hole $hole for expansion $(expansion.data)")
         push!(match.holes_stack, hole)
 
         # add all the children of the hole as new holes (except possibly the head)
@@ -472,8 +472,8 @@ function arg_capture(search_state)
 end
 
 function is_single_task(search_state)
-    first = search_state.matches[1].expr.metadata.program.task
-    all(match -> match.expr.metadata.program.task == first, search_state.matches)
+    first = expr_of_match(search_state.matches[1]).metadata.program.task
+    all(match -> expr_of_match(match).metadata.program.task == first, search_state.matches)
 end
 
 mutable struct SamplingProcessor{F <: Function}

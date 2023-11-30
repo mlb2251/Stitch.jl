@@ -79,6 +79,8 @@ const Metadata = MetadataGeneric{Match}
 const SExpr = SExprGeneric{Match,Metadata}
 const Program = ProgramGeneric{Match,Metadata}
 
+expr_of_match(match::Match)::SExpr = match.expr
+
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
     expr = SExpr(nothing, children, parent, nothing, nothing)
     for (i,child) in enumerate(children)

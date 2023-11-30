@@ -168,7 +168,7 @@ mutable struct SearchState
                 run_dfa!(program.expr, config.dfa, :M)
             end
         end
-        all_nodes = map(m -> m.expr, matches)
+        all_nodes = map(expr_of_match, matches)
         best_util = Float32(0)
         best_abstraction = nothing
         new(config, corpus, all_nodes,
@@ -256,7 +256,7 @@ end
 function filter_init_allowed_matches!(search_state)
     # if search_state.config.only_match_semi
     #     filter!(search_state.matches) do m
-    #         length(m.expr.children) == 3 && m.expr.children[1].leaf === :semi
+    #         length(expr_of_match(m).children) == 3 && expr_of_match(m).children[1].leaf === :semi
     #     end
     # end
 end
@@ -468,7 +468,7 @@ mutable struct SearchResult
 end
 
 function root_dfa_state(search_res)
-    dfa_states = [m.expr.metadata.dfa_state for m in search_res.matches]
+    dfa_states = [expr_of_match(m).metadata.dfa_state for m in search_res.matches]
     dfa_states = unique(dfa_states)
     if length(dfa_states) > 1
         error("multiple dfa states for a single abstraction")
