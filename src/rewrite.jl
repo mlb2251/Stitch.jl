@@ -54,7 +54,7 @@ function collect_rci(search_state::SearchState)::Tuple{Float64, MultiRewriteConf
     )
 
     for match in search_state.matches
-        rcis[match.expr.metadata.id].is_active = true
+        rcis[expr_of_match(match).metadata.id].is_active = true
     end
 
     # special case the identity abstraction (\x. x) since it has a self loop dependency in terms of utility calculation
