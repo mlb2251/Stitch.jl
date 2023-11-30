@@ -99,6 +99,40 @@ function finalized_unique_args(match::Match)::Vector{SExpr}
     return match._unique_args
 end
 
+function ways_to_expand_literally(match::Match, config) :: Tuple{Vector{Symbol}, Vector{Tuple{Symbol,Int}}}
+    # returns a tuple of (leaves, nodes)
+    # leaves: list of symbol, leaves that can be expanded to
+    # nodes: list of (head, childcount) that can be expanded to
+    #   head: symbol of the head of the node
+    #  childcount: number of children of the node
+    if is_leaf(match.holes[end])
+        # leaf case
+        leaf = match.holes[end].leaf
+        startswith(string(leaf), "&") && return [], []
+
+        return [leaf], []
+    else
+        # node case - group with other nodes that have same number of children (and head if autoexpand_head is on)
+        head = if config.autoexpand_head match.holes[end].children[1].leaf else :no_expand_head end
+        childcount = length(match.holes[end].children)
+        return [], [(head, childcount)]
+    end
+end
+
+function ways_to_expand_to_symvar(match::Match) :: Vector{Tuple{Int,Bool}}
+    # returns a lits of (idx, fresh) where
+    #    idx: index of the symvar
+    #    fresh: whether the symvar is fresh
+    is_leaf(match.holes[end]) || return []
+    sym = match.holes[end].leaf
+    if !startswith(string(sym), "&") # this is not a symbol
+        return []
+    end
+    fresh = !haskey(match.idx_of_sym, sym)
+    idx = get(match.idx_of_sym, sym, length(match.sym_of_idx) + 1)
+    return [(idx, fresh)]
+end
+
 function expand_abstract!(match::Match, fresh::Bool)
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)

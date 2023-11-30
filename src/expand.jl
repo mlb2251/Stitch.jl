@@ -27,20 +27,20 @@ function syntactic_expansions!(search_state)
     matches_of_leaf = Dict{Symbol,Vector{Match}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
     matches_of_node = Dict{Tuple{Symbol,Int},Vector{Match}}()
     for match in search_state.matches
-        if is_leaf(match.holes[end])
-            # leaf case
-            leaf = match.holes[end].leaf
-            startswith(string(leaf), "&") && continue
-
-            matches = get!(matches_of_leaf, leaf) do; Match[] end
-            push!(matches, match)
-        else
-            # node case - group with other nodes that have same number of children (and head if autoexpand_head is on)
-            head = if search_state.config.autoexpand_head match.holes[end].children[1].leaf else :no_expand_head end
-            childcount = length(match.holes[end].children)
-            matches = get!(matches_of_node, (head,childcount)) do; Match[] end
+        leaves, nodes = ways_to_expand_literally(match, search_state.config)
+        for leaf in leaves
+            matches = get!(matches_of_leaf, leaf) do
+                Match[]
+            end
             push!(matches, match)
         end
+        for (head,childcount) in nodes
+            matches = get!(matches_of_node, (head,childcount)) do
+                Match[]
+            end
+            push!(matches, match)
+        end
+
     end
 
     for (leaf, matches) in matches_of_leaf
@@ -64,22 +64,19 @@ function symbol_expansions!(search_state)
     matches_of_idx = Dict{Int,Vector{Match}}()
     freshness_of_idx = Dict{Int,Bool}()
     for match in search_state.matches
-        is_leaf(match.holes[end]) || continue
-        sym = match.holes[end].leaf
-        if !startswith(string(sym), "&") # this is not a symbol
-            continue
+        
+        for (idx, fresh) in ways_to_expand_to_symvar(match)
+            matches = get!(matches_of_idx, idx) do
+                []
+            end
+            push!(matches, match)
+
+            if !haskey(freshness_of_idx, idx)
+                freshness_of_idx[idx] = fresh
+            else
+                @assert freshness_of_idx[idx] == fresh
+            end
         end
-        fresh = !haskey(match.idx_of_sym, sym)
-        idx = get(match.idx_of_sym, sym, length(match.sym_of_idx) + 1)
-        matches = get!(matches_of_idx, idx) do
-            []
-        end
-        if !haskey(freshness_of_idx, idx)
-            freshness_of_idx[idx] = fresh
-        else
-            @assert freshness_of_idx[idx] == fresh
-        end
-        push!(matches,match)
     end
 
     for (idx, matches) in matches_of_idx
