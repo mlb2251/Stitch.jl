@@ -40,7 +40,7 @@ mutable struct Match
     # pointer to subtree in original corpus
     _expr::SExprGeneric{Match,MetadataGeneric{Match}}
     # pointers to first instance of each arg within subtree ie args[1] is the thing that #0 matches
-    unique_args::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
+    _unique_args::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
     # pointer to the place that each hole matches.
     holes::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
     # history of the holes
@@ -80,6 +80,41 @@ const SExpr = SExprGeneric{Match,Metadata}
 const Program = ProgramGeneric{Match,Metadata}
 
 expr_of_match(match::Match)::SExpr = match._expr
+can_reuse_arg(match::Match, arg_idx::Int)::Bool = match.holes[end].metadata.struct_hash == match._unique_args[arg_idx+1].metadata.struct_hash
+function args_are_equivalent(match::Match, arg_idx_1::Int, arg_idx_2::Int)
+    match._unique_args[arg_idx_1+1].metadata.struct_hash == match._unique_args[arg_idx_2 + 1].metadata.struct_hash
+end
+
+function args_match(matches::Vector{Match}, arg_idx::Int)
+    first_match = matches[1]._unique_args[arg_idx + 1].metadata.struct_hash
+    if all(match -> match._unique_args[arg_idx+1].metadata.struct_hash == first_match, matches)
+        return true
+    end
+    return false
+end
+
+function finalized_unique_args(match::Match)::Vector{SExpr}
+    # check that holes is empty
+    isempty(match.holes) || error("finalized_unique_args can only be called on a finalized match")
+    return match._unique_args
+end
+
+function expand_abstract!(match::Match, fresh::Bool)
+    hole = pop!(match.holes)
+    push!(match.holes_stack, hole)
+    if fresh
+        push!(match._unique_args, hole); # move the hole to be an argument
+    end
+    return hole
+end
+
+function unexpand_abstract!(match::Match, fresh::Bool)
+    hole = pop!(match.holes_stack)
+    push!(match.holes, hole)
+    if fresh
+        pop!(match._unique_args) === hole || error("expected same hole");
+    end
+end
 
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
     expr = SExpr(nothing, children, parent, nothing, nothing)

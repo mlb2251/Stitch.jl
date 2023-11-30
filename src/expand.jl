@@ -114,8 +114,7 @@ function abstraction_expansions!(search_state)
     # variable reuse
     for i in 0:search_state.abstraction.arity-1
         matches = copy(matches_after_dfa)
-        filter!(m -> m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash, matches)
-        # matches = [m for m in search_state.matches if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
+        filter!(m -> can_reuse_arg(m, i), matches)
         if isempty(matches) continue end
 
         push!(search_state.expansions, PossibleExpansion(
@@ -287,12 +286,8 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
     dfa_sym = nothing
 
     for match in search_state.matches
-        hole = pop!(match.holes)
-        push!(match.holes_stack, hole)
-        if expansion.data.fresh
-            dfa_sym = hole.metadata.dfa_state
-            push!(match.unique_args, hole); # move the hole to be an argument
-        end
+        hole = expand_abstract!(match, expansion.data.fresh)
+        dfa_sym = hole.metadata.dfa_state
     end
 
     if expansion.data.fresh
@@ -394,11 +389,7 @@ function unexpand!(search_state, expansion::PossibleExpansion{AbstractionExpansi
     end
 
     for match in search_state.matches
-        hole = pop!(match.holes_stack)
-        push!(match.holes, hole)
-        if expansion.data.fresh
-            pop!(match.unique_args) === hole || error("expected same hole");
-        end
+        unexpand_abstract!(match, expansion.data.fresh)
     end
 end
 
@@ -449,9 +440,9 @@ end
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
 function redundant_arg_elim(search_state)
     search_state.config.no_opt_redundant_args && return false
-    for i in 1:search_state.abstraction.arity
-        for j in i+1:search_state.abstraction.arity
-            if all(match -> match.unique_args[i].metadata.struct_hash == match.unique_args[j].metadata.struct_hash, search_state.matches)
+    for i in 0:search_state.abstraction.arity-1
+        for j in i+1:search_state.abstraction.arity-1
+            if all(match -> args_are_equivalent(match, i, j), search_state.matches)
                 return true
             end
         end
@@ -462,11 +453,8 @@ end
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
 function arg_capture(search_state)
     search_state.config.no_opt_arg_capture && return false
-    for i in 1:search_state.abstraction.arity
-        first_match = search_state.matches[1].unique_args[i].metadata.struct_hash
-        if all(match -> match.unique_args[i].metadata.struct_hash == first_match, search_state.matches)
-            return true
-        end
+    for i in 0:search_state.abstraction.arity-1
+        args_match(search_state.matches, i) && return true
     end 
     false
 end
