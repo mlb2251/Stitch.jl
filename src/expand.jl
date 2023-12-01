@@ -195,7 +195,7 @@ function expand_general!(search_state, expansion)
         for match in match_poss.alternatives
             # save the local utility for backtracking
             push!(match.local_utility_stack, match.local_utility)
-            expand_utility!(search_state.config, match, hole, expansion)
+            match.local_utility += delta_local_utility(search_state.config, match, expansion)
         end
     end
 
