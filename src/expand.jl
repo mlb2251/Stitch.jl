@@ -140,39 +140,55 @@ function collect_expansions(
     config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
-    matches_after_dfa = if isnothing(config.dfa)
-        matches
-    else
-        filter(matches) do (i, match)
-            dfa_state = match.holes[end].metadata.dfa_state
-            dfa_state === :E || dfa_state === :S
-        end
-    end
-
-    if isempty(matches_after_dfa) return [] end
-
     result = Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}()
 
-    # variable reuse
-    for i in 0:abstraction.arity-1
-        matches = copy(matches_after_dfa)
-        filter!(matches) do (_, match)
-            match.holes[end].metadata.struct_hash == match.unique_args[i+1].metadata.struct_hash
-        end
-        # matches = [m for m in search_state.matches if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
-        if isempty(matches) continue end
+    function collect_abstraction_expansions_for_dfa_state!(
+        ms, sym
+    )
 
-        push!(result, (AbstractionExpansion(i, false), matches))
+        if length(ms) == 0
+            return
+        end
+        # variable reuse
+        for i in 0:abstraction.arity-1
+            ms_specific = copy(ms)
+            filter!(ms_specific) do (_, match)
+                match.holes[end].metadata.struct_hash == match.unique_args[i+1].metadata.struct_hash
+            end
+            # ms_specific = [m for m in ms_specific if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
+            if isempty(ms_specific)
+                continue
+            end
+
+            push!(result, (AbstractionExpansion(i, false, sym), ms_specific))
+        end
+
+        if abstraction.arity < config.max_arity
+            # fresh variable
+            push!(result, (AbstractionExpansion(abstraction.arity, true, sym), ms))
+        end
+
     end
 
-    if abstraction.arity < config.max_arity
-        # fresh variable
-        push!(result, (AbstractionExpansion(abstraction.arity, true), matches_after_dfa))
+    if isnothing(config.dfa)
+        collect_abstraction_expansions_for_dfa_state!(matches, :uninit_state)
+    else
+        matches_e = Vector{Tuple{Int,Match}}()
+        matches_s = Vector{Tuple{Int,Match}}()
+        for (i, match) in matches
+            dfa_state = match.holes[end].metadata.dfa_state
+            if dfa_state === :E
+                push!(matches_e, (i, match))
+            elseif dfa_state === :S
+                push!(matches_s, (i, match))
+            end
+        end
+        collect_abstraction_expansions_for_dfa_state!(matches_e, :E)
+        collect_abstraction_expansions_for_dfa_state!(matches_s, :S)
     end
 
     result
 end
-
 
 function collect_expansions(
     ::Type{ContinuationExpansion},
@@ -345,8 +361,6 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
         search_state.abstraction.arity += 1
     end
 
-    dfa_sym = nothing
-
     for match_poss in search_state.matches
         # TODO actually handle multiple alternatives
         @assert length(match_poss.alternatives) == 1
@@ -354,13 +368,12 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
         hole = pop!(match.holes)
         push!(match.holes_stack, hole)
         if expansion.data.fresh
-            dfa_sym = hole.metadata.dfa_state
             push!(match.unique_args, hole); # move the hole to be an argument
         end
     end
 
     if expansion.data.fresh
-        push!(search_state.abstraction.dfa_metavars, dfa_sym)
+        push!(search_state.abstraction.dfa_metavars, expansion.data.dfa_state)
     end
 end
 
