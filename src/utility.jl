@@ -56,47 +56,46 @@ function upper_bound_with_conflicts(search_state, expansion=nothing) :: Float32
     bound
 end
 
-function expand_utility!(config, match, hole, expansion::PossibleExpansion{SymbolExpansion})
+function delta_local_utility(config, match, expansion::PossibleExpansion{SymbolExpansion})
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
     # node from the corpus.
     if expansion.data.fresh
-        match.local_utility += config.application_utility_symvar
+        return config.application_utility_symvar
     else
-        match.local_utility += 1;
+        return 1
     end
 end
 
 
-function expand_utility!(config, match, hole, expansion::PossibleExpansion{SyntacticLeafExpansion})
+function delta_local_utility(config, match, expansion::PossibleExpansion{SyntacticLeafExpansion})
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    match.local_utility += symbol_size(expansion.data.leaf, config.size_by_symbol)
+    symbol_size(expansion.data.leaf, config.size_by_symbol)
 end
 
-function expand_utility!(config, match, hole, expansion::PossibleExpansion{SyntacticNodeExpansion})
+function delta_local_utility(config, match, expansion::PossibleExpansion{SyntacticNodeExpansion})
     # let it be zero?
     # match.local_utility += 0.;
     if expansion.data.head !== :no_expand_head
-        match.local_utility += symbol_size(expansion.data.head, config.size_by_symbol)
+        return symbol_size(expansion.data.head, config.size_by_symbol)
     end
-    nothing
+    return 0
 end
 
-function expand_utility!(config, match, hole, expansion::PossibleExpansion{AbstractionExpansion})
+function delta_local_utility(config, match, expansion::PossibleExpansion{AbstractionExpansion})
     if expansion.data.fresh
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility second term; cost_app * arity)
         # note: commented out with switch away from application penalty
-        match.local_utility += config.application_utility_metavar
+        return config.application_utility_metavar
 
         # actually do nothing here
     else
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (multiuse utility; (usages-1)*cost(arg))
-        match.local_utility += match.holes[end].metadata.size;
+        return match.holes[end].metadata.size;
     end
-    nothing
 end
 
-function expand_utility!(config, match, hole, expansion::PossibleExpansion{ContinuationExpansion})
-    # zero
+function delta_local_utility(config, match, expansion::PossibleExpansion{ContinuationExpansion})
+    0
 end
 
 local_utility_init(config::SearchConfig) = config.application_utility_fixed

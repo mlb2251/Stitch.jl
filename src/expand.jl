@@ -186,7 +186,7 @@ function collect_expansions(
     isnothing(node.parent) && return [] # no identity abstraction allowed
 
     while !isnothing(node.parent)
-        (parent,i) = node.parent
+        (parent, i) = node.parent
         # check that our parent is a semicolon and we are the righthand child
         # so in particular parent == (semi _ node)
         i == 3 || return []
@@ -209,33 +209,33 @@ function expand_general!(search_state, expansion)
     hole = pop!(search_state.holes)
     # hole_dfa_state = pop!(search_state.hole_dfa_states)
     is_hole(hole) || error("not a hole")
-    push!(search_state.holes_stack,hole)
+    push!(search_state.holes_stack, hole)
     # push!(search_state.hole_dfa_states_stack,hole_dfa_state)
 
     # save state for backtracking
-    push!(search_state.expansions_stack,search_state.expansions)
-    push!(search_state.matches_stack,search_state.matches)
-    push!(search_state.past_expansions,expansion)
+    push!(search_state.expansions_stack, search_state.expansions)
+    push!(search_state.matches_stack, search_state.matches)
+    push!(search_state.past_expansions, expansion)
 
     # fresh .expansions
     search_state.expansions = PossibleExpansion[]
     # set .matches properly
-    search_state.matches = expansion.matches;
+    search_state.matches = expansion.matches
 
     for match in expansion.matches
         push!(match.local_utility_stack, match.local_utility)
-        expand_utility!(search_state.config, match, hole, expansion)
+        match.local_utility += delta_local_utility(search_state.config, match, expansion)
     end
 
     # expand the state
     expand!(search_state, expansion, hole)
 
-    all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes");
+    check_number_of_holes(search_state)
 end
 
 function unexpand_general!(search_state::SearchState)
 
-    hole = pop!(search_state.holes_stack);
+    hole = pop!(search_state.holes_stack)
     # hole_dfa_state = pop!(search_state.hole_dfa_states_stack);
 
     # pop the expansion to undo
@@ -255,14 +255,17 @@ function unexpand_general!(search_state::SearchState)
     push!(search_state.holes, hole)
     # push!(search_state.hole_dfa_states, hole_dfa_state)
 
-    all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes");
+    check_number_of_holes(search_state)
     # all(match -> length(match.args) == length(search_state.args), search_state.matches) || error("mismatched number of holes")    
 
 end
 
+function check_number_of_holes(search_state)
+    all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes")
+end
 
 function expand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpansion}, hole)
-    
+
     # set the head symbol of the hole
     hole.leaf = expansion.data.leaf
 
@@ -278,10 +281,10 @@ function expand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpansi
 
     # make it no longer a leaf
     hole.leaf = nothing
-    
+
     # add fresh holes to .args and also keep track of them in search_state.abstraction.holes
     for i in 1:expansion.data.num_holes
-        h = new_hole((hole,i))
+        h = new_hole((hole, i))
         push!(hole.children, h)
         if i == 1 && expansion.data.head !== :no_expand_head
             # set the head symbol of the hole and dont push it to the list of search state holes
@@ -336,7 +339,7 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
         push!(match.holes_stack, hole)
         if expansion.data.fresh
             dfa_sym = hole.metadata.dfa_state
-            push!(match.unique_args, hole); # move the hole to be an argument
+            push!(match.unique_args, hole) # move the hole to be an argument
         end
     end
 
@@ -346,7 +349,7 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
 end
 
 function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, hole)
-    
+
     # set the head symbol of the hole
     hole.leaf = Symbol("%$(expansion.data.idx)")
 
@@ -364,11 +367,11 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
             # this is a new symbol
             push!(match.sym_of_idx, hole.leaf)
             match.idx_of_sym[hole.leaf] = expansion.data.idx
-            push!(match.idx_is_fresh,true)
+            push!(match.idx_is_fresh, true)
             new_symbol = true
             dfa_sym = hole.metadata.dfa_state
         else
-            push!(match.idx_is_fresh,false)
+            push!(match.idx_is_fresh, false)
         end
 
     end
@@ -388,19 +391,19 @@ function expand!(search_state, expansion::PossibleExpansion{ContinuationExpansio
         hole = pop!(match.holes)
         push!(match.holes_stack, hole)
         @assert isnothing(match.continuation)
-        match.continuation = hole;
+        match.continuation = hole
     end
 end
 
 
 
 function unexpand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpansion}, hole)
-    
+
     # set the head symbol of the hole
     hole.leaf = SYM_HOLE
 
     for match in search_state.matches
-        hole = pop!(match.holes_stack) 
+        hole = pop!(match.holes_stack)
         push!(match.holes, hole)
     end
 end
@@ -418,12 +421,16 @@ function unexpand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpan
     end
 
     for match in search_state.matches
-        num_remove = if expansion.data.head !== :no_expand_head expansion.data.num_holes-1 else expansion.data.num_holes end
+        num_remove = if expansion.data.head !== :no_expand_head
+            expansion.data.num_holes - 1
+        else
+            expansion.data.num_holes
+        end
         for _ in 1:num_remove
             pop!(match.holes)
         end
 
-        hole = pop!(match.holes_stack) 
+        hole = pop!(match.holes_stack)
         length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
         push!(match.holes, hole)
     end
@@ -442,20 +449,20 @@ function unexpand!(search_state, expansion::PossibleExpansion{AbstractionExpansi
         hole = pop!(match.holes_stack)
         push!(match.holes, hole)
         if expansion.data.fresh
-            pop!(match.unique_args) === hole || error("expected same hole");
+            pop!(match.unique_args) === hole || error("expected same hole")
         end
     end
 end
 
 function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, hole)
-    
+
     # set the head symbol of the hole
     hole.leaf = SYM_HOLE
 
     new_symbol = false
 
     for match in search_state.matches
-        hole = pop!(match.holes_stack) 
+        hole = pop!(match.holes_stack)
         push!(match.holes, hole)
 
         if pop!(match.idx_is_fresh)
@@ -480,7 +487,7 @@ function unexpand!(search_state, expansion::PossibleExpansion{ContinuationExpans
         hole = pop!(match.holes_stack)
         push!(match.holes, hole)
         @assert match.continuation === hole
-        match.continuation = nothing;
+        match.continuation = nothing
     end
 end
 
@@ -516,7 +523,7 @@ function arg_capture(search_state)
         if all(match -> match.unique_args[i].metadata.struct_hash == first_match, search_state.matches)
             return true
         end
-    end 
+    end
     false
 end
 
@@ -525,7 +532,7 @@ function is_single_task(search_state)
     all(match -> match.expr.metadata.program.task == first, search_state.matches)
 end
 
-mutable struct SamplingProcessor{F <: Function}
+mutable struct SamplingProcessor{F<:Function}
     keep_frac::Float32
     score::F
 end
@@ -534,5 +541,5 @@ using StatsBase
 function process_expansions!(search_state)
     weights = search_state.expansion_processor.score.(search_state.expansions, search_state)
     num_samples = max(Int(round(length(search_state.expansions) * processor.keep_frac)), min(2, length(search_state.expansions)))
-    search_state.expansions = sample(search_state.expansions, Weights(weights), num_samples, replace=false);
+    search_state.expansions = sample(search_state.expansions, Weights(weights), num_samples, replace=false)
 end
