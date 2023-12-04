@@ -179,7 +179,7 @@ function expand_general!(search_state, expansion)
 
     for match in expansion.matches
         push!(match.local_utility_stack, match.local_utility)
-        expand_utility!(search_state.config, match, hole, expansion)
+        match.local_utility += delta_local_utility(search_state.config, match, expansion)
     end
 
     # expand the state
