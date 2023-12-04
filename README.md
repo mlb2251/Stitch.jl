@@ -21,6 +21,8 @@ We can conceptualize this as a Set of Matches, which leads to a Monad structure,
 
 An expansion is a particular way in which an abstraction can be expanded to replace a hole. For example, the abstraction `(+ ?? 2)` can be expanded to `(+ 3 2)`, or to `(+ (+ ?? ??) 2)`, `(+ $0 2)`, etc. We conceptualize expansions as having the following interface (using Haskell notation for clarity)
 
+### Expansion Interface (Haskell)
+
 ```haskell
 class Expansion e where
     -- Take a list of tagged matches, and return a list of expansions along with the matches that the expansion applies to
@@ -52,3 +54,17 @@ unexpand_match_multi :: (Expansion e) => e -> State MatchPossibilities ()
 
 update_local_utility :: (Expansion e) => e -> State MatchPossibilities ()
 ```
+
+### Expansion Interface (Julia)
+
+```julia
+# corresponds to collect in Haskell
+collect_expansions(
+    ::Type{Expansion},
+    abstraction::Abstraction,
+    matches::Vector{Tuple{Int,Match}},
+    config
+)
+```
+
+We implement these 

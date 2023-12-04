@@ -103,6 +103,7 @@ function collect_expansions(
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
     matches_of_idx = Dict{Int,Vector{Tuple{Int,Match}}}()
     freshness_of_idx = Dict{Int,Bool}()
+    sym_of_idx = Dict{Int,Symbol}()
     for (i, match) in matches
         # TODO actually handle multiple alternatives
         is_leaf(match.holes[end]) || continue
@@ -117,8 +118,10 @@ function collect_expansions(
         end
         if !haskey(freshness_of_idx, idx)
             freshness_of_idx[idx] = fresh
+            sym_of_idx[idx] = match.holes[end].metadata.dfa_state
         else
             @assert freshness_of_idx[idx] == fresh
+            @assert sym_of_idx[idx] == match.holes[end].metadata.dfa_state
         end
         push!(ms, (i, match))
     end
@@ -127,7 +130,7 @@ function collect_expansions(
 
     for (idx, matches) in matches_of_idx
         if isempty(matches) continue end
-        push!(result, (SymbolExpansion(idx, freshness_of_idx[idx]), matches))
+        push!(result, (SymbolExpansion(idx, freshness_of_idx[idx], sym_of_idx[idx]), matches))
     end
 
     result
@@ -287,36 +290,24 @@ function check_number_of_holes(search_state)
     all(match_poss -> all(match -> length(match.holes) == length(search_state.holes), match_poss.alternatives), search_state.matches) || error("mismatched number of holes")
 end
 
-function expand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpansion}, hole)
-    
+function expand_abstraction!(expansion::PossibleExpansion{SyntacticLeafExpansion}, hole, holes, abstraction)
     # set the head symbol of the hole
     hole.leaf = expansion.data.leaf
-
-    for match_poss in search_state.matches
-        # TODO actually handle multiple alternatives
-        @assert length(match_poss.alternatives) == 1
-        match = match_poss.alternatives[1]
-        # pop next hole and save it for future backtracking
-        hole = pop!(match.holes)
-        push!(match.holes_stack, hole)
-        @assert is_leaf(hole)
-    end
 end
 
-function expand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpansion}, hole)
-
+function expand_abstraction!(expansion::PossibleExpansion{SyntacticNodeExpansion}, hole, holes, abstraction)
     # make it no longer a leaf
     hole.leaf = nothing
-    
+
     # add fresh holes to .args and also keep track of them in search_state.abstraction.holes
     for i in 1:expansion.data.num_holes
-        h = new_hole((hole,i))
+        h = new_hole((hole, i))
         push!(hole.children, h)
         if i == 1 && expansion.data.head !== :no_expand_head
             # set the head symbol of the hole and dont push it to the list of search state holes
             h.leaf = expansion.data.head
         else
-            push!(search_state.holes, h)
+            push!(holes, h)
             # state = if expansion.data.head === :no_expand_head || isnothing(search_state.config.dfa)
             #     :no_dfa_state
             # else
@@ -331,7 +322,36 @@ function expand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpansi
     end
 
     # reverse holes so they go left to right
-    # @views reverse!(search_state.holes[end-expansion.data.num_holes+1:end])
+    # @views reverse!(search_state.holes[end-expansion.data.num_holes+1:end]) 
+end
+
+function expand_abstraction!(expansion::PossibleExpansion{AbstractionExpansion}, hole, holes, abstraction)
+    hole.leaf = Symbol("#$(expansion.data.index)")
+
+    if expansion.data.fresh
+        abstraction.arity += 1
+        push!(abstraction.dfa_metavars, expansion.data.dfa_state)
+    end
+end
+
+function expand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpansion}, hole)
+    
+    expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
+
+    for match_poss in search_state.matches
+        # TODO actually handle multiple alternatives
+        @assert length(match_poss.alternatives) == 1
+        match = match_poss.alternatives[1]
+        # pop next hole and save it for future backtracking
+        hole = pop!(match.holes)
+        push!(match.holes_stack, hole)
+        @assert is_leaf(hole)
+    end
+end
+
+function expand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpansion}, hole)
+
+    expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
 
     for match_poss in search_state.matches
         # TODO actually handle multiple alternatives
@@ -355,11 +375,7 @@ end
 
 function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion}, hole)
 
-    hole.leaf = Symbol("#$(expansion.data.index)")
-
-    if expansion.data.fresh
-        search_state.abstraction.arity += 1
-    end
+    expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
 
     for match_poss in search_state.matches
         # TODO actually handle multiple alternatives
@@ -370,10 +386,6 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
         if expansion.data.fresh
             push!(match.unique_args, hole); # move the hole to be an argument
         end
-    end
-
-    if expansion.data.fresh
-        push!(search_state.abstraction.dfa_metavars, expansion.data.dfa_state)
     end
 end
 
@@ -401,7 +413,6 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
             match.idx_of_sym[hole.leaf] = expansion.data.idx
             push!(match.idx_is_fresh,true)
             new_symbol = true
-            dfa_sym = hole.metadata.dfa_state
         else
             push!(match.idx_is_fresh,false)
         end
@@ -410,7 +421,7 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
 
     if new_symbol
         search_state.abstraction.sym_arity += 1
-        push!(search_state.abstraction.dfa_symvars, dfa_sym)
+        push!(search_state.abstraction.dfa_symvars, expansion.data.dfa_state)
     end
 
 end
