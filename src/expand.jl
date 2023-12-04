@@ -3,10 +3,10 @@
 function possible_expansions!(search_state)
     isempty(search_state.expansions) || error("expansions should be empty")
 
-    syntactic_expansions!(search_state)
-    abstraction_expansions!(search_state)
-    symbol_expansions!(search_state)
-    continuation_expansions!(search_state)
+    expansions!(SyntacticLeafExpansion, search_state)
+    expansions!(AbstractionExpansion, search_state)
+    expansions!(SymbolExpansion, search_state)
+    expansions!(ContinuationExpansion, search_state)
 
     # sort!(search_state.expansions, by=e -> length(e.matches)*e.matches[1].local_utility)
     # sort!(search_state.expansions, by=e -> upper_bound_fn(search_state,e))
@@ -18,58 +18,93 @@ function possible_expansions!(search_state)
     # filter!(e -> upper_bound_fn(search_state,e) > best_util, search_state.expansions);
 end
 
+function expansions!(typ, search_state)
+    flattened_matches = Vector{Tuple{Int, Match}}()
+    for (i, match_poss) in enumerate(search_state.matches)
+        for match in match_poss.alternatives
+            push!(flattened_matches, (i, match))
+        end
+    end
+    res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config)
+    for (expansion, tagged_matches) in res
+        out = Dict{Int,Vector{Match}}()
+        keys = Vector{Int}()
+        for (i, match) in tagged_matches
+            push!(keys, i)
+            push!(get!(out, i, Match[]), match)
+        end
+        poss = Vector{MatchPossibilities}()
+        for i in keys
+            push!(poss, MatchPossibilities(out[i]))
+        end
+        push!(search_state.expansions, PossibleExpansion(
+            poss,
+            expansion,
+        ))
+    end
+end
 
 """
 Adds the set of expansions to whatever terminal or nonterminal is present at the match locations,
 for example primitives or variables.
 """
-function syntactic_expansions!(search_state)
-    matches_of_leaf = Dict{Symbol,Vector{MatchPossibilities}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
-    matches_of_node = Dict{Tuple{Symbol,Int},Vector{MatchPossibilities}}()
-    for match_poss in search_state.matches
+function collect_expansions(
+    ::Type{SyntacticLeafExpansion},
+    abstraction::Abstraction,
+    matches::Vector{Tuple{Int,Match}}, config
+)::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
+    matches_of_leaf = Dict{Symbol,Vector{Tuple{Int,Match}}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
+    matches_of_node = Dict{Tuple{Symbol,Int},Vector{Tuple{Int,Match}}}()
+    for (i, match) in matches
         # TODO actually handle multiple alternatives
-        @assert length(match_poss.alternatives) == 1
-        match = match_poss.alternatives[1]
         if is_leaf(match.holes[end])
             # leaf case
             leaf = match.holes[end].leaf
             startswith(string(leaf), "&") && continue
 
-            matches = get!(matches_of_leaf, leaf) do; Match[] end
-            push!(matches, MatchPossibilities([match]))
+            matches_for_leaf = get!(matches_of_leaf, leaf) do
+                Match[]
+            end
+
+            push!(matches_for_leaf, (i, match))
         else
             # node case - group with other nodes that have same number of children (and head if autoexpand_head is on)
-            head = if search_state.config.autoexpand_head match.holes[end].children[1].leaf else :no_expand_head end
+            head = if config.autoexpand_head
+                match.holes[end].children[1].leaf
+            else
+                :no_expand_head
+            end
             childcount = length(match.holes[end].children)
-            matches = get!(matches_of_node, (head,childcount)) do; Match[] end
-            push!(matches, MatchPossibilities([match]))
+            matches_for_leaf = get!(matches_of_node, (head, childcount)) do
+                Match[]
+            end
+            push!(matches_for_leaf, (i, match))
         end
     end
 
+    result = Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}()
+
     for (leaf, matches) in matches_of_leaf
         isempty(matches) && continue
-        push!(search_state.expansions, PossibleExpansion(
-            matches,
-            SyntacticLeafExpansion(leaf),
-        ))
+        push!(result, (SyntacticLeafExpansion(leaf), matches))
     end
-    for ((head,childcount), matches) in matches_of_node
+    for ((head, childcount), matches) in matches_of_node
         isempty(matches) && continue
-        push!(search_state.expansions, PossibleExpansion(
-            matches,
-            SyntacticNodeExpansion(head, childcount),
-        ))
+        push!(result, (SyntacticNodeExpansion(head, childcount), matches))
     end
+
+    result
 end
 
-
-function symbol_expansions!(search_state)
-    matches_of_idx = Dict{Int,Vector{MatchPossibilities}}()
+function collect_expansions(
+    ::Type{SymbolExpansion},
+    abstraction::Abstraction,
+    matches::Vector{Tuple{Int,Match}}, config
+)::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
+    matches_of_idx = Dict{Int,Vector{Tuple{Int,Match}}}()
     freshness_of_idx = Dict{Int,Bool}()
-    for match_poss in search_state.matches
+    for (i, match) in matches
         # TODO actually handle multiple alternatives
-        @assert length(match_poss.alternatives) == 1
-        match = match_poss.alternatives[1]
         is_leaf(match.holes[end]) || continue
         sym = match.holes[end].leaf
         if !startswith(string(sym), "&") # this is not a symbol
@@ -77,7 +112,7 @@ function symbol_expansions!(search_state)
         end
         fresh = !haskey(match.idx_of_sym, sym)
         idx = get(match.idx_of_sym, sym, length(match.sym_of_idx) + 1)
-        matches = get!(matches_of_idx, idx) do
+        ms = get!(matches_of_idx, idx) do
             []
         end
         if !haskey(freshness_of_idx, idx)
@@ -85,87 +120,84 @@ function symbol_expansions!(search_state)
         else
             @assert freshness_of_idx[idx] == fresh
         end
-        push!(matches,MatchPossibilities([match]))
+        push!(ms, (i, match))
     end
+
+    result = Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}()
 
     for (idx, matches) in matches_of_idx
         if isempty(matches) continue end
-        push!(search_state.expansions, PossibleExpansion(
-            matches,
-            SymbolExpansion(idx, freshness_of_idx[idx]),
-        ))
+        push!(result, (SymbolExpansion(idx, freshness_of_idx[idx]), matches))
     end
 
+    result
 end
 
-function abstraction_expansions!(search_state)
-    # note: abstracting out a symbol or subtree containing a symbol is okay because you can pass
-    # a symbol in just fine bc ur doing it at the call site so it's bound correctly already.
+function collect_expansions(
+    ::Type{AbstractionExpansion},
+    abstraction::Abstraction,
+    matches::Vector{Tuple{Int,Match}},
+    config
+)::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
-    # todo this line confuses me how could a hole be nothing???
-    isnothing(search_state.holes[end]) && return # no identity abstraction allowed
-
-    # only allow matches in :E dfa state
-    matches_after_dfa = if isnothing(search_state.config.dfa)
-        search_state.matches
+    matches_after_dfa = if isnothing(config.dfa)
+        matches
     else
-        filter(search_state.matches) do m_poss
-            # TODO actually handle multiple alternatives
-            @assert length(m_poss.alternatives) == 1
-            m = m_poss.alternatives[1]
-            dfa_state = m.holes[end].metadata.dfa_state
+        filter(matches) do (i, match)
+            dfa_state = match.holes[end].metadata.dfa_state
             dfa_state === :E || dfa_state === :S
         end
     end
 
-    isempty(matches_after_dfa) && return
+    if isempty(matches_after_dfa) return [] end
+
+    result = Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}()
 
     # variable reuse
-    for i in 0:search_state.abstraction.arity-1
+    for i in 0:abstraction.arity-1
         matches = copy(matches_after_dfa)
-        filter!(matches) do m_poss
-            # TODO actually handle multiple alternatives
-            @assert length(m_poss.alternatives) == 1
-            m = m_poss.alternatives[1]
-            m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash
+        filter!(matches) do (_, match)
+            match.holes[end].metadata.struct_hash == match.unique_args[i+1].metadata.struct_hash
         end
         # matches = [m for m in search_state.matches if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
         if isempty(matches) continue end
 
-        push!(search_state.expansions, PossibleExpansion(
-            matches,
-            AbstractionExpansion(i, false),
-        ))
+        push!(result, (AbstractionExpansion(i, false), matches))
     end
-    if search_state.abstraction.arity < search_state.config.max_arity
+
+    if abstraction.arity < config.max_arity
         # fresh variable
-        push!(search_state.expansions, PossibleExpansion(
-            matches_after_dfa, # all the same matches
-            AbstractionExpansion(search_state.abstraction.arity, true),
-        ))
+        push!(result, (AbstractionExpansion(abstraction.arity, true), matches_after_dfa))
     end
+
+    result
 end
 
-function continuation_expansions!(search_state)
 
-    node = search_state.holes[end]
-    isnothing(node.parent) && return # no identity abstraction allowed
+function collect_expansions(
+    ::Type{ContinuationExpansion},
+    abstraction::Abstraction,
+    matches::Vector{Tuple{Int,Match}},
+    config
+)::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
+
+    if length(matches) == 0 return [] end
+
+    node = matches[1][2].holes[end]
+    isnothing(node.parent) && return [] # no identity abstraction allowed
 
     while !isnothing(node.parent)
         (parent,i) = node.parent
         # check that our parent is a semicolon and we are the righthand child
         # so in particular parent == (semi _ node)
-        i == 3 || return
-        parent.children[1] === :semi || return
+        i == 3 || return []
+        parent.children[1] === :semi || return []
         node = parent
     end
 
-    isnothing(search_state.continuation) || error("shouldn't be possible to have two continuation expansions!")
+    isnothing(matches[1][2].continuation) || error("shouldn't be possible to have two continuation expansions!")
 
-    push!(search_state.expansions, PossibleExpansion(
-        search_state.matches, # all the same matches
-        ContinuationExpansion(),
-    ))
+    return [(ContinuationExpansion(), matches)]
 end
 
 

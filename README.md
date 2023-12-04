@@ -24,7 +24,7 @@ An expansion is a particular way in which an abstraction can be expanded to repl
 ```haskell
 class Expansion e where
     -- Take a list of tagged matches, and return a list of expansions along with the matches that the expansion applies to
-    collect :: e -> [(i, Match)] -> [(e, Dict i [Match])]
+    collect :: Abstraction -> [(i, Match)] -> [(e, [(i, Match)])]
 
     -- mutate the abstraction to apply the expansion, and to unapply the expansion
     expand_abstraction :: e -> State AbstractionInfo ()
