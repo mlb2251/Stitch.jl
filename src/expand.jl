@@ -185,7 +185,7 @@ function expand_general!(search_state, expansion)
     # expand the state
     expand!(search_state, expansion, hole)
 
-    all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes");
+    check_number_of_holes(search_state)
 end
 
 function unexpand_general!(search_state::SearchState)
@@ -210,11 +210,14 @@ function unexpand_general!(search_state::SearchState)
     push!(search_state.holes, hole)
     # push!(search_state.hole_dfa_states, hole_dfa_state)
 
-    all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes");
+    check_number_of_holes(search_state)
     # all(match -> length(match.args) == length(search_state.args), search_state.matches) || error("mismatched number of holes")    
 
 end
 
+function check_number_of_holes(search_state)
+    all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes");
+end
 
 function expand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpansion}, hole)
     
