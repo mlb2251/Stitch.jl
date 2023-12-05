@@ -8,6 +8,8 @@ function possible_expansions!(search_state)
     expansions!(SymbolExpansion, search_state)
     expansions!(ContinuationExpansion, search_state)
     expansions!(SequenceExpansion, search_state)
+    expansions!(SequenceElementExpansion, search_state)
+    expansions!(SequenceTerminatorExpansion, search_state)
 
     # sort!(search_state.expansions, by=e -> length(e.matches)*e.matches[1].local_utility)
     # sort!(search_state.expansions, by=e -> upper_bound_fn(search_state,e))
@@ -268,6 +270,46 @@ function collect_expansions(
     return [(SequenceExpansion(), matches)]
 end
 
+function collect_expansions(
+    ::Type{SequenceElementExpansion},
+    abstraction::Abstraction,
+    matches::Vector{Tuple{Int,Match}},
+    config
+)::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
+
+    matches = filter(matches) do (_, match)
+        hole = match.holes[end]
+        if typeof(hole) != RemainingSequenceHole
+            return false
+        end
+        hole.num_consumed < length(hole.root_node.children)
+    end
+    if length(matches) == 0
+        return []
+    end
+    return [(SequenceElementExpansion(), matches)]
+end
+
+function collect_expansions(
+    ::Type{SequenceTerminatorExpansion},
+    abstraction::Abstraction,
+    matches::Vector{Tuple{Int,Match}},
+    config
+)::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
+
+    matches = filter(matches) do (_, match)
+        hole = match.holes[end]
+        if typeof(hole) != RemainingSequenceHole
+            return false
+        end
+        hole.num_consumed == length(hole.root_node.children)
+    end
+    if length(matches) == 0
+        return []
+    end
+    return [(SequenceTerminatorExpansion(), matches)]
+end
+
 """
 Saves current state to the stack, and reinitializes as a fresh state
 """
@@ -276,7 +318,7 @@ function expand_general!(search_state, expansion)
     # pop hole
     hole = pop!(search_state.holes)
     # hole_dfa_state = pop!(search_state.hole_dfa_states)
-    is_hole(hole) || is_seq_hole(hole) || error("not a hole")
+    is_hole(hole) || is_seq_hole(hole) || error("not a hole: $hole")
     push!(search_state.holes_stack, hole)
     # push!(search_state.hole_dfa_states_stack,hole_dfa_state)
 
@@ -474,7 +516,7 @@ function expand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, ho
     head.leaf = Symbol("/seq")
     rest = new_seq_hole((hole, 2))
     push!(hole.children, rest)
-    push!(holes, rest)
+    push!(holes, hole)
 end
 
 function expand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
@@ -483,6 +525,48 @@ function expand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
     push!(match.holes_stack, hole)
     hole = hole.content
     push!(match.holes, RemainingSequenceHole(hole, 1))
+end
+
+function expand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansion}, hole, holes, abstraction)
+    # takes something of the form (/seq a ...) and makes it (/seq a ?? ...). Puts [??, ...] on the stack
+    # with the top being ?? and the next being ...
+    println("expand sequence element: ", abstraction, abstraction.body.children[end].parent)
+    i = length(hole.children)
+    created_hole = new_hole((hole, i))
+    hole.children[i] = created_hole
+    new_sequence_hole = new_seq_hole((hole, i + 1))
+    push!(hole.children, new_sequence_hole)
+    println("X", new_sequence_hole.parent)
+    push!(holes, hole)
+    push!(holes, created_hole)
+    println("expand sequence element: ", abstraction, abstraction.body.children[end].parent)
+end
+
+function expand_match!(expansion::PossibleExpansion{SequenceElementExpansion}, match)
+    # before: top of stack [...1, more stuff]
+    # after: top of stack [??, ...2, more stuff]
+    # ...2 is shifted over one from ...1
+    last_hole = pop!(match.holes)
+    @assert typeof(last_hole) == RemainingSequenceHole
+    push!(match.holes_stack, last_hole)
+    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1)
+    push!(match.holes, new_sequence_hole)
+    push!(match.holes, TreeNodeHole(new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]))
+end
+
+function expand_abstraction!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, hole, holes, abstraction)
+    # set the head symbol of the hole
+    println("expand terminator: ", abstraction)
+    pop!(hole.children)
+    println("expand terminator: ", abstraction)
+end
+
+function expand_match!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, match)
+    # pop next hole and save it for future backtracking
+    last_hole = pop!(match.holes)
+    @assert typeof(last_hole) == RemainingSequenceHole
+    @assert last_hole.num_consumed == length(last_hole.root_node.children)
+    push!(match.holes_stack, last_hole)
 end
 
 function unexpand!(search_state, expansion, hole)
@@ -586,9 +670,12 @@ end
 function unexpand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, hole, holes, abstraction)
     hole.leaf = SYM_HOLE
 
-    @assert pop!(holes).leaf == SYM_SEQ_HOLE || error("expected SYM_SEQ_HOLE")
+    pop!(holes) === hole || error("expected same hole")
+
     pop!(hole.children).leaf == SYM_SEQ_HOLE || error("expected SYM_SEQ_HOLE")
     pop!(hole.children).leaf == Symbol("/seq") || error("expected /seq")
+
+    println(hole)
 end
 
 function unexpand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
@@ -600,6 +687,50 @@ function unexpand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
     @assert sequence_hole.root_node === original_hole.content
 end
 
+function unexpand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansion}, hole, holes, abstraction)
+    println("unexpand sequence element: ", abstraction, abstraction.body.children[end].parent)
+
+    # remove the ?? hole from the list of holes
+    pop!(holes).leaf == SYM_HOLE || error("expected SYM_HOLE")
+
+    sequence = hole
+    i = length(sequence.children)
+    old_sequence_hole = pop!(sequence.children)
+    @assert old_sequence_hole.leaf == SYM_SEQ_HOLE
+    old_hole = pop!(sequence.children)
+    @assert old_hole.leaf == SYM_HOLE
+    new_sequence_hole = new_seq_hole((sequence, i - 1))
+    push!(sequence.children, new_sequence_hole)
+
+    pop!(holes) === sequence || error("expected same sequence")
+
+    println("Y", new_sequence_hole.parent)
+    println("unexpand sequence element: ", abstraction, abstraction.body.children[end].parent)
+
+    println("abs holes: ", holes)
+end
+
+function unexpand_match!(expansion::PossibleExpansion{SequenceElementExpansion}, match)
+    last_hole = pop!(match.holes)
+    @assert typeof(last_hole) == TreeNodeHole
+    last_sequence_hole = pop!(match.holes)
+    @assert typeof(last_sequence_hole) == RemainingSequenceHole
+    push!(match.holes, pop!(match.holes_stack))
+
+    println("match holes: ", match.holes)
+end
+
+function unexpand_abstraction!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, hole, holes, abstraction)
+    # just put a SYM_SEQ_HOLE on the stack and at the end of the sequence
+    println("unexpand terminator: ", abstraction)
+    new_hole = new_seq_hole((hole, length(hole.children) + 1))
+    push!(hole.children, new_hole)
+    println("unexpand terminator: ", abstraction)
+end
+
+function unexpand_match!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, match)
+    push!(match.holes, pop!(match.holes_stack))
+end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
 function strictly_dominated(search_state)

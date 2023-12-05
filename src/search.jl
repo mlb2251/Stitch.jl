@@ -64,6 +64,15 @@ end
 
 Base.show(io::IO, obj::SequenceExpansion) = pretty_show(io, obj; indent=false)
 
+struct SequenceElementExpansion <: Expansion
+end
+
+Base.show(io::IO, obj::SequenceElementExpansion) = pretty_show(io, obj; indent=false)
+
+struct SequenceTerminatorExpansion <: Expansion
+end
+
+Base.show(io::IO, obj::SequenceTerminatorExpansion) = pretty_show(io, obj; indent=false)
 
 struct SymbolExpansion <: Expansion
     idx::Int
@@ -275,7 +284,13 @@ function is_tracked(search_state; expansion=nothing)
 
     # body = string(search_state.abstraction.body)
     # suffix = split(body, "??")[end]
+    println("Could expand to")
+    println(search_state.abstraction.body)
+    println(search_state.config.track)
+
     res = could_expand_to(search_state.abstraction.body, search_state.config.track)
+
+    println("res: ", res)
 
     isnothing(expansion) || unexpand_general!(search_state)
 

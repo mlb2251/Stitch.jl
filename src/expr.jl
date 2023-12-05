@@ -157,6 +157,16 @@ Checks if one expression could be expanded to obtain another expression
 function could_expand_to(ancestor::SExpr, descendant::SExpr)
     is_hole(ancestor) && return true
     is_leaf(ancestor) && return ancestor.leaf === descendant.leaf
+    if is_seq_hole(ancestor)
+        println("ancestor is seq hole")
+        if length(ancestor.children) - 1 > length(descendant.children)
+            return false
+        end
+        for i in 1:length(ancestor.children)-1
+            could_expand_to(ancestor.children[i], descendant.children[i]) || return false
+        end
+        return true
+    end
     length(ancestor.children) == length(descendant.children) || return false
     for (a,d) in zip(ancestor.children, descendant.children)
         could_expand_to(a,d) || return false
@@ -171,7 +181,8 @@ const SYM_SEQ_HOLE = Symbol("...")
 new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
 new_seq_hole(parent_and_argidx) = sexpr_leaf(SYM_SEQ_HOLE; parent=parent_and_argidx)
 
-is_hole(e::SExpr) = e.leaf === SYM_HOLE || e.leaf === SYM_SEQ_HOLE
+is_hole(e::SExpr) = e.leaf === SYM_HOLE
+is_seq_hole(e::SExpr) = e.leaf === nothing && e.children[end].leaf === SYM_SEQ_HOLE
 
 "child-first traversal"
 function subexpressions(e::SExpr; subexprs = SExpr[])
