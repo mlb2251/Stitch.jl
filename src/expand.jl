@@ -19,7 +19,7 @@ function possible_expansions!(search_state)
 end
 
 function expansions!(typ, search_state)
-    flattened_matches = Vector{Tuple{Int, Match}}()
+    flattened_matches = Vector{Tuple{Int,Match}}()
     for (i, match_poss) in enumerate(search_state.matches)
         for match in match_poss.alternatives
             push!(flattened_matches, (i, match))
@@ -127,7 +127,9 @@ function collect_expansions(
     result = Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}()
 
     for (idx, matches) in matches_of_idx
-        if isempty(matches) continue end
+        if isempty(matches)
+            continue
+        end
         push!(result, (SymbolExpansion(idx, freshness_of_idx[idx], sym_of_idx[idx]), matches))
     end
 
@@ -194,7 +196,9 @@ function collect_expansions(
     config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
-    if length(matches) == 0 return [] end
+    if length(matches) == 0
+        return []
+    end
 
     node = matches[1][2].holes[end]
     isnothing(node.parent) && return [] # no identity abstraction allowed
@@ -329,7 +333,7 @@ function expand_abstraction!(expansion::PossibleExpansion{AbstractionExpansion},
 end
 
 function expand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpansion}, hole)
-    
+
     expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
 
     for match_poss in search_state.matches
@@ -378,7 +382,7 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
         hole = pop!(match.holes)
         push!(match.holes_stack, hole)
         if expansion.data.fresh
-            push!(match.unique_args, hole); # move the hole to be an argument
+            push!(match.unique_args, hole) # move the hole to be an argument
         end
     end
 end
@@ -442,7 +446,7 @@ function unexpand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpan
 
     for match_poss in search_state.matches
         unexpand_match_poss!(match_poss) do match
-            hole = pop!(match.holes_stack) 
+            hole = pop!(match.holes_stack)
             push!(match.holes, hole)
         end
     end
@@ -507,7 +511,7 @@ function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, 
 
     for match_poss in search_state.matches
         unexpand_match_poss!(match_poss) do match
-            hole = pop!(match.holes_stack) 
+            hole = pop!(match.holes_stack)
             push!(match.holes, hole)
 
             if expansion.data.fresh
@@ -531,7 +535,7 @@ function unexpand!(search_state, expansion::PossibleExpansion{ContinuationExpans
             hole = pop!(match.holes_stack)
             push!(match.holes, hole)
             @assert match.continuation === hole
-            match.continuation = nothing;
+            match.continuation = nothing
         end
     end
 end
