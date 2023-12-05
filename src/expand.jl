@@ -341,7 +341,6 @@ function expand_general!(search_state, expansion)
     end
 
     # expand the state
-    println(expansion.data)
     expand!(search_state, expansion, hole)
 
     check_number_of_holes(search_state)
@@ -530,16 +529,13 @@ end
 function expand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansion}, hole, holes, abstraction)
     # takes something of the form (/seq a ...) and makes it (/seq a ?? ...). Puts [??, ...] on the stack
     # with the top being ?? and the next being ...
-    println("expand sequence element: ", abstraction, abstraction.body.children[end].parent)
     i = length(hole.children)
     created_hole = new_hole((hole, i))
     hole.children[i] = created_hole
     new_sequence_hole = new_seq_hole((hole, i + 1))
     push!(hole.children, new_sequence_hole)
-    println("X", new_sequence_hole.parent)
     push!(holes, hole)
     push!(holes, created_hole)
-    println("expand sequence element: ", abstraction, abstraction.body.children[end].parent)
 end
 
 function expand_match!(expansion::PossibleExpansion{SequenceElementExpansion}, match)
@@ -556,9 +552,7 @@ end
 
 function expand_abstraction!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, hole, holes, abstraction)
     # set the head symbol of the hole
-    println("expand terminator: ", abstraction)
     pop!(hole.children)
-    println("expand terminator: ", abstraction)
 end
 
 function expand_match!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, match)
@@ -674,8 +668,6 @@ function unexpand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, 
 
     pop!(hole.children).leaf == SYM_SEQ_HOLE || error("expected SYM_SEQ_HOLE")
     pop!(hole.children).leaf == Symbol("/seq") || error("expected /seq")
-
-    println(hole)
 end
 
 function unexpand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
@@ -688,8 +680,6 @@ function unexpand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
 end
 
 function unexpand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansion}, hole, holes, abstraction)
-    println("unexpand sequence element: ", abstraction, abstraction.body.children[end].parent)
-
     # remove the ?? hole from the list of holes
     pop!(holes).leaf == SYM_HOLE || error("expected SYM_HOLE")
 
@@ -703,11 +693,6 @@ function unexpand_abstraction!(expansion::PossibleExpansion{SequenceElementExpan
     push!(sequence.children, new_sequence_hole)
 
     pop!(holes) === sequence || error("expected same sequence")
-
-    println("Y", new_sequence_hole.parent)
-    println("unexpand sequence element: ", abstraction, abstraction.body.children[end].parent)
-
-    println("abs holes: ", holes)
 end
 
 function unexpand_match!(expansion::PossibleExpansion{SequenceElementExpansion}, match)
@@ -716,16 +701,12 @@ function unexpand_match!(expansion::PossibleExpansion{SequenceElementExpansion},
     last_sequence_hole = pop!(match.holes)
     @assert typeof(last_sequence_hole) == RemainingSequenceHole
     push!(match.holes, pop!(match.holes_stack))
-
-    println("match holes: ", match.holes)
 end
 
 function unexpand_abstraction!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, hole, holes, abstraction)
     # just put a SYM_SEQ_HOLE on the stack and at the end of the sequence
-    println("unexpand terminator: ", abstraction)
     new_hole = new_seq_hole((hole, length(hole.children) + 1))
     push!(hole.children, new_hole)
-    println("unexpand terminator: ", abstraction)
 end
 
 function unexpand_match!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, match)

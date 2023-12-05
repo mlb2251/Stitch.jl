@@ -158,7 +158,6 @@ function could_expand_to(ancestor::SExpr, descendant::SExpr)
     is_hole(ancestor) && return true
     is_leaf(ancestor) && return ancestor.leaf === descendant.leaf
     if is_seq_hole(ancestor)
-        println("ancestor is seq hole")
         if length(ancestor.children) - 1 > length(descendant.children)
             return false
         end

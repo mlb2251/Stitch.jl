@@ -284,13 +284,7 @@ function is_tracked(search_state; expansion=nothing)
 
     # body = string(search_state.abstraction.body)
     # suffix = split(body, "??")[end]
-    println("Could expand to")
-    println(search_state.abstraction.body)
-    println(search_state.config.track)
-
     res = could_expand_to(search_state.abstraction.body, search_state.config.track)
-
-    println("res: ", res)
 
     isnothing(expansion) || unexpand_general!(search_state)
 
