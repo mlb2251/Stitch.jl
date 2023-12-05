@@ -7,6 +7,7 @@ function possible_expansions!(search_state)
     expansions!(AbstractionExpansion, search_state)
     expansions!(SymbolExpansion, search_state)
     expansions!(ContinuationExpansion, search_state)
+    expansions!(SequenceExpansion, search_state)
 
     # sort!(search_state.expansions, by=e -> length(e.matches)*e.matches[1].local_utility)
     # sort!(search_state.expansions, by=e -> upper_bound_fn(search_state,e))
@@ -44,6 +45,14 @@ function expansions!(typ, search_state)
     end
 end
 
+function compute_head(config, node)
+    if config.autoexpand_head
+        node.children[1].leaf
+    else
+        :no_expand_head
+    end
+end
+
 """
 Adds the set of expansions to whatever terminal or nonterminal is present at the match locations,
 for example primitives or variables.
@@ -68,11 +77,12 @@ function collect_expansions(
             push!(matches_for_leaf, (i, match))
         else
             # node case - group with other nodes that have same number of children (and head if autoexpand_head is on)
-            head = if config.autoexpand_head
-                match.holes[end].children[1].leaf
-            else
-                :no_expand_head
+            head = compute_head(config, match.holes[end])
+
+            if string(head) == "/" # this is a sequence
+                continue
             end
+
             childcount = length(match.holes[end].children)
             matches_for_leaf = get!(matches_of_node, (head, childcount)) do
                 Match[]
@@ -217,6 +227,18 @@ function collect_expansions(
     return [(ContinuationExpansion(), matches)]
 end
 
+function collect_expansions(
+    ::Type{SequenceExpansion},
+    abstraction::Abstraction,
+    matches::Vector{Tuple{Int,Match}},
+    config
+)::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
+
+    matches = filter(matches) do (i, match)
+        is_leaf(match.holes[end]) && string(compute_head(config, match.holes[end])) == "/seq"
+    end
+    return [(SequenceExpansion(), matches)]
+end
 
 """
 Saves current state to the stack, and reinitializes as a fresh state
@@ -409,6 +431,24 @@ function expand_match!(expansion::PossibleExpansion{ContinuationExpansion}, matc
     match.continuation = hole
 end
 
+function expand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, hole, holes, abstraction)
+    # set the head symbol of the hole
+    hole.leaf = nothing
+    head = new_hole((hole, 1))
+    push!(hole.children, head)
+    head.leaf = Symbol("/seq")
+    rest = new_hole((hole, 2))
+    rest.leaf = Sym("??seq")
+    push!(hole.children, rest)
+    push!(holes, rest)
+end
+
+function expand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
+    # pop next hole and save it for future backtracking
+    hole = pop!(match.holes)
+    push!(match.holes_stack, hole)
+    push!(match.holes, hole.children)
+end
 
 function unexpand!(search_state, expansion, hole)
     unexpand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
@@ -502,6 +542,16 @@ function unexpand_match!(expansion::PossibleExpansion{ContinuationExpansion}, ma
     @assert match.continuation === hole
     match.continuation = nothing
 end
+
+function unexpand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, hole, holes, abstraction)
+    hole.leaf = SYM_HOLE
+    head = pop!(hole.children)
+    head.leaf === Symbol("/seq") || error("expected /seq")
+    rest = pop!(hole.children)
+    rest.leaf === Sym("??seq") || error("expected ??seq")
+    push!(holes, rest)
+end
+
 
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)

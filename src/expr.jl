@@ -27,6 +27,8 @@ mutable struct MetadataGeneric{D}
     id::Int
 end
 
+abstract type Hole{S} end
+
 mutable struct MatchGeneric{M}
     # represents a match of the current abstraction being constructed
     # match objects are created once at the start of each iteration, which each match
@@ -86,6 +88,10 @@ const Match = MatchGeneric{MatchPossibilities}
 const Metadata = MetadataGeneric{MatchPossibilities}
 const SExpr = SExprGeneric{MatchPossibilities,Metadata}
 const Program = ProgramGeneric{MatchPossibilities,Metadata}
+
+struct TreeNodeHole <: Hole{SExpr}
+    content::SExpr
+end
 
 expr_of(m :: MatchPossibilities) = m.alternatives[1].expr
 

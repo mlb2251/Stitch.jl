@@ -59,6 +59,11 @@ end
 
 Base.show(io::IO, obj::ContinuationExpansion) = pretty_show(io, obj; indent=false)
 
+struct SequenceExpansion <: Expansion 
+end
+
+Base.show(io::IO, obj::SequenceExpansion) = pretty_show(io, obj; indent=false)
+
 
 struct SymbolExpansion <: Expansion
     idx::Int
