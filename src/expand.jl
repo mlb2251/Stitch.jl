@@ -411,11 +411,6 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
 
     end
 
-    if new_symbol
-        search_state.abstraction.sym_arity += 1
-        push!(search_state.abstraction.dfa_symvars, expansion.data.dfa_state)
-    end
-
 end
 
 function expand!(search_state, expansion::PossibleExpansion{ContinuationExpansion}, hole)
@@ -515,7 +510,7 @@ function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, 
             hole = pop!(match.holes_stack) 
             push!(match.holes, hole)
 
-            if pop!(match.idx_is_fresh)
+            if expansion.data.fresh
                 delete!(match.idx_of_sym, hole.leaf)
             end
         end
