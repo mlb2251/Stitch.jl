@@ -27,6 +27,8 @@ mutable struct MetadataGeneric{D}
     id::Int
 end
 
+abstract type Hole{S} end
+
 mutable struct MatchGeneric{M}
     # represents a match of the current abstraction being constructed
     # match objects are created once at the start of each iteration, which each match
@@ -42,9 +44,9 @@ mutable struct MatchGeneric{M}
     # pointers to first instance of each arg within subtree ie args[1] is the thing that #0 matches
     unique_args::Vector{SExprGeneric{M,MetadataGeneric{M}}}
     # pointer to the place that each hole matches.
-    holes::Vector{SExprGeneric{M,MetadataGeneric{M}}}
+    holes::Vector{Hole{SExprGeneric{M,MetadataGeneric{M}}}}
     # history of the holes
-    holes_stack::Vector{SExprGeneric{M,MetadataGeneric{M}}}
+    holes_stack::Vector{Hole{SExprGeneric{M,MetadataGeneric{M}}}}
     # history of the local utilities of the match
     local_utility_stack::Vector{Float32}
 
@@ -63,8 +65,8 @@ mutable struct MatchGeneric{M}
     MatchGeneric{M}(expr, id, config) where {M} = new(
         expr,
         SExprGeneric{M,MetadataGeneric{M}}[],
-        [expr],
-        SExprGeneric{M,MetadataGeneric{M}}[],
+        Hole{SExprGeneric{M,MetadataGeneric{M}}}[TreeNodeHole(expr)],
+        Hole{SExprGeneric{M,MetadataGeneric{M}}}[],
         Float32[],
         local_utility_init(config),
         Symbol[],
@@ -86,6 +88,10 @@ const Match = MatchGeneric{MatchPossibilities}
 const Metadata = MetadataGeneric{MatchPossibilities}
 const SExpr = SExprGeneric{MatchPossibilities,Metadata}
 const Program = ProgramGeneric{MatchPossibilities,Metadata}
+
+struct TreeNodeHole <: Hole{SExpr}
+    content::SExpr
+end
 
 expr_of(m :: MatchPossibilities) = m.alternatives[1].expr
 
