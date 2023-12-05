@@ -162,9 +162,7 @@ function collect_expansions(
         # variable reuse
         for i in 0:abstraction.arity-1
             ms_specific = copy(ms)
-            filter!(ms_specific) do (_, m)
-                m.holes[end].content.metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash
-            end
+            filter!(((_, m),) -> m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash, ms_specific)
             # ms_specific = [m for m in ms_specific if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
             if isempty(ms_specific)
                 continue
