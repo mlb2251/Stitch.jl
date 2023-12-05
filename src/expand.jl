@@ -163,6 +163,8 @@ function collect_expansions(
     config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
+    matches = filter(((_, m),) -> typeof(m.holes[end]) == TreeNodeHole, matches)
+
     result = Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}()
 
     function collect_abstraction_expansions_for_dfa_state!(ms, sym)
@@ -174,8 +176,7 @@ function collect_expansions(
         for i in 0:abstraction.arity-1
             ms_specific = copy(ms)
             filter!(ms_specific) do (_, m)
-                hole = m.holes[end]
-                typeof(hole) == TreeNodeHole && hole.content.metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash
+                m.holes[end].content.metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash
             end
             # ms_specific = [m for m in ms_specific if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
             if isempty(ms_specific)
