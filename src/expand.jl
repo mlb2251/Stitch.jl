@@ -143,6 +143,8 @@ function collect_expansions(
     config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
+    print("Collecting abstraction expansions...")
+
     result = Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}()
 
     function collect_abstraction_expansions_for_dfa_state!(ms, sym)
