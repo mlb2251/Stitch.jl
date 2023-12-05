@@ -507,20 +507,19 @@ function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, 
     # set the head symbol of the hole
     hole.leaf = SYM_HOLE
 
-    new_symbol = false
-
     for match_poss in search_state.matches
         unexpand_match_poss!(match_poss) do match
             hole = pop!(match.holes_stack)
             push!(match.holes, hole)
 
             if expansion.data.fresh
+                pop!(match.sym_of_idx)
                 delete!(match.idx_of_sym, hole.leaf)
             end
         end
     end
 
-    if new_symbol
+    if expansion.data.fresh
         search_state.abstraction.sym_arity -= 1
         pop!(search_state.abstraction.dfa_symvars)
     end
