@@ -109,7 +109,9 @@ function collect_expansions(
     result = Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}()
 
     for (idx, matches) in matches_of_idx
-        if isempty(matches) continue end
+        if isempty(matches)
+            continue
+        end
         push!(result, (SymbolExpansion(idx, freshness_of_idx[idx]), matches))
     end
 
@@ -180,7 +182,9 @@ function collect_expansions(
     config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
-    if length(matches) == 0 return [] end
+    if length(matches) == 0
+        return []
+    end
 
     node = matches[1][2].holes[end]
     isnothing(node.parent) && return [] # no identity abstraction allowed
