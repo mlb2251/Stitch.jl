@@ -93,6 +93,11 @@ struct TreeNodeHole <: Hole{SExpr}
     content::SExpr
 end
 
+struct RemainingSequenceHole <: Hole{SExpr}
+    in_sequence::SExpr
+    num_consumed::Int
+end
+
 expr_of(m :: MatchPossibilities) = m.alternatives[1].expr
 
 max_local_utility(m :: MatchPossibilities) = maximum([match.local_utility for match in m.alternatives])
@@ -162,10 +167,11 @@ end
 
 
 const SYM_HOLE = Symbol("??")
+const SEQ_HOLE = Symbol("...")
 new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
+new_seq_hole(parent_and_argidx) = sexpr_leaf(SEQ_HOLE; parent=parent_and_argidx)
 
-
-is_hole(e::SExpr) = e.leaf === SYM_HOLE
+is_hole(e::SExpr) = e.leaf === SYM_HOLE || e.leaf === SEQ_HOLE
 
 "child-first traversal"
 function subexpressions(e::SExpr; subexprs = SExpr[])

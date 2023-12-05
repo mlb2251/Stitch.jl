@@ -98,6 +98,10 @@ function delta_local_utility(config, match, expansion::PossibleExpansion{Continu
     0
 end
 
+function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceExpansion})
+    symbol_size(Symbol("/seq"), config.size_by_symbol)
+end
+
 local_utility_init(config::SearchConfig) = config.application_utility_fixed
 
 

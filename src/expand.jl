@@ -255,7 +255,14 @@ function collect_expansions(
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
     matches = filter(matches) do (i, match)
-        is_leaf(match.holes[end]) && string(compute_head(config, match.holes[end])) == "/seq"
+        if typeof(match.holes[end]) != TreeNodeHole
+            return false
+        end
+        hole = match.holes[end].content
+        !is_leaf(hole) && string(compute_head(config, hole)) == "/seq"
+    end
+    if length(matches) == 0
+        return []
     end
     return [(SequenceExpansion(), matches)]
 end
@@ -268,7 +275,7 @@ function expand_general!(search_state, expansion)
     # pop hole
     hole = pop!(search_state.holes)
     # hole_dfa_state = pop!(search_state.hole_dfa_states)
-    is_hole(hole) || error("not a hole")
+    is_hole(hole) || is_seq_hole(hole) || error("not a hole")
     push!(search_state.holes_stack, hole)
     # push!(search_state.hole_dfa_states_stack,hole_dfa_state)
 
@@ -463,8 +470,7 @@ function expand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, ho
     head = new_hole((hole, 1))
     push!(hole.children, head)
     head.leaf = Symbol("/seq")
-    rest = new_hole((hole, 2))
-    rest.leaf = Sym("??seq")
+    rest = new_seq_hole((hole, 2))
     push!(hole.children, rest)
     push!(holes, rest)
 end
@@ -473,7 +479,8 @@ function expand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
-    push!(match.holes, hole.children)
+    hole = hole.content
+    push!(match.holes, RemainingSequenceHole(hole, 1))
 end
 
 function unexpand!(search_state, expansion, hole)
