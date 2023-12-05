@@ -130,8 +130,9 @@ function collect_expansions(
     matches_after_dfa = if isnothing(config.dfa)
         matches
     else
-        filter(matches) do (_, match)
-            match.holes[end].metadata.dfa_state == abstraction.dfa_metavars[end]
+        filter(matches) do (_, m)
+            dfa_state = m.holes[end].metadata.dfa_state
+            dfa_state === :E || dfa_state === :S
         end
     end
 
