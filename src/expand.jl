@@ -186,6 +186,7 @@ function collect_expansions(
         collect_abstraction_expansions_for_dfa_state!(matches_s, :S)
     end
 
+    println([x[1] for x in result])
     result
 end
 
