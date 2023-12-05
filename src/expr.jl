@@ -44,9 +44,9 @@ mutable struct MatchGeneric{M}
     # pointers to first instance of each arg within subtree ie args[1] is the thing that #0 matches
     unique_args::Vector{SExprGeneric{M,MetadataGeneric{M}}}
     # pointer to the place that each hole matches.
-    holes::Vector{SExprGeneric{M,MetadataGeneric{M}}}
+    holes::Vector{Hole{SExprGeneric{M,MetadataGeneric{M}}}}
     # history of the holes
-    holes_stack::Vector{SExprGeneric{M,MetadataGeneric{M}}}
+    holes_stack::Vector{Hole{SExprGeneric{M,MetadataGeneric{M}}}}
     # history of the local utilities of the match
     local_utility_stack::Vector{Float32}
 
@@ -65,8 +65,8 @@ mutable struct MatchGeneric{M}
     MatchGeneric{M}(expr, id, config) where {M} = new(
         expr,
         SExprGeneric{M,MetadataGeneric{M}}[],
-        [expr],
-        SExprGeneric{M,MetadataGeneric{M}}[],
+        Hole{SExprGeneric{M,MetadataGeneric{M}}}[TreeNodeHole(expr)],
+        Hole{SExprGeneric{M,MetadataGeneric{M}}}[],
         Float32[],
         local_utility_init(config),
         Symbol[],
