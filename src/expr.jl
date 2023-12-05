@@ -94,7 +94,7 @@ struct TreeNodeHole <: Hole{SExpr}
 end
 
 struct RemainingSequenceHole <: Hole{SExpr}
-    in_sequence::SExpr
+    root_node::SExpr
     num_consumed::Int
 end
 
@@ -167,11 +167,11 @@ end
 
 
 const SYM_HOLE = Symbol("??")
-const SEQ_HOLE = Symbol("...")
+const SYM_SEQ_HOLE = Symbol("...")
 new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
-new_seq_hole(parent_and_argidx) = sexpr_leaf(SEQ_HOLE; parent=parent_and_argidx)
+new_seq_hole(parent_and_argidx) = sexpr_leaf(SYM_SEQ_HOLE; parent=parent_and_argidx)
 
-is_hole(e::SExpr) = e.leaf === SYM_HOLE || e.leaf === SEQ_HOLE
+is_hole(e::SExpr) = e.leaf === SYM_HOLE || e.leaf === SYM_SEQ_HOLE
 
 "child-first traversal"
 function subexpressions(e::SExpr; subexprs = SExpr[])

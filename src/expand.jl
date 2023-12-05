@@ -84,7 +84,7 @@ function collect_expansions(
             # node case - group with other nodes that have same number of children (and head if autoexpand_head is on)
             head = compute_head(config, hole_content)
 
-            if string(head) == "/" # this is a sequence
+            if string(head) == "/seq" # this is a sequence
                 continue
             end
 
@@ -299,6 +299,7 @@ function expand_general!(search_state, expansion)
     end
 
     # expand the state
+    println(expansion.data)
     expand!(search_state, expansion, hole)
 
     check_number_of_holes(search_state)
@@ -584,13 +585,20 @@ end
 
 function unexpand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, hole, holes, abstraction)
     hole.leaf = SYM_HOLE
-    head = pop!(hole.children)
-    head.leaf === Symbol("/seq") || error("expected /seq")
-    rest = pop!(hole.children)
-    rest.leaf === Sym("??seq") || error("expected ??seq")
-    push!(holes, rest)
+
+    @assert pop!(holes).leaf == SYM_SEQ_HOLE || error("expected SYM_SEQ_HOLE")
+    pop!(hole.children).leaf == SYM_SEQ_HOLE || error("expected SYM_SEQ_HOLE")
+    pop!(hole.children).leaf == Symbol("/seq") || error("expected /seq")
 end
 
+function unexpand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
+    sequence_hole = pop!(match.holes)
+    original_hole = pop!(match.holes_stack)
+    push!(match.holes, original_hole)
+    @assert typeof(sequence_hole) == RemainingSequenceHole
+    @assert sequence_hole.num_consumed == 1
+    @assert sequence_hole.root_node === original_hole.content
+end
 
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
