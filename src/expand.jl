@@ -127,49 +127,34 @@ function collect_expansions(
 
     result = Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}()
 
-    function collect_abstraction_expansions_for_dfa_state!(
-        ms, sym
-    )
-
-        if length(ms) == 0
-            return
+    matches_after_dfa = if isnothing(config.dfa)
+        matches
+    else
+        filter(matches) do (_, match)
+            match.holes[end].metadata.dfa_state == abstraction.dfa_metavars[end]
         end
-        # variable reuse
-        for i in 0:abstraction.arity-1
-            ms_specific = copy(ms)
-            filter!(ms_specific) do (_, match)
-                match.holes[end].metadata.struct_hash == match.unique_args[i+1].metadata.struct_hash
-            end
-            # ms_specific = [m for m in ms_specific if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
-            if isempty(ms_specific)
-                continue
-            end
-
-            push!(result, (AbstractionExpansion(i, false), ms_specific))
-        end
-
-        if abstraction.arity < config.max_arity
-            # fresh variable
-            push!(result, (AbstractionExpansion(abstraction.arity, true), ms))
-        end
-
     end
 
-    if isnothing(config.dfa)
-        collect_abstraction_expansions_for_dfa_state!(matches, :uninit_state)
-    else
-        matches_e = Vector{Tuple{Int,Match}}()
-        matches_s = Vector{Tuple{Int,Match}}()
-        for (i, match) in matches
-            dfa_state = match.holes[end].metadata.dfa_state
-            if dfa_state === :E
-                push!(matches_e, (i, match))
-            elseif dfa_state === :S
-                push!(matches_s, (i, match))
-            end
+    if length(matches_after_dfa) == 0
+        return
+    end
+    # variable reuse
+    for i in 0:abstraction.arity-1
+        ms_specific = copy(matches_after_dfa)
+        filter!(ms_specific) do (_, match)
+            match.holes[end].metadata.struct_hash == match.unique_args[i+1].metadata.struct_hash
         end
-        collect_abstraction_expansions_for_dfa_state!(matches_e, :E)
-        collect_abstraction_expansions_for_dfa_state!(matches_s, :S)
+        # ms_specific = [m for m in ms_specific if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
+        if isempty(ms_specific)
+            continue
+        end
+
+        push!(result, (AbstractionExpansion(i, false), ms_specific))
+    end
+
+    if abstraction.arity < config.max_arity
+        # fresh variable
+        push!(result, (AbstractionExpansion(abstraction.arity, true), matches_after_dfa))
     end
 
     result
