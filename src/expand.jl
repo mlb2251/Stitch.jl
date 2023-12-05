@@ -386,97 +386,95 @@ function expand_match!(expansion::PossibleExpansion{ContinuationExpansion}, matc
 end
 
 
-function unexpand!(search_state, expansion::PossibleExpansion{SyntacticLeafExpansion}, hole)
-
-    # set the head symbol of the hole
-    hole.leaf = SYM_HOLE
-
+function unexpand!(search_state, expansion, hole)
+    unexpand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
     for match in search_state.matches
-        hole = pop!(match.holes_stack)
-        push!(match.holes, hole)
+        unexpand_match!(expansion, match)
     end
 end
 
-function unexpand!(search_state, expansion::PossibleExpansion{SyntacticNodeExpansion}, hole)
+function unexpand_abstraction!(expansion::PossibleExpansion{SyntacticLeafExpansion}, hole, holes, abstraction)
+    hole.leaf = SYM_HOLE
+end
+
+function unexpand_match!(expansion::PossibleExpansion{SyntacticLeafExpansion}, match)
+    hole = pop!(match.holes_stack)
+    push!(match.holes, hole)
+end
+
+function unexpand_abstraction!(expansion::PossibleExpansion{SyntacticNodeExpansion}, hole, holes, abstraction)
     hole.leaf = SYM_HOLE
 
-    # pop from .args and search_state.holes
+    # pop from .args and holes
     for i in 1:expansion.data.num_holes
         if expansion.data.head !== :no_expand_head && i == expansion.data.num_holes
             pop!(hole.children).leaf === expansion.data.head || error("expected same head")
         else
-            pop!(hole.children).leaf === pop!(search_state.holes).leaf === SYM_HOLE || error("not a hole")
+            pop!(hole.children).leaf === pop!(holes).leaf === SYM_HOLE || error("not a hole")
         end
-    end
-
-    for match in search_state.matches
-        num_remove = if expansion.data.head !== :no_expand_head
-            expansion.data.num_holes - 1
-        else
-            expansion.data.num_holes
-        end
-        for _ in 1:num_remove
-            pop!(match.holes)
-        end
-
-        hole = pop!(match.holes_stack)
-        length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
-        push!(match.holes, hole)
     end
 end
 
+function unexpand_match!(expansion::PossibleExpansion{SyntacticNodeExpansion}, match)
+    num_remove = if expansion.data.head !== :no_expand_head
+        expansion.data.num_holes - 1
+    else
+        expansion.data.num_holes
+    end
+    for _ in 1:num_remove
+        pop!(match.holes)
+    end
 
-function unexpand!(search_state, expansion::PossibleExpansion{AbstractionExpansion}, hole)
+    hole = pop!(match.holes_stack)
+    length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
+    push!(match.holes, hole)
+end
 
+function unexpand_abstraction!(expansion::PossibleExpansion{AbstractionExpansion}, hole, holes, abstraction)
     hole.leaf = SYM_HOLE
     if expansion.data.fresh
-        search_state.abstraction.arity -= 1
-        pop!(search_state.abstraction.dfa_metavars)
-    end
-
-    for match in search_state.matches
-        hole = pop!(match.holes_stack)
-        push!(match.holes, hole)
-        if expansion.data.fresh
-            pop!(match.unique_args) === hole || error("expected same hole")
-        end
+        abstraction.arity -= 1
+        pop!(abstraction.dfa_metavars)
     end
 end
 
-function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, hole)
+function unexpand_match!(expansion::PossibleExpansion{AbstractionExpansion}, match)
+    hole = pop!(match.holes_stack)
+    push!(match.holes, hole)
+    if expansion.data.fresh
+        pop!(match.unique_args) === hole || error("expected same hole")
+    end
+end
 
+function unexpand_abstraction!(expansion::PossibleExpansion{SymbolExpansion}, hole, holes, abstraction)
     # set the head symbol of the hole
     hole.leaf = SYM_HOLE
     if expansion.data.fresh
-        search_state.abstraction.sym_arity -= 1
-        pop!(search_state.abstraction.dfa_symvars)
+        abstraction.sym_arity -= 1
+        pop!(abstraction.dfa_symvars)
     end
-
-    for match in search_state.matches
-        hole = pop!(match.holes_stack)
-        push!(match.holes, hole)
-
-        if expansion.data.fresh
-            pop!(match.sym_of_idx)
-            delete!(match.idx_of_sym, hole.leaf)
-        end
-
-    end
-
 end
 
-function unexpand!(search_state, expansion::PossibleExpansion{ContinuationExpansion}, hole)
+function unexpand_match!(expansion::PossibleExpansion{SymbolExpansion}, match)
+    hole = pop!(match.holes_stack)
+    push!(match.holes, hole)
 
+    if expansion.data.fresh
+        pop!(match.sym_of_idx)
+        delete!(match.idx_of_sym, hole.leaf)
+    end
+end
+
+function unexpand_abstraction!(expansion::PossibleExpansion{ContinuationExpansion}, hole, holes, abstraction)
     hole.leaf = SYM_HOLE
-
-    for match in search_state.matches
-        hole = pop!(match.holes_stack)
-        push!(match.holes, hole)
-        @assert match.continuation === hole
-        match.continuation = nothing
-    end
 end
 
+function unexpand_match!(expansion::PossibleExpansion{ContinuationExpansion}, match)
+    hole = pop!(match.holes_stack)
+    push!(match.holes, hole)
+    @assert match.continuation === hole
+    match.continuation = nothing
+end
 
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
