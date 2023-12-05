@@ -143,9 +143,7 @@ function collect_expansions(
 
     result = Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}()
 
-    function collect_abstraction_expansions_for_dfa_state!(
-        ms, sym
-    )
+    function collect_abstraction_expansions_for_dfa_state!(ms, sym)
 
         if length(ms) == 0
             return
@@ -153,9 +151,7 @@ function collect_expansions(
         # variable reuse
         for i in 0:abstraction.arity-1
             ms_specific = copy(ms)
-            filter!(ms_specific) do (_, match)
-                match.holes[end].metadata.struct_hash == match.unique_args[i+1].metadata.struct_hash
-            end
+            filter!(((_, m),) -> m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash, ms_specific)
             # ms_specific = [m for m in ms_specific if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
             if isempty(ms_specific)
                 continue
@@ -392,8 +388,10 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
     # set the head symbol of the hole
     hole.leaf = Symbol("%$(expansion.data.idx)")
 
-    new_symbol = false
-    dfa_sym = nothing
+    if expansion.data.fresh
+        search_state.abstraction.sym_arity += 1
+        push!(search_state.abstraction.dfa_symvars, expansion.data.dfa_state)
+    end
 
     for match_poss in search_state.matches
         # TODO actually handle multiple alternatives
@@ -405,14 +403,10 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
 
         @assert string(hole.leaf)[1] == '&'
 
-        if length(match.sym_of_idx) < expansion.data.idx
+        if expansion.data.fresh
             # this is a new symbol
             push!(match.sym_of_idx, hole.leaf)
             match.idx_of_sym[hole.leaf] = expansion.data.idx
-            push!(match.idx_is_fresh, true)
-            new_symbol = true
-        else
-            push!(match.idx_is_fresh, false)
         end
 
     end
@@ -522,9 +516,7 @@ function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, 
             push!(match.holes, hole)
 
             if pop!(match.idx_is_fresh)
-                pop!(match.sym_of_idx)
                 delete!(match.idx_of_sym, hole.leaf)
-                new_symbol = true
             end
         end
     end

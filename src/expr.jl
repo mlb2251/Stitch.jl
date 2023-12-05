@@ -56,7 +56,6 @@ mutable struct MatchGeneric{M}
     # conversions between a symbol &foo and it's index %0
     sym_of_idx::Vector{Symbol}
     idx_of_sym::Dict{Symbol, Int} # idx_of_sym[sym_of_idx[i]] == i
-    idx_is_fresh::Vector{Bool} # stack of whether each idx is fresh across the levels of search, used for backtracking
 
     # metavariable for continuation
     continuation::Union{Nothing,SExprGeneric{M,MetadataGeneric{M}}}
@@ -70,7 +69,6 @@ mutable struct MatchGeneric{M}
         local_utility_init(config),
         Symbol[],
         Dict{Symbol,Int}(),
-        Bool[],
         nothing
     )
 end
