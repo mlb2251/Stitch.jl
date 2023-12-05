@@ -54,7 +54,7 @@ function collect_rci(search_state::SearchState)::Tuple{Float64, MultiRewriteConf
     )
 
     for match in search_state.matches
-        rcis[expr_of(match).metadata.id].is_active = true
+        rcis[match.expr.metadata.id].is_active = true
     end
 
     # special case the identity abstraction (\x. x) since it has a self loop dependency in terms of utility calculation
@@ -74,10 +74,7 @@ function collect_rci(search_state::SearchState)::Tuple{Float64, MultiRewriteConf
         accept_util = if !rci.is_active
             0.0
         else
-            # TODO is this correct? I think by this point there should be a unique answer
-            @assert length(expr.match.alternatives) == 1
-            m = expr.match.alternatives[1]
-            m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, m.unique_args, init=0.0)
+            expr.match.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, expr.match.unique_args, init=0.0)
         end
         rci.cumulative_utility = max(reject_util, accept_util)
         rci.accept_rewrite = accept_util > reject_util + 0.0001 # slightly in favor of rejection to avoid floating point rounding errors in the approximate equality case
@@ -101,8 +98,6 @@ rewrite_program(program, search_state, rcis) = Program(rewrite_inner(program.exp
 
 function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewriteConflictInfo) :: SExpr
     # TODO is this correct? I think by this point there should be a unique answer
-    @assert length(expr.match.alternatives) == 1
-    m = expr.match.alternatives[1]
 
     # if cumulative utility <= 0 then there are no rewrites in this whole subtree
     rci = rcis[expr.metadata.id]
@@ -111,14 +106,14 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
     if rci.accept_rewrite
         # do a rewrite
         children = [sexpr_leaf(search_state.config.new_abstraction_name)]
-        for arg in m.unique_args
+        for arg in expr.match.unique_args
             push!(children, rewrite_inner(arg, search_state, rcis))
         end
-        for sym in m.sym_of_idx
+        for sym in expr.match.sym_of_idx
             push!(children, sexpr_leaf(sym))
         end
-        if !isnothing(m.continuation)
-            push!(children, rewrite_inner(m.continuation, search_state, rcis))
+        if !isnothing(expr.match.continuation)
+            push!(children, rewrite_inner(expr.match.continuation, search_state, rcis))
         end
         return sexpr_node(children)
     else
