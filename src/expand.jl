@@ -449,8 +449,10 @@ function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, 
 
     # set the head symbol of the hole
     hole.leaf = SYM_HOLE
-
-    new_symbol = false
+    if expansion.data.fresh
+        search_state.abstraction.sym_arity -= 1
+        pop!(search_state.abstraction.dfa_symvars)
+    end
 
     for match in search_state.matches
         hole = pop!(match.holes_stack)
@@ -459,15 +461,10 @@ function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, 
         if expansion.data.fresh
             pop!(match.sym_of_idx)
             delete!(match.idx_of_sym, hole.leaf)
-            new_symbol = true
         end
 
     end
 
-    if new_symbol
-        search_state.abstraction.sym_arity -= 1
-        pop!(search_state.abstraction.dfa_symvars)
-    end
 end
 
 function unexpand!(search_state, expansion::PossibleExpansion{ContinuationExpansion}, hole)
