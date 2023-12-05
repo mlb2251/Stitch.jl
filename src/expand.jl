@@ -87,6 +87,7 @@ function collect_expansions(
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
     matches_of_idx = Dict{Int,Vector{Tuple{Int,Match}}}()
     freshness_of_idx = Dict{Int,Bool}()
+    sym_of_idx = Dict{Int,Symbol}()
     for (i, match) in matches
         is_leaf(match.holes[end]) || continue
         sym = match.holes[end].leaf
@@ -100,8 +101,10 @@ function collect_expansions(
         end
         if !haskey(freshness_of_idx, idx)
             freshness_of_idx[idx] = fresh
+            sym_of_idx[idx] = match.holes[end].metadata.dfa_state
         else
             @assert freshness_of_idx[idx] == fresh
+            @assert sym_of_idx[idx] == match.holes[end].metadata.dfa_state
         end
         push!(ms, (i, match))
     end
@@ -112,7 +115,7 @@ function collect_expansions(
         if isempty(matches)
             continue
         end
-        push!(result, (SymbolExpansion(idx, freshness_of_idx[idx]), matches))
+        push!(result, (SymbolExpansion(idx, freshness_of_idx[idx], sym_of_idx[idx]), matches))
     end
 
     result
@@ -127,33 +130,45 @@ function collect_expansions(
 
     result = Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}()
 
-    matches_after_dfa = if isnothing(config.dfa)
-        matches
+    function collect_abstraction_expansions_for_dfa_state!(ms, sym)
+
+        if length(ms) == 0
+            return
+        end
+        # variable reuse
+        for i in 0:abstraction.arity-1
+            ms_specific = copy(ms)
+            filter!(((_, m),) -> m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash, ms_specific)
+            # ms_specific = [m for m in ms_specific if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
+            if isempty(ms_specific)
+                continue
+            end
+
+            push!(result, (AbstractionExpansion(i, false, sym), ms_specific))
+        end
+
+        if abstraction.arity < config.max_arity
+            # fresh variable
+            push!(result, (AbstractionExpansion(abstraction.arity, true, sym), ms))
+        end
+
+    end
+
+    if isnothing(config.dfa)
+        collect_abstraction_expansions_for_dfa_state!(matches, :uninit_state)
     else
-        filter(matches) do (_, m)
-            dfa_state = m.holes[end].metadata.dfa_state
-            dfa_state === :E || dfa_state === :S
+        matches_e = Vector{Tuple{Int,Match}}()
+        matches_s = Vector{Tuple{Int,Match}}()
+        for (i, match) in matches
+            dfa_state = match.holes[end].metadata.dfa_state
+            if dfa_state === :E
+                push!(matches_e, (i, match))
+            elseif dfa_state === :S
+                push!(matches_s, (i, match))
+            end
         end
-    end
-
-    if length(matches_after_dfa) == 0
-        return []
-    end
-    # variable reuse
-    for i in 0:abstraction.arity-1
-        ms_specific = copy(matches_after_dfa)
-        filter!(((_, m),) -> m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash, ms_specific)
-        # ms_specific = [m for m in ms_specific if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
-        if isempty(ms_specific)
-            continue
-        end
-
-        push!(result, (AbstractionExpansion(i, false), ms_specific))
-    end
-
-    if abstraction.arity < config.max_arity
-        # fresh variable
-        push!(result, (AbstractionExpansion(abstraction.arity, true), matches_after_dfa))
+        collect_abstraction_expansions_for_dfa_state!(matches_e, :E)
+        collect_abstraction_expansions_for_dfa_state!(matches_s, :S)
     end
 
     result
@@ -318,22 +333,18 @@ function expand!(search_state, expansion::PossibleExpansion{AbstractionExpansion
 
     if expansion.data.fresh
         search_state.abstraction.arity += 1
+        push!(search_state.abstraction.dfa_metavars, expansion.data.dfa_state)
     end
 
-    dfa_sym = nothing
 
     for match in search_state.matches
         hole = pop!(match.holes)
         push!(match.holes_stack, hole)
         if expansion.data.fresh
-            dfa_sym = hole.metadata.dfa_state
             push!(match.unique_args, hole) # move the hole to be an argument
         end
     end
 
-    if expansion.data.fresh
-        push!(search_state.abstraction.dfa_metavars, dfa_sym)
-    end
 end
 
 function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, hole)
@@ -341,8 +352,10 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
     # set the head symbol of the hole
     hole.leaf = Symbol("%$(expansion.data.idx)")
 
-    new_symbol = false
-    dfa_sym = nothing
+    if expansion.data.fresh
+        search_state.abstraction.sym_arity += 1
+        push!(search_state.abstraction.dfa_symvars, expansion.data.dfa_state)
+    end
 
     for match in search_state.matches
         # pop next hole and save it for future backtracking
@@ -351,22 +364,12 @@ function expand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, ho
 
         @assert string(hole.leaf)[1] == '&'
 
-        if length(match.sym_of_idx) < expansion.data.idx
+        if expansion.data.fresh
             # this is a new symbol
             push!(match.sym_of_idx, hole.leaf)
             match.idx_of_sym[hole.leaf] = expansion.data.idx
-            push!(match.idx_is_fresh, true)
-            new_symbol = true
-            dfa_sym = hole.metadata.dfa_state
-        else
-            push!(match.idx_is_fresh, false)
         end
 
-    end
-
-    if new_symbol
-        search_state.abstraction.sym_arity += 1
-        push!(search_state.abstraction.dfa_symvars, dfa_sym)
     end
 
 end
@@ -453,7 +456,7 @@ function unexpand!(search_state, expansion::PossibleExpansion{SymbolExpansion}, 
         hole = pop!(match.holes_stack)
         push!(match.holes, hole)
 
-        if pop!(match.idx_is_fresh)
+        if expansion.data.fresh
             pop!(match.sym_of_idx)
             delete!(match.idx_of_sym, hole.leaf)
             new_symbol = true
