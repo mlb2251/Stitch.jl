@@ -249,6 +249,8 @@ function expand_general!(search_state, expansion)
     end
 
     # expand the state
+    println(search_state.abstraction)
+    println(expansion.data)
     expand!(search_state, expansion, hole)
 
     check_number_of_holes(search_state)
