@@ -137,7 +137,7 @@ function collect_expansions(
     end
 
     if length(matches_after_dfa) == 0
-        return
+        return []
     end
     # variable reuse
     for i in 0:abstraction.arity-1
