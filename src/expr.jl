@@ -29,7 +29,7 @@ end
 
 abstract type Hole{S} end
 
-mutable struct MatchGeneric{M}
+mutable struct Match
     # represents a match of the current abstraction being constructed
     # match objects are created once at the start of each iteration, which each match
     #   corresponding to a node in the corpus
@@ -40,13 +40,13 @@ mutable struct MatchGeneric{M}
     #   - what are the holes that need to be expanded at the current location, etc.
     # Fields:
     # pointer to subtree in original corpus
-    expr::SExprGeneric{M,MetadataGeneric{M}}
+    expr::SExprGeneric{Match,MetadataGeneric{Match}}
     # pointers to first instance of each arg within subtree ie args[1] is the thing that #0 matches
-    unique_args::Vector{SExprGeneric{M,MetadataGeneric{M}}}
+    unique_args::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
     # pointer to the place that each hole matches.
-    holes::Vector{Hole{SExprGeneric{M,MetadataGeneric{M}}}}
+    holes::Vector{Hole{SExprGeneric{Match,MetadataGeneric{Match}}}}
     # history of the holes
-    holes_stack::Vector{Hole{SExprGeneric{M,MetadataGeneric{M}}}}
+    holes_stack::Vector{Hole{SExprGeneric{Match,MetadataGeneric{Match}}}}
     # history of the local utilities of the match
     local_utility_stack::Vector{Float32}
 
@@ -60,13 +60,13 @@ mutable struct MatchGeneric{M}
     idx_of_sym::Dict{Symbol, Int} # idx_of_sym[sym_of_idx[i]] == i
 
     # metavariable for continuation
-    continuation::Union{Nothing,SExprGeneric{M,MetadataGeneric{M}}}
+    continuation::Union{Nothing,SExprGeneric{Match,MetadataGeneric{Match}}}
 
-    MatchGeneric{M}(expr, id, config) where {M} = new(
+    Match(expr, id, config) = new(
         expr,
-        SExprGeneric{M,MetadataGeneric{M}}[],
-        Hole{SExprGeneric{M,MetadataGeneric{M}}}[TreeNodeHole(expr)],
-        Hole{SExprGeneric{M,MetadataGeneric{M}}}[],
+        Hole{SExprGeneric{Match,MetadataGeneric{Match}}}[],
+        Hole{SExprGeneric{Match,MetadataGeneric{Match}}}[TreeNodeHole(expr)],
+        SExprGeneric{Match,MetadataGeneric{Match}}[],
         Float32[],
         local_utility_init(config),
         Symbol[],
@@ -75,19 +75,9 @@ mutable struct MatchGeneric{M}
     )
 end
 
-mutable struct MatchPossibilities
-    # represents the set of possible matches that could be made at a given location
-    alternatives::Vector{MatchGeneric{MatchPossibilities}}
-end
-
-fresh_match_possibilities(expr, id, config) = MatchPossibilities(
-    [MatchGeneric{MatchPossibilities}(expr, id, config)]
-)
-
-const Match = MatchGeneric{MatchPossibilities}
-const Metadata = MetadataGeneric{MatchPossibilities}
-const SExpr = SExprGeneric{MatchPossibilities,Metadata}
-const Program = ProgramGeneric{MatchPossibilities,Metadata}
+const Metadata = MetadataGeneric{Match}
+const SExpr = SExprGeneric{Match,Metadata}
+const Program = ProgramGeneric{Match,Metadata}
 
 struct TreeNodeHole <: Hole{SExpr}
     content::SExpr
@@ -97,10 +87,6 @@ struct RemainingSequenceHole <: Hole{SExpr}
     root_node::SExpr
     num_consumed::Int
 end
-
-expr_of(m :: MatchPossibilities) = m.alternatives[1].expr
-
-max_local_utility(m :: MatchPossibilities) = maximum([match.local_utility for match in m.alternatives])
 
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
     expr = SExpr(nothing, children, parent, nothing, nothing)
@@ -176,12 +162,10 @@ end
 
 
 const SYM_HOLE = Symbol("??")
-const SYM_SEQ_HOLE = Symbol("...")
 new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
-new_seq_hole(parent_and_argidx) = sexpr_leaf(SYM_SEQ_HOLE; parent=parent_and_argidx)
+
 
 is_hole(e::SExpr) = e.leaf === SYM_HOLE
-is_seq_hole(e::SExpr) = e.leaf === nothing && e.children[end].leaf === SYM_SEQ_HOLE
 
 "child-first traversal"
 function subexpressions(e::SExpr; subexprs = SExpr[])
