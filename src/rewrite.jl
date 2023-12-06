@@ -97,8 +97,6 @@ end
 rewrite_program(program, search_state, rcis) = Program(rewrite_inner(program.expr, search_state, rcis), program.id, program.task)
 
 function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewriteConflictInfo) :: SExpr
-    # TODO is this correct? I think by this point there should be a unique answer
-
     # if cumulative utility <= 0 then there are no rewrites in this whole subtree
     rci = rcis[expr.metadata.id]
     rci.cumulative_utility > 0 || return copy(expr)
