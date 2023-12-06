@@ -1,0 +1,23 @@
+[
+    {
+        "args": {},
+        "abstractions": [
+            [
+                2,
+                0,
+                "(/seq (/seq 1 2 #1) 2 3 a b #0)",
+                "uninit_state",
+                [
+                    "uninit_state",
+                    "uninit_state"
+                ],
+                []
+            ]
+        ],
+        "programs": [
+            "(fn_1 b 5)",
+            "(fn_1 d 4)",
+            "(fn_1 c 3)"
+        ]
+    }
+]
