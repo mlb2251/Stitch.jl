@@ -52,12 +52,10 @@ function collect_expansions(
     matches_of_leaf = Dict{Symbol,Vector{Tuple{Int,Match}}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
     matches_of_node = Dict{Tuple{Symbol,Int},Vector{Tuple{Int,Match}}}()
     for (i, match) in matches
-        hole = match.holes[end]
-        if typeof(hole) != TreeNodeHole
+        if typeof(match.holes[end]) != TreeNodeHole
             continue
         end
-        hole_content = hole.content
-        if is_leaf(hole_content)
+        if is_leaf(match.holes[end])
             # leaf case
             leaf = hole_content.leaf
             startswith(string(leaf), "&") && continue
@@ -69,13 +67,13 @@ function collect_expansions(
             push!(matches_for_leaf, (i, match))
         else
             # node case - group with other nodes that have same number of children (and head if autoexpand_head is on)
-            head = compute_head(config, hole_content)
+            head = compute_head(config, match.holes[end])
 
             if string(head) == "/seq" # this is a sequence
                 continue
             end
 
-            childcount = length(hole_content.children)
+            childcount = length(match.holes[end].children)
             matches_for_leaf = get!(matches_of_node, (head, childcount)) do
                 Match[]
             end
@@ -106,13 +104,11 @@ function collect_expansions(
     freshness_of_idx = Dict{Int,Bool}()
     sym_of_idx = Dict{Int,Symbol}()
     for (i, match) in matches
-        hole = match.holes[end]
-        if typeof(hole) != TreeNodeHole
+        if typeof(match.holes[end]) != TreeNodeHole
             continue
         end
-        hole_content = hole.content
-        is_leaf(hole_content) || continue
-        sym = hole_content.leaf
+        is_leaf(match.holes[end]) || continue
+        sym = match.holes[end].leaf
         if !startswith(string(sym), "&") # this is not a symbol
             continue
         end
@@ -188,7 +184,7 @@ function collect_expansions(
             if typeof(hole) != TreeNodeHole
                 continue
             end
-            dfa_state = hole.content.metadata.dfa_state
+            dfa_state = hole.metadata.dfa_state
             if dfa_state === :E
                 push!(matches_e, (i, match))
             elseif dfa_state === :S
@@ -216,7 +212,6 @@ function collect_expansions(
     if typeof(node) != TreeNodeHole
         return []
     end
-    node = node.content
     isnothing(node.parent) && return [] # no identity abstraction allowed
 
     while !isnothing(node.parent)

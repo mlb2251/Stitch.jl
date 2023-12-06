@@ -1,9 +1,11 @@
+abstract type Hole{S} end
+
 """
 An expression. See SExpr for the version that's always used - the definition is split into
 SExprGeneric and SExpr because mutually recursive types are supported in julia so we can't
 directly have Expr and Match that point to each other and without using generics.
 """
-mutable struct SExprGeneric{D,M}
+mutable struct SExprGeneric{D,M} <: Hole{SExprGeneric{D,M}}
     leaf::Union{Symbol,Nothing}
     children::Vector{SExprGeneric{D,M}}
     parent::Union{Tuple{SExprGeneric{D,M},Int}, Nothing} # parent and which index of the child it is
@@ -65,7 +67,7 @@ mutable struct Match
     Match(expr, id, config) = new(
         expr,
         Hole{SExprGeneric{Match,MetadataGeneric{Match}}}[],
-        Hole{SExprGeneric{Match,MetadataGeneric{Match}}}[TreeNodeHole(expr)],
+        Hole{SExprGeneric{Match,MetadataGeneric{Match}}}[expr],
         SExprGeneric{Match,MetadataGeneric{Match}}[],
         Float32[],
         local_utility_init(config),
@@ -78,6 +80,7 @@ end
 const Metadata = MetadataGeneric{Match}
 const SExpr = SExprGeneric{Match,Metadata}
 const Program = ProgramGeneric{Match,Metadata}
+const TreeNodeHole = SExpr
 
 struct TreeNodeHole <: Hole{SExpr}
     content::SExpr
