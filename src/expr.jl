@@ -80,11 +80,6 @@ const SExpr = SExprGeneric{Match,Metadata}
 const Program = ProgramGeneric{Match,Metadata}
 const TreeNodeHole = SExpr
 
-struct RemainingSequenceHole <: Hole{SExpr}
-    root_node::SExpr
-    num_consumed::Int
-end
-
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
     expr = SExpr(nothing, children, parent, nothing, nothing)
     for (i,child) in enumerate(children)

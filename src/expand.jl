@@ -66,9 +66,6 @@ function collect_expansions(
             # node case - group with other nodes that have same number of children (and head if autoexpand_head is on)
             head = compute_head(config, match.holes[end])
 
-            if string(head) == "/seq" # this is a sequence
-                continue
-            end
             childcount = length(match.holes[end].children)
             matches_for_leaf = get!(matches_of_node, (head, childcount)) do
                 Match[]
