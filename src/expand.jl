@@ -34,13 +34,6 @@ function expansions!(typ, search_state)
     end
 end
 
-function compute_head(config, node)
-    if config.autoexpand_head
-        node.children[1].leaf
-    else
-        :no_expand_head
-    end
-end
 
 """
 Adds the set of expansions to whatever terminal or nonterminal is present at the match locations,
@@ -69,10 +62,14 @@ function collect_expansions(
             push!(matches_for_leaf, (i, match))
         else
             # node case - group with other nodes that have same number of children (and head if autoexpand_head is on)
-            head = compute_head(config, match.holes[end])
+            head = match.holes[end].children[1].leaf
 
             if head === SYM_SEQ_HEAD # this is a sequence
                 continue
+            end
+
+            if !config.autoexpand_head
+                head = :no_expand_head
             end
 
             childcount = length(match.holes[end].children)
@@ -241,7 +238,7 @@ function collect_expansions(
         if typeof(match.holes[end]) != TreeNodeHole
             return false
         end
-        !is_leaf(match.holes[end]) && compute_head(config, match.holes[end]) === SYM_SEQ_HEAD
+        !is_leaf(match.holes[end]) && match.holes[end].children[1].leaf === SYM_SEQ_HEAD
     end
     if length(matches) == 0
         return []
@@ -476,10 +473,10 @@ function expand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, ho
     hole.leaf = nothing
     head = new_hole((hole, 1))
     head.leaf = SYM_SEQ_HEAD
-    new_hole = new_seq_hole((hole, 2))
+    nh = new_seq_hole((hole, 2))
 
-    push!(hole.children, new_hole)
     push!(hole.children, head)
+    push!(hole.children, nh)
 
     push!(holes, hole)
 end
