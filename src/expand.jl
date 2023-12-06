@@ -481,13 +481,15 @@ function expand_match!(expansion::PossibleExpansion{ContinuationExpansion}, matc
 end
 
 function expand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, hole, holes, abstraction)
-    # set the head symbol of the hole
+    # take a hole ?? and make it (/seq ...). The hole is then pushed to the stack
     hole.leaf = nothing
     head = new_hole((hole, 1))
-    push!(hole.children, head)
     head.leaf = Symbol("/seq")
-    rest = new_seq_hole((hole, 2))
-    push!(hole.children, rest)
+    new_hole = new_seq_hole((hole, 2))
+
+    push!(hole.children, new_hole)
+    push!(hole.children, head)
+
     push!(holes, hole)
 end
 
@@ -495,36 +497,39 @@ function expand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
-    hole = hole.content
-    push!(match.holes, RemainingSequenceHole(hole, 1))
+    # add a hole representing the remaining sequence
+    push!(match.holes, RemainingSequenceHole(hole.content, 1))
 end
 
 function expand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansion}, hole, holes, abstraction)
-    # takes something of the form (/seq a ...) and makes it (/seq a ?? ...). Puts [??, ...] on the stack
-    # with the top being ?? and the next being ...
+    # take a hole (/seq <things> ...) and make it (/seq <things> ?? ...). Place the ?? above the ... on the stack,
+    # but do *not* remove ... from the stack, since it will be consumed by the next expansion once the ?? is filled in
+
     i = length(hole.children)
-    created_hole = new_hole((hole, i))
-    hole.children[i] = created_hole
+    element_hole = new_hole((hole, i))
+    # overwrite the old ...
+    hole.children[i] = element_hole
+
     new_sequence_hole = new_seq_hole((hole, i + 1))
     push!(hole.children, new_sequence_hole)
+
     push!(holes, hole)
-    push!(holes, created_hole)
+    push!(holes, element_hole)
 end
 
 function expand_match!(expansion::PossibleExpansion{SequenceElementExpansion}, match)
-    # before: top of stack [...1, more stuff]
-    # after: top of stack [??, ...2, more stuff]
-    # ...2 is shifted over one from ...1
     last_hole = pop!(match.holes)
     @assert typeof(last_hole) == RemainingSequenceHole
+    # push the hole back on the stack
     push!(match.holes_stack, last_hole)
+
     new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1)
     push!(match.holes, new_sequence_hole)
     push!(match.holes, TreeNodeHole(new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]))
 end
 
 function expand_abstraction!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, hole, holes, abstraction)
-    # set the head symbol of the hole
+    # just remove the last hole, and implicitly close off the sequence
     pop!(hole.children)
 end
 
@@ -632,18 +637,24 @@ function unexpand_match!(expansion::PossibleExpansion{ContinuationExpansion}, ma
 end
 
 function unexpand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, hole, holes, abstraction)
-    hole.leaf = SYM_HOLE
-
     pop!(holes) === hole || error("expected same hole")
 
+    # remove the ... and /seq from the sequence
     pop!(hole.children).leaf == SYM_SEQ_HOLE || error("expected SYM_SEQ_HOLE")
     pop!(hole.children).leaf == Symbol("/seq") || error("expected /seq")
+
+    # set the head symbol of the hole, to make it a ?? hole
+    hole.leaf = SYM_HOLE
+
 end
 
 function unexpand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
+    # remove the ... hole
     sequence_hole = pop!(match.holes)
+    # get the original hole and put it back on the stack
     original_hole = pop!(match.holes_stack)
     push!(match.holes, original_hole)
+    # check that the ... hole is the same as the one we just popped
     @assert typeof(sequence_hole) == RemainingSequenceHole
     @assert sequence_hole.num_consumed == 1
     @assert sequence_hole.root_node === original_hole.content
@@ -653,23 +664,25 @@ function unexpand_abstraction!(expansion::PossibleExpansion{SequenceElementExpan
     # remove the ?? hole from the list of holes
     pop!(holes).leaf == SYM_HOLE || error("expected SYM_HOLE")
 
-    sequence = hole
-    i = length(sequence.children)
-    old_sequence_hole = pop!(sequence.children)
-    @assert old_sequence_hole.leaf == SYM_SEQ_HOLE
-    old_hole = pop!(sequence.children)
-    @assert old_hole.leaf == SYM_HOLE
-    new_sequence_hole = new_seq_hole((sequence, i - 1))
-    push!(sequence.children, new_sequence_hole)
+    # remove the ... hole from the list of holes
+    pop!(hole.children).leaf == SYM_SEQ_HOLE || error("expected SYM_SEQ_HOLE")
 
-    pop!(holes) === sequence || error("expected same sequence")
+    # delete the ?? hole from the sequence
+    pop!(hole.children).leaf == SYM_HOLE || error("expected SYM_HOLE")
+
+    # put the ... hole back onto the end
+    new_sequence_hole = new_seq_hole((hole, length(hole.children)))
+    push!(hole.children, new_sequence_hole)
+
+    # delete the (/seq <extra> ...) hole
+    pop!(holes) === hole || error("expected same sequence")
 end
 
 function unexpand_match!(expansion::PossibleExpansion{SequenceElementExpansion}, match)
-    last_hole = pop!(match.holes)
-    @assert typeof(last_hole) == TreeNodeHole
-    last_sequence_hole = pop!(match.holes)
-    @assert typeof(last_sequence_hole) == RemainingSequenceHole
+    # get rid of the ?? and ... holes
+    typeof(pop!(match.holes)) == TreeNodeHole || error("expected TreeNodeHole")
+    typeof(pop!(match.holes)) == RemainingSequenceHole || error("expected RemainingSequenceHole")
+    # put the original ... hole back on the stack
     push!(match.holes, pop!(match.holes_stack))
 end
 
