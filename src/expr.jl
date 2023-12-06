@@ -82,10 +82,6 @@ const SExpr = SExprGeneric{Match,Metadata}
 const Program = ProgramGeneric{Match,Metadata}
 const TreeNodeHole = SExpr
 
-struct TreeNodeHole <: Hole{SExpr}
-    content::SExpr
-end
-
 struct RemainingSequenceHole <: Hole{SExpr}
     root_node::SExpr
     num_consumed::Int
