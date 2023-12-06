@@ -69,7 +69,7 @@ function collect_expansions(
             # node case - group with other nodes that have same number of children (and head if autoexpand_head is on)
             head = compute_head(config, match.holes[end])
 
-            if string(head) == "/seq" # this is a sequence
+            if head === SYM_SEQ_HEAD # this is a sequence
                 continue
             end
 
@@ -239,7 +239,7 @@ function collect_expansions(
         if typeof(match.holes[end]) != TreeNodeHole
             return false
         end
-        !is_leaf(match.holes[end]) && string(compute_head(config, match.holes[end])) == "/seq"
+        !is_leaf(match.holes[end]) && compute_head(config, match.holes[end]) === SYM_SEQ_HEAD
     end
     if length(matches) == 0
         return []
@@ -473,7 +473,7 @@ function expand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, ho
     # take a hole ?? and make it (/seq ...). The hole is then pushed to the stack
     hole.leaf = nothing
     head = new_hole((hole, 1))
-    head.leaf = Symbol("/seq")
+    head.leaf = SYM_SEQ_HEAD
     new_hole = new_seq_hole((hole, 2))
 
     push!(hole.children, new_hole)
@@ -625,7 +625,7 @@ function unexpand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, 
 
     # remove the ... and /seq from the sequence
     pop!(hole.children).leaf == SYM_SEQ_HOLE || error("expected SYM_SEQ_HOLE")
-    pop!(hole.children).leaf == Symbol("/seq") || error("expected /seq")
+    pop!(hole.children).leaf === SYM_SEQ_HEAD || error("expected SYM_SEQ_HEAD")
 
     # set the head symbol of the hole, to make it a ?? hole
     hole.leaf = SYM_HOLE

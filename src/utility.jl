@@ -99,7 +99,7 @@ function delta_local_utility(config, match, expansion::PossibleExpansion{Continu
 end
 
 function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceExpansion})
-    symbol_size(Symbol("/seq"), config.size_by_symbol)
+    symbol_size(SYM_SEQ_HEAD, config.size_by_symbol)
 end
 
 function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceElementExpansion})

@@ -162,6 +162,7 @@ end
 
 const SYM_HOLE = Symbol("??")
 const SYM_SEQ_HOLE = Symbol("...")
+const SYM_SEQ_HEAD = Symbol("/seq")
 new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
 new_seq_hole(parent_and_argidx) = sexpr_leaf(SYM_SEQ_HOLE; parent=parent_and_argidx)
 
