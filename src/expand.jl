@@ -7,9 +7,11 @@ function possible_expansions!(search_state)
     expansions!(AbstractionExpansion, search_state)
     expansions!(SymbolExpansion, search_state)
     expansions!(ContinuationExpansion, search_state)
-    expansions!(SequenceExpansion, search_state)
-    expansions!(SequenceElementExpansion, search_state)
-    expansions!(SequenceTerminatorExpansion, search_state)
+    if search_state.config.match_sequences
+        expansions!(SequenceExpansion, search_state)
+        expansions!(SequenceElementExpansion, search_state)
+        expansions!(SequenceTerminatorExpansion, search_state)
+    end
 
     # sort!(search_state.expansions, by=e -> length(e.matches)*e.matches[1].local_utility)
     # sort!(search_state.expansions, by=e -> upper_bound_fn(search_state,e))
