@@ -402,9 +402,9 @@ end
 function expand_match!(expansion::PossibleExpansion{SyntacticNodeExpansion}, match)
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
+    length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion.data)")
     push!(match.holes_stack, hole)
 
-    length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion.data)")
     # add all the children of the hole as new holes (except possibly the head)
     if expansion.data.head !== :no_expand_head
         append!(match.holes, hole.children[2:end])
@@ -426,7 +426,6 @@ end
 function expand_match!(expansion::PossibleExpansion{AbstractionExpansion}, match)
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
-
     if expansion.data.fresh
         push!(match.unique_args, hole) # move the hole to be an argument
     end
@@ -571,8 +570,8 @@ function unexpand_match!(expansion::PossibleExpansion{SyntacticNodeExpansion}, m
     end
 
     hole = pop!(match.holes_stack)
-    push!(match.holes, hole)
     length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
+    push!(match.holes, hole)
 end
 
 function unexpand_abstraction!(expansion::PossibleExpansion{AbstractionExpansion}, hole, holes, abstraction)
@@ -586,7 +585,6 @@ end
 function unexpand_match!(expansion::PossibleExpansion{AbstractionExpansion}, match)
     hole = pop!(match.holes_stack)
     push!(match.holes, hole)
-
     if expansion.data.fresh
         pop!(match.unique_args) === hole || error("expected same hole")
     end
