@@ -90,7 +90,7 @@ function delta_local_utility(config, match, expansion::PossibleExpansion{Abstrac
         # actually do nothing here
     else
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (multiuse utility; (usages-1)*cost(arg))
-        return match.holes[end].metadata.size;
+        return match.holes_stack[end].metadata.size;
     end
 end
 

@@ -308,13 +308,14 @@ function expand_general!(search_state, expansion)
     # set .matches properly
     search_state.matches = expansion.matches
 
+    # expand the state
+    expand!(search_state, expansion, hole)
+
     for match in expansion.matches
+        # save the local utility for backtracking
         push!(match.local_utility_stack, match.local_utility)
         match.local_utility += delta_local_utility(search_state.config, match, expansion)
     end
-
-    # expand the state
-    expand!(search_state, expansion, hole)
 
     check_number_of_holes(search_state)
 end
@@ -329,12 +330,11 @@ function unexpand_general!(search_state::SearchState)
 
     # unexpand - this should be an inverse to expand!()
     search_state.matches === expansion.matches || error("mismatched matches")
-    unexpand!(search_state, expansion, hole)
-
     for match in search_state.matches
         match.local_utility = pop!(match.local_utility_stack)
     end
 
+    unexpand!(search_state, expansion, hole)
     # restore other state
     search_state.expansions = pop!(search_state.expansions_stack)
     search_state.matches = pop!(search_state.matches_stack)
