@@ -53,7 +53,7 @@ function collect_expansions(
         if typeof(hole) != TreeNodeHole
             continue
         end
-        hole_content = hole.content
+        hole_content = hole
         if is_leaf(hole_content)
             # leaf case
             leaf = hole_content.leaf
@@ -107,7 +107,7 @@ function collect_expansions(
         if typeof(hole) != TreeNodeHole
             continue
         end
-        hole_content = hole.content
+        hole_content = hole
         is_leaf(hole_content) || continue
         sym = hole_content.leaf
         if !startswith(string(sym), "&") # this is not a symbol
@@ -159,7 +159,7 @@ function collect_expansions(
         # variable reuse
         for i in 0:abstraction.arity-1
             ms_specific = copy(ms)
-            filter!(((_, m),) -> m.holes[end].content.metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash, ms_specific)
+            filter!(((_, m),) -> m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash, ms_specific)
             # ms_specific = [m for m in ms_specific if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
             if isempty(ms_specific)
                 continue
@@ -185,7 +185,7 @@ function collect_expansions(
             if typeof(hole) != TreeNodeHole
                 continue
             end
-            dfa_state = hole.content.metadata.dfa_state
+            dfa_state = hole.metadata.dfa_state
             if dfa_state === :E
                 push!(matches_e, (i, match))
             elseif dfa_state === :S
@@ -213,7 +213,7 @@ function collect_expansions(
     if typeof(node) != TreeNodeHole
         return []
     end
-    node = node.content
+    node = node
     isnothing(node.parent) && return [] # no identity abstraction allowed
 
     while !isnothing(node.parent)
@@ -311,7 +311,7 @@ end
 function expand_match!(expansion::PossibleExpansion{SyntacticLeafExpansion}, match)
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
-    @assert is_leaf(hole.content)
+    @assert is_leaf(hole)
 end
 function expand_abstraction!(expansion::PossibleExpansion{SyntacticNodeExpansion}, hole, holes, abstraction)
     # make it no longer a leaf
@@ -347,14 +347,14 @@ function expand_match!(expansion::PossibleExpansion{SyntacticNodeExpansion}, mat
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
-    hole = hole.content
+    hole = hole
 
     length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion.data)")
     # add all the children of the hole as new holes (except possibly the head)
     if expansion.data.head !== :no_expand_head
-        append!(match.holes, [TreeNodeHole(x) for x in hole.children[2:end]])
+        append!(match.holes, hole.children[2:end])
     else
-        append!(match.holes, [TreeNodeHole(x) for x in hole.children])
+        append!(match.holes, hole.children)
     end
 end
 
@@ -371,7 +371,7 @@ end
 function expand_match!(expansion::PossibleExpansion{AbstractionExpansion}, match)
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
-    hole = hole.content
+    hole = hole
 
     if expansion.data.fresh
         push!(match.unique_args, hole) # move the hole to be an argument
@@ -392,7 +392,7 @@ function expand_match!(expansion::PossibleExpansion{SymbolExpansion}, match)
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
-    hole = hole.content
+    hole = hole
 
     @assert string(hole.leaf)[1] == '&'
 
@@ -413,7 +413,7 @@ function expand_match!(expansion::PossibleExpansion{ContinuationExpansion}, matc
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
-    hole = hole.content
+    hole = hole
     @assert isnothing(match.continuation)
     match.continuation = hole
 end
@@ -460,7 +460,7 @@ function unexpand_match!(expansion::PossibleExpansion{SyntacticNodeExpansion}, m
 
     hole = pop!(match.holes_stack)
     push!(match.holes, hole)
-    hole = hole.content
+    hole = hole
     length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
 end
 
@@ -475,7 +475,7 @@ end
 function unexpand_match!(expansion::PossibleExpansion{AbstractionExpansion}, match)
     hole = pop!(match.holes_stack)
     push!(match.holes, hole)
-    hole = hole.content
+    hole = hole
 
     if expansion.data.fresh
         pop!(match.unique_args) === hole || error("expected same hole")
@@ -494,7 +494,7 @@ end
 function unexpand_match!(expansion::PossibleExpansion{SymbolExpansion}, match)
     hole = pop!(match.holes_stack)
     push!(match.holes, hole)
-    hole = hole.content
+    hole = hole
 
     if expansion.data.fresh
         pop!(match.sym_of_idx)
@@ -509,7 +509,7 @@ end
 function unexpand_match!(expansion::PossibleExpansion{ContinuationExpansion}, match)
     hole = pop!(match.holes_stack)
     push!(match.holes, hole)
-    hole = hole.content
+    hole = hole
     @assert match.continuation === hole
     match.continuation = nothing
 end
