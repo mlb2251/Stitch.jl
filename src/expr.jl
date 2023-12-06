@@ -27,6 +27,8 @@ mutable struct MetadataGeneric{D}
     id::Int
 end
 
+abstract type Hole{S} end
+
 mutable struct Match
     # represents a match of the current abstraction being constructed
     # match objects are created once at the start of each iteration, which each match
@@ -42,9 +44,9 @@ mutable struct Match
     # pointers to first instance of each arg within subtree ie args[1] is the thing that #0 matches
     unique_args::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
     # pointer to the place that each hole matches.
-    holes::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
+    holes::Vector{Hole{SExprGeneric{Match,MetadataGeneric{Match}}}}
     # history of the holes
-    holes_stack::Vector{SExprGeneric{Match,MetadataGeneric{Match}}}
+    holes_stack::Vector{Hole{SExprGeneric{Match,MetadataGeneric{Match}}}}
     # history of the local utilities of the match
     local_utility_stack::Vector{Float32}
 
@@ -62,8 +64,8 @@ mutable struct Match
 
     Match(expr, id, config) = new(
         expr,
-        SExprGeneric{Match,MetadataGeneric{Match}}[],
-        [expr],
+        Hole{SExprGeneric{Match,MetadataGeneric{Match}}}[],
+        Hole{SExprGeneric{Match,MetadataGeneric{Match}}}[TreeNodeHole(expr)],
         SExprGeneric{Match,MetadataGeneric{Match}}[],
         Float32[],
         local_utility_init(config),
@@ -76,6 +78,15 @@ end
 const Metadata = MetadataGeneric{Match}
 const SExpr = SExprGeneric{Match,Metadata}
 const Program = ProgramGeneric{Match,Metadata}
+
+struct TreeNodeHole <: Hole{SExpr}
+    content::SExpr
+end
+
+struct RemainingSequenceHole <: Hole{SExpr}
+    root_node::SExpr
+    num_consumed::Int
+end
 
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
     expr = SExpr(nothing, children, parent, nothing, nothing)
