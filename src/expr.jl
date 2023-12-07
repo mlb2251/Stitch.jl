@@ -8,7 +8,7 @@ directly have Expr and Match that point to each other and without using generics
 mutable struct SExprGeneric{M} <: Hole{SExprGeneric{M}}
     leaf::Union{Symbol,Nothing}
     children::Vector{SExprGeneric{M}}
-    parent::Union{Tuple{SExprGeneric{M},Int}, Nothing} # parent and which index of the child it is
+    parent::Union{Tuple{SExprGeneric{M},Int},Nothing} # parent and which index of the child it is
     metadata::Union{M,Nothing}
 end
 
@@ -33,7 +33,7 @@ const Program = ProgramGeneric{Metadata}
 
 abstract type Hole{S} end
 
-mutable struct Match
+mutable struct MatchGeneric{M}
     # represents a match of the current abstraction being constructed
     # match objects are created once at the start of each iteration, which each match
     #   corresponding to a node in the corpus
@@ -58,27 +58,24 @@ mutable struct Match
     # Local utility: utility if you rewrite at this location specifically. Match specific
     # Tracks Eqn 12: https://arxiv.org/pdf/2211.16605.pdf
     local_utility::Float32
-    
+
     # conversions between a symbol &foo and it's index %0
     sym_of_idx::Vector{Symbol}
-    idx_of_sym::Dict{Symbol, Int} # idx_of_sym[sym_of_idx[i]] == i
+    idx_of_sym::Dict{Symbol,Int} # idx_of_sym[sym_of_idx[i]] == i
 
     # metavariable for continuation
     continuation::Union{Nothing,SExpr}
 
-    Match(expr, id, config) = new(
-        expr,
-        Hole{SExpr}[],
-        Hole{SExpr}[expr],
-        SExpr[],
-        Float32[],
-        local_utility_init(config),
-        Symbol[],
-        Dict{Symbol,Int}(),
-        nothing
-    )
+    # choice vars
+    choice_var_captures::Dict{Int,Union{SExpr,Nothing}}
 end
 
+mutable struct MatchPossibilities
+    # represents the set of possible matches that could be made at a given location
+    alternatives::Vector{MatchGeneric{MatchPossibilities}}
+end
+
+const Match = MatchGeneric{MatchPossibilities}
 const TreeNodeHole = SExpr
 
 struct RemainingSequenceHole <: Hole{SExpr}
@@ -86,13 +83,47 @@ struct RemainingSequenceHole <: Hole{SExpr}
     num_consumed::Int
 end
 
+fresh_match_possibilities(expr, id, config) = MatchPossibilities(
+    [
+    Match(
+        expr,
+        SExpr[],
+        Hole{SExpr}[expr],
+        Hole{SExpr}[],
+        Float32[],
+        local_utility_init(config),
+        Symbol[],
+        Dict{Symbol,Int}(),
+        nothing,
+        Dict{Int,Union{SExpr,Nothing}}()
+    )]
+)
+
+copy_match(m::Match) = Match(
+    m.expr,
+    copy(m.unique_args),
+    copy(m.holes),
+    copy(m.holes_stack),
+    copy(m.local_utility_stack),
+    m.local_utility,
+    copy(m.sym_of_idx),
+    copy(m.idx_of_sym),
+    m.continuation,
+    copy(m.choice_var_captures),
+)
+
+
+expr_of(m::MatchPossibilities) = m.alternatives[1].expr
+
+max_local_utility(m::MatchPossibilities) = maximum([match.local_utility for match in m.alternatives])
+
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
     expr = SExpr(nothing, children, parent, nothing)
-    for (i,child) in enumerate(children)
+    for (i, child) in enumerate(children)
         isnothing(child.parent) || error("arg already has parent")
-        child.parent = (expr,i)
+        child.parent = (expr, i)
     end
-    expr 
+    expr
 end
 
 function sexpr_leaf(leaf::Symbol; parent=nothing)
@@ -116,16 +147,16 @@ end
     children::Vector{Int}
 end
 
-const global_struct_hash = Dict{HashNode, Int}()
+const global_struct_hash = Dict{HashNode,Int}()
 
 """
 sets structural hash value, possibly with side effects of updating the structural hash, and
 sets e.metadata.struct_hash. Requires .metadata to be set so we know this will be used immutably
 """
-function struct_hash(e::SExpr) :: Int
+function struct_hash(e::SExpr)::Int
     isnothing(e.metadata) || isnothing(e.metadata.struct_hash) || return e.metadata.struct_hash
 
-    node = HashNode(e.leaf, map(struct_hash,e.children))
+    node = HashNode(e.leaf, map(struct_hash, e.children))
     if !haskey(global_struct_hash, node)
         global_struct_hash[node] = length(global_struct_hash) + 1
     end
@@ -150,8 +181,8 @@ function could_expand_to(ancestor::SExpr, descendant::SExpr)
         return true
     end
     length(ancestor.children) == length(descendant.children) || return false
-    for (a,d) in zip(ancestor.children, descendant.children)
-        could_expand_to(a,d) || return false
+    for (a, d) in zip(ancestor.children, descendant.children)
+        could_expand_to(a, d) || return false
     end
     true
 end
@@ -168,7 +199,7 @@ is_hole(e::SExpr) = e.leaf === SYM_HOLE
 is_seq_hole(e::SExpr) = e.leaf === nothing && e.children[end].leaf === SYM_SEQ_HOLE
 
 "child-first traversal"
-function subexpressions(e::SExpr; subexprs = SExpr[])
+function subexpressions(e::SExpr; subexprs=SExpr[])
     for child in e.children
         subexpressions(child, subexprs=subexprs)
     end
@@ -194,11 +225,11 @@ num_nodes(e::SExpr) = 1 + sum(num_nodes, e.children, init=0)
 # end
 
 
-Base.show(io::IO, e::SExpr) = begin    
+Base.show(io::IO, e::SExpr) = begin
     if is_leaf(e)
         print(io, e.leaf)
         @assert isempty(e.children)
-    # elseif e.leaf === :app
+        # elseif e.leaf === :app
         # print(io, "(", join(uncurry(e), " "), ")")
     else
         print(io, "(")
@@ -215,7 +246,7 @@ end
 takes (app (app f x) y) and returns (f x y)
 """
 function uncurry_app(e::SExpr)
-    (length(e.children) != 3 || e.children[1].leaf !== :app) && return[e]
+    (length(e.children) != 3 || e.children[1].leaf !== :app) && return [e]
     res = uncurry_app(e.children[2])
     return push!(res, e.children[3])
 end
@@ -245,7 +276,7 @@ Binarizes an expression. Starting from (f x y) the result is ((f x) y).
 Applications are implicit in the tree structure, there are not explicit :app symbols
 as otherwise these might get abstracted over and aren't particularly useful
 """
-function curry(e::SExpr) :: SExpr
+function curry(e::SExpr)::SExpr
     is_leaf(e) && return copy(e)
     @assert length(e.children) > 1
 
@@ -284,7 +315,7 @@ function Base.parse(::Type{SExpr}, original_s::String)
     # this is a single symbol like "foo" or "bar"
     length(items) == 1 && return sexpr_leaf(Symbol(items[1]))
 
-    i=0
+    i = 0
     expr_stack = SExpr[]
     # num_open_parens = Int[]
 

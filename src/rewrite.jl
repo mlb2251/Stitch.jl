@@ -7,7 +7,7 @@ mutable struct RewriteConflictInfo
     # Simple bottom-up dynamic programming to figure out which is best
     cumulative_utility::Float32
     accept_rewrite::Bool
-    rci_match::Union{Match,Nothing}
+    rci_match::Union{MatchPossibilities,Nothing}
 end
 
 const MultiRewriteConflictInfo = Dict{Int64, RewriteConflictInfo}
@@ -54,7 +54,7 @@ function collect_rci(search_state::SearchState)::Tuple{Float64, MultiRewriteConf
     )
 
     for match in search_state.matches
-        rcis[match.expr.metadata.id].rci_match = match
+        rcis[expr_of(match).metadata.id].rci_match = match
     end
 
     # special case the identity abstraction (\x. x) since it has a self loop dependency in terms of utility calculation
@@ -74,7 +74,12 @@ function collect_rci(search_state::SearchState)::Tuple{Float64, MultiRewriteConf
         accept_util = if rci.rci_match === nothing
             0.0
         else
-            rci.rci_match.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, rci.rci_match.unique_args, init=0.0)
+            # TODO is this correct? I think by this point there should be a unique answer
+            maximum(rci.rci_match.alternatives) do m
+                ua = copy(m.unique_args)
+                append!(ua, [v for (_, v) in m.choice_var_captures if !isnothing(v)])
+                m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, ua, init=0.0)
+            end
         end
         rci.cumulative_utility = max(reject_util, accept_util)
         rci.accept_rewrite = accept_util > reject_util + 0.0001 # slightly in favor of rejection to avoid floating point rounding errors in the approximate equality case
@@ -103,7 +108,9 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
     rci.cumulative_utility > 0 || return copy(expr)
 
     if rci.accept_rewrite
-        m = rci.rci_match
+        # TODO is this correct? I think by this point there should be a unique answer
+        @assert length(rci.rci_match.alternatives) == 1
+        m = rci.rci_match.alternatives[1]
         # do a rewrite
         children = [sexpr_leaf(search_state.config.new_abstraction_name)]
         for arg in m.unique_args
