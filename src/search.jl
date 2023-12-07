@@ -69,6 +69,12 @@ end
 
 Base.show(io::IO, obj::SequenceElementExpansion) = pretty_show(io, obj; indent=false)
 
+struct SequenceChoiceVarExpansion <: Expansion
+    idx::Int
+end
+
+Base.show(io::IO, obj::SequenceChoiceVarExpansion) = pretty_show(io, obj; indent=false)
+
 struct SequenceTerminatorExpansion <: Expansion
 end
 
@@ -87,6 +93,7 @@ mutable struct Abstraction
     body::SExpr
     arity::Int
     sym_arity::Int
+    choice_arity::Int
     dfa_root::Symbol
     dfa_metavars::Vector{Symbol}
     dfa_symvars::Vector{Symbol}
@@ -95,7 +102,7 @@ end
 Base.show(io::IO, obj::Abstraction) = pretty_show(io, obj; indent=false)
 
 Base.copy(abstraction::Abstraction) = Abstraction(
-    copy(abstraction.body), abstraction.arity, abstraction.sym_arity,
+    copy(abstraction.body), abstraction.arity, abstraction.sym_arity, abstraction.choice_arity,
     abstraction.dfa_root, copy(abstraction.dfa_metavars), copy(abstraction.dfa_symvars))
 
 @Base.kwdef mutable struct Stats
@@ -112,6 +119,7 @@ Base.@kwdef mutable struct SearchConfig
     new_abstraction_name::Symbol = :placeholder
     track::Union{SExpr, Nothing} = nothing
     max_arity::Int = 2
+    max_choice_arity::Int = 2
     upper_bound_fn::Function = upper_bound_with_conflicts
     expansion_processor::Union{Function, Nothing} = nothing
     verbose::Bool = false
@@ -180,7 +188,7 @@ mutable struct SearchState
     past_expansions::Vector{PossibleExpansion}
 
     function SearchState(corpus, config)
-        abstraction = Abstraction(new_hole(nothing), 0, 0, :uninit_state, [], [])
+        abstraction = Abstraction(new_hole(nothing), 0, 0, 0, :uninit_state, [], [])
         matches = init_all_corpus_matches(corpus, config)
         if !isnothing(config.dfa)
             for program in corpus.programs
@@ -256,6 +264,7 @@ function init_all_corpus_matches(corpus, config::SearchConfig)::Vector{MatchPoss
     for program in corpus.programs
         for expr in subexpressions(program.expr) # child-first traversal (postorder)
             match = fresh_match_possibilities(expr, id, config)
+            expr.match = match
             expr.metadata = Metadata(
                 program,
                 size(expr, config.size_by_symbol),
@@ -316,6 +325,7 @@ function expand_search_state!(search_state)
 
 
     !search_state.config.verbose || printstyled(search_state, "\n", color=:yellow);
+    # !verbose || println("possible_expansions!() -> ", length(search_state.expansions), " ", [e.match for e in search_state.expansions])
     search_state.stats.comparable_worklist_steps += 1
     search_state.config.plot && push!(plot_data.depth, (search_state.stats.expansions, length(search_state.past_expansions)))
     search_state.config.plot && push!(plot_data.num_matches, (search_state.stats.expansions, length(search_state.matches)))

@@ -28,6 +28,8 @@ Same as summing over sizes of subtrees, but not doublecounting matches within ch
 """
 function upper_bound_with_conflicts(search_state, expansion=nothing) :: Float32
     matches = if isnothing(expansion) search_state.matches else expansion.matches end
+    @assert length(matches) > 0
+
     issorted(matches, by=m -> expr_of(m).metadata.id) || error("matches is not sorted")
 
     bound = 0.
@@ -50,11 +52,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing) :: Float32
         expr_of(matches[offset]).metadata.id <= next_id && continue
 
         # rarer case: run binary search to find the rightmost non-child of the previous match
-        offset = searchsortedlast(
-            matches,
-            search_state.all_nodes[next_id].metadata.id,
-            by=m -> if typeof(m) === Int64 m else expr_of(m).metadata.id end
-        )
+        offset = searchsortedlast(matches, search_state.all_nodes[next_id].match, by=m -> expr_of(m).metadata.id)
         offset == 0 && break
     end
     bound
@@ -112,6 +110,14 @@ end
 
 function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceTerminatorExpansion})
     0
+end
+
+function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceChoiceVarExpansion})
+    if match.choice_var_captures[expansion.data.idx] === nothing
+        return -1 # TODO: parameterizable
+    else
+        return -0.01 # TODO: parameterizable
+    end
 end
 
 local_utility_init(config::SearchConfig) = config.application_utility_fixed

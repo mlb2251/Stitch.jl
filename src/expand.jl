@@ -11,6 +11,7 @@ function possible_expansions!(search_state)
         expansions!(SequenceExpansion, search_state)
         expansions!(SequenceElementExpansion, search_state)
         expansions!(SequenceTerminatorExpansion, search_state)
+        expansions!(SequenceChoiceVarExpansion, search_state)
     end
 
     # sort!(search_state.expansions, by=e -> length(e.matches)*e.matches[1].local_utility)
@@ -302,6 +303,32 @@ function collect_expansions(
     return [(SequenceTerminatorExpansion(), matches)]
 end
 
+function collect_expansions(
+    ::Type{SequenceChoiceVarExpansion},
+    abstraction::Abstraction,
+    matches::Vector{Tuple{Int,Match}},
+    config
+)::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
+
+    if abstraction.choice_arity >= config.max_choice_arity
+        return []
+    end
+
+    matches = filter(matches) do (_, match)
+        hole = match.holes[end]
+        if typeof(hole) != RemainingSequenceHole
+            return false
+        end
+        hole.num_consumed <= length(hole.root_node.children)
+    end
+
+    if length(matches) == 0
+        return []
+    end
+
+    return [(SequenceChoiceVarExpansion(abstraction.choice_arity), matches)]
+end
+
 """
 Saves current state to the stack, and reinitializes as a fresh state
 """
@@ -587,6 +614,52 @@ function expand_match!(expansion::PossibleExpansion{SequenceTerminatorExpansion}
     return nothing
 end
 
+function expand_abstraction!(expansion::PossibleExpansion{SequenceChoiceVarExpansion}, hole, holes, abstraction)
+    # take a hole (/seq <things> ...) and make it (/seq <things> ?? ...). Place the ?? above the ... on the stack,
+    # but do *not* remove ... from the stack, since it will be consumed by the next expansion once the ?? is filled in
+
+    insert_before_sequence_hole!(hole, holes) do i
+        x = new_hole((hole, i))
+        x.leaf = Symbol("?$(expansion.data.idx)")
+        x
+    end
+    abstraction.choice_arity += 1
+end
+
+function expand_match!(expansion::PossibleExpansion{SequenceChoiceVarExpansion}, match)::Vector{Match}
+    not_consuming_hole = match
+
+    @assert !(expansion.data.idx in keys(match.choice_var_captures))
+
+    # dont consume the hole
+    not_consuming_hole.choice_var_captures[expansion.data.idx] = nothing
+
+
+    # consume the hole
+    # first check if there's more space in the sequence
+    last_hole = match.holes[end]
+    @assert typeof(last_hole) == RemainingSequenceHole
+    if last_hole.num_consumed == length(last_hole.root_node.children)
+        # no more space in the sequence, so we can't consume the hole
+        return []
+    end
+    consuming_hole = copy_match(match)
+
+    pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
+    # push the hole back on the stack
+    push!(consuming_hole.holes_stack, last_hole)
+
+    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1)
+    push!(consuming_hole.holes, new_sequence_hole)
+
+    captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]
+    @assert typeof(captured) == SExpr
+
+    consuming_hole.choice_var_captures[expansion.data.idx] = captured
+
+    return [consuming_hole]
+end
+
 function unexpand!(search_state, expansion, hole)
     unexpand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
     search_state.matches = pop!(search_state.matches_stack)
@@ -744,6 +817,19 @@ end
 
 function unexpand_match!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, match)
     push!(match.holes, pop!(match.holes_stack))
+end
+
+function unexpand_abstraction!(expansion::PossibleExpansion{SequenceChoiceVarExpansion}, hole, holes, abstraction)
+    remove_inserted_before_sequence_hole!(hole, holes) do m
+        m.leaf == Symbol("?$(expansion.data.idx)") || error("expected Symbol(?$(expansion.data.idx)), got $m")
+    end
+    abstraction.choice_arity -= 1
+end
+
+function unexpand_match!(expansion::PossibleExpansion{SequenceChoiceVarExpansion}, match)
+    # we are operating on the non-consuming hole
+    # just get rid of the element from the dictionary choice_var_captures
+    delete!(match.choice_var_captures, expansion.data.idx)
 end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
