@@ -49,7 +49,6 @@ Base.show(io::IO, obj::SyntacticNodeExpansion) = pretty_show(io, obj; indent=fal
 struct AbstractionExpansion <: Expansion
     index::Int
     fresh::Bool
-    dfa_state::Symbol
 end
 
 Base.show(io::IO, obj::AbstractionExpansion) = pretty_show(io, obj; indent=false)
@@ -63,7 +62,6 @@ Base.show(io::IO, obj::ContinuationExpansion) = pretty_show(io, obj; indent=fals
 struct SymbolExpansion <: Expansion
     idx::Int
     fresh::Bool
-    dfa_state::Symbol
 end
 
 Base.show(io::IO, obj::SymbolExpansion) = pretty_show(io, obj; indent=false)
