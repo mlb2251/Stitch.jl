@@ -7,7 +7,7 @@ mutable struct RewriteConflictInfo
     # Simple bottom-up dynamic programming to figure out which is best
     cumulative_utility::Float32
     accept_rewrite::Bool
-    is_active::Bool
+    rci_match::Union{Match,Nothing}
 end
 
 const MultiRewriteConflictInfo = Dict{Int64, RewriteConflictInfo}
@@ -48,13 +48,13 @@ function collect_rci(search_state::SearchState)::Tuple{Float64, MultiRewriteConf
 
     rcis = Dict(
         expr.metadata.id => RewriteConflictInfo(
-            NaN32, false, false
+            NaN32, false, nothing
         )
         for expr in search_state.all_nodes
     )
 
     for match in search_state.matches
-        rcis[match.expr.metadata.id].is_active = true
+        rcis[match.expr.metadata.id].rci_match = match
     end
 
     # special case the identity abstraction (\x. x) since it has a self loop dependency in terms of utility calculation
@@ -71,16 +71,16 @@ function collect_rci(search_state::SearchState)::Tuple{Float64, MultiRewriteConf
         rci = rcis[expr.metadata.id]
 
         reject_util = sum(child -> rcis[child.metadata.id].cumulative_utility, expr.children, init=0.0)
-        accept_util = if !rci.is_active
+        accept_util = if rci.rci_match === nothing
             0.0
         else
-            expr.match.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, expr.match.unique_args, init=0.0)
+            rci.rci_match.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, rci.rci_match.unique_args, init=0.0)
         end
         rci.cumulative_utility = max(reject_util, accept_util)
         rci.accept_rewrite = accept_util > reject_util + 0.0001 # slightly in favor of rejection to avoid floating point rounding errors in the approximate equality case
         rci.cumulative_utility >= 0 || error("cumulative utility should be non-negative, not $(rcis[expr.metadata.id].cumulative_utility)")
 
-        # expr.match.accept_rewrite && println("accepted rewrite at $expr with cumulative utility $(expr.match.cumulative_utility) and local utility $(expr.match.local_utility)")
+        # rci.rci_match.accept_rewrite && println("accepted rewrite at $expr with cumulative utility $(rci.rci_match.cumulative_utility) and local utility $(rci.rci_match.local_utility)")
     end
 
     # Eqn 18 from https://arxiv.org/pdf/2211.16605.pdf
@@ -97,21 +97,23 @@ end
 rewrite_program(program, search_state, rcis) = Program(rewrite_inner(program.expr, search_state, rcis), program.id, program.task)
 
 function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewriteConflictInfo) :: SExpr
-    # if cumulative utility <= 0 then there are no rewrites in this whole subtree
     rci = rcis[expr.metadata.id]
+
+    # if cumulative utility <= 0 then there are no rewrites in this whole subtree
     rci.cumulative_utility > 0 || return copy(expr)
 
     if rci.accept_rewrite
+        m = rci.rci_match
         # do a rewrite
         children = [sexpr_leaf(search_state.config.new_abstraction_name)]
-        for arg in expr.match.unique_args
+        for arg in m.unique_args
             push!(children, rewrite_inner(arg, search_state, rcis))
         end
-        for sym in expr.match.sym_of_idx
+        for sym in m.sym_of_idx
             push!(children, sexpr_leaf(sym))
         end
-        if !isnothing(expr.match.continuation)
-            push!(children, rewrite_inner(expr.match.continuation, search_state, rcis))
+        if !isnothing(m.continuation)
+            push!(children, rewrite_inner(m.continuation, search_state, rcis))
         end
         return sexpr_node(children)
     else

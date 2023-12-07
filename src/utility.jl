@@ -50,7 +50,11 @@ function upper_bound_with_conflicts(search_state, expansion=nothing) :: Float32
         matches[offset].expr.metadata.id <= next_id && continue
 
         # rarer case: run binary search to find the rightmost non-child of the previous match
-        offset = searchsortedlast(matches, search_state.all_nodes[next_id].match, by=m -> m.expr.metadata.id)
+        offset = searchsortedlast(
+            matches,
+            search_state.all_nodes[next_id].metadata.id,
+            by=m -> if typeof(m) === Int64 m else m.expr.metadata.id end
+        )
         offset == 0 && break
     end
     bound
