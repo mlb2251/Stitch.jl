@@ -59,6 +59,20 @@ end
 
 Base.show(io::IO, obj::ContinuationExpansion) = pretty_show(io, obj; indent=false)
 
+struct SequenceExpansion <: Expansion 
+end
+
+Base.show(io::IO, obj::SequenceExpansion) = pretty_show(io, obj; indent=false)
+
+struct SequenceElementExpansion <: Expansion
+end
+
+Base.show(io::IO, obj::SequenceElementExpansion) = pretty_show(io, obj; indent=false)
+
+struct SequenceTerminatorExpansion <: Expansion
+end
+
+Base.show(io::IO, obj::SequenceTerminatorExpansion) = pretty_show(io, obj; indent=false)
 
 struct SymbolExpansion <: Expansion
     idx::Int
@@ -121,6 +135,9 @@ Base.@kwdef mutable struct SearchConfig
     application_utility_fixed::Float32 = -1.0
     application_utility_metavar::Float32 = 0
     application_utility_symvar::Float32 = 0
+
+    # extensions
+    match_sequences::Bool = false
 end
 
 
