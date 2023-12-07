@@ -264,7 +264,6 @@ function init_all_corpus_matches(corpus, config::SearchConfig)::Vector{MatchPoss
     for program in corpus.programs
         for expr in subexpressions(program.expr) # child-first traversal (postorder)
             match = fresh_match_possibilities(expr, id, config)
-            expr.match = match
             expr.metadata = Metadata(
                 program,
                 size(expr, config.size_by_symbol),
@@ -325,7 +324,6 @@ function expand_search_state!(search_state)
 
 
     !search_state.config.verbose || printstyled(search_state, "\n", color=:yellow);
-    # !verbose || println("possible_expansions!() -> ", length(search_state.expansions), " ", [e.match for e in search_state.expansions])
     search_state.stats.comparable_worklist_steps += 1
     search_state.config.plot && push!(plot_data.depth, (search_state.stats.expansions, length(search_state.past_expansions)))
     search_state.config.plot && push!(plot_data.num_matches, (search_state.stats.expansions, length(search_state.matches)))

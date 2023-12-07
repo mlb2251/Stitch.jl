@@ -5,22 +5,21 @@ An expression. See SExpr for the version that's always used - the definition is 
 SExprGeneric and SExpr because mutually recursive types are supported in julia so we can't
 directly have Expr and Match that point to each other and without using generics.
 """
-mutable struct SExprGeneric{D,M} <: Hole{SExprGeneric{D,M}}
+mutable struct SExprGeneric{M} <: Hole{SExprGeneric{M}}
     leaf::Union{Symbol,Nothing}
-    children::Vector{SExprGeneric{D,M}}
-    parent::Union{Tuple{SExprGeneric{D,M},Int},Nothing} # parent and which index of the child it is
-    match::Union{D,Nothing}
+    children::Vector{SExprGeneric{M}}
+    parent::Union{Tuple{SExprGeneric{M},Int},Nothing} # parent and which index of the child it is
     metadata::Union{M,Nothing}
 end
 
-mutable struct ProgramGeneric{D,M}
-    expr::SExprGeneric{D,M}
+mutable struct ProgramGeneric{M}
+    expr::SExprGeneric{M}
     id::Int
     task::Int
 end
 
-mutable struct MetadataGeneric{D}
-    program::ProgramGeneric{D,MetadataGeneric{D}} # which program this subtree appears in
+mutable struct Metadata
+    program::ProgramGeneric{Metadata} # which program this subtree appears in
     size::Float32
     num_nodes::Int
     struct_hash::Int
@@ -28,6 +27,9 @@ mutable struct MetadataGeneric{D}
     # postorder location of the underlying node in the corpus.
     id::Int
 end
+
+const SExpr = SExprGeneric{Metadata}
+const Program = ProgramGeneric{Metadata}
 
 abstract type Hole{S} end
 
@@ -42,13 +44,13 @@ mutable struct MatchGeneric{M}
     #   - what are the holes that need to be expanded at the current location, etc.
     # Fields:
     # pointer to subtree in original corpus
-    expr::SExprGeneric{M,MetadataGeneric{M}}
+    expr::SExpr
     # pointers to first instance of each arg within subtree ie args[1] is the thing that #0 matches
-    unique_args::Vector{SExprGeneric{M,MetadataGeneric{M}}}
+    unique_args::Vector{SExpr}
     # pointer to the place that each hole matches.
-    holes::Vector{Hole{SExprGeneric{M,MetadataGeneric{M}}}}
+    holes::Vector{Hole{SExpr}}
     # history of the holes
-    holes_stack::Vector{Hole{SExprGeneric{M,MetadataGeneric{M}}}}
+    holes_stack::Vector{Hole{SExpr}}
     # history of the local utilities of the match
     local_utility_stack::Vector{Float32}
 
@@ -62,10 +64,10 @@ mutable struct MatchGeneric{M}
     idx_of_sym::Dict{Symbol,Int} # idx_of_sym[sym_of_idx[i]] == i
 
     # metavariable for continuation
-    continuation::Union{Nothing,SExprGeneric{M,MetadataGeneric{M}}}
+    continuation::Union{Nothing,SExpr}
 
     # choice vars
-    choice_var_captures::Dict{Int,Union{SExprGeneric{M,MetadataGeneric{M}},Nothing}}
+    choice_var_captures::Dict{Int,Union{SExpr,Nothing}}
 end
 
 mutable struct MatchPossibilities
@@ -74,9 +76,6 @@ mutable struct MatchPossibilities
 end
 
 const Match = MatchGeneric{MatchPossibilities}
-const Metadata = MetadataGeneric{MatchPossibilities}
-const SExpr = SExprGeneric{MatchPossibilities,Metadata}
-const Program = ProgramGeneric{MatchPossibilities,Metadata}
 const TreeNodeHole = SExpr
 
 struct RemainingSequenceHole <: Hole{SExpr}
@@ -119,7 +118,7 @@ expr_of(m::MatchPossibilities) = m.alternatives[1].expr
 max_local_utility(m::MatchPossibilities) = maximum([match.local_utility for match in m.alternatives])
 
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
-    expr = SExpr(nothing, children, parent, nothing, nothing)
+    expr = SExpr(nothing, children, parent, nothing)
     for (i, child) in enumerate(children)
         isnothing(child.parent) || error("arg already has parent")
         child.parent = (expr, i)
@@ -128,7 +127,7 @@ function sexpr_node(children::Vector{SExpr}; parent=nothing)
 end
 
 function sexpr_leaf(leaf::Symbol; parent=nothing)
-    SExpr(leaf, Vector{SExpr}(), parent, nothing, nothing)
+    SExpr(leaf, Vector{SExpr}(), parent, nothing)
 end
 
 is_leaf(e::SExpr) = !isnothing(e.leaf)
@@ -138,7 +137,6 @@ function Base.copy(e::SExpr)
     SExpr(
         e.leaf,
         [copy(child) for child in e.children],
-        nothing,
         nothing,
         nothing,
     )
