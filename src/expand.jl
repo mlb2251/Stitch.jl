@@ -29,6 +29,14 @@ function expansions!(typ, search_state)
     end
 end
 
+function compute_head(config, node)
+    if config.autoexpand_head
+        node.children[1].leaf
+    else
+        :no_expand_head
+    end
+end
+
 """
 Adds the set of expansions to whatever terminal or nonterminal is present at the match locations,
 for example primitives or variables.
@@ -41,6 +49,9 @@ function collect_expansions(
     matches_of_leaf = Dict{Symbol,Vector{Tuple{Int,Match}}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
     matches_of_node = Dict{Tuple{Symbol,Int},Vector{Tuple{Int,Match}}}()
     for (i, match) in matches
+        if typeof(match.holes[end]) != TreeNodeHole
+            continue
+        end
         if is_leaf(match.holes[end])
             # leaf case
             leaf = match.holes[end].leaf
@@ -53,11 +64,8 @@ function collect_expansions(
             push!(matches_for_leaf, (i, match))
         else
             # node case - group with other nodes that have same number of children (and head if autoexpand_head is on)
-            head = if config.autoexpand_head
-                match.holes[end].children[1].leaf
-            else
-                :no_expand_head
-            end
+            head = compute_head(config, match.holes[end])
+
             childcount = length(match.holes[end].children)
             matches_for_leaf = get!(matches_of_node, (head, childcount)) do
                 Match[]
@@ -89,6 +97,9 @@ function collect_expansions(
     freshness_of_idx = Dict{Int,Bool}()
     sym_of_idx = Dict{Int,Symbol}()
     for (i, match) in matches
+        if typeof(match.holes[end]) != TreeNodeHole
+            continue
+        end
         is_leaf(match.holes[end]) || continue
         sym = match.holes[end].leaf
         if !startswith(string(sym), "&") # this is not a symbol
@@ -128,6 +139,8 @@ function collect_expansions(
     config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
+    matches = filter(((_, m),) -> typeof(m.holes[end]) == TreeNodeHole, matches)
+
     result = Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}()
 
     function collect_abstraction_expansions_for_dfa_state!(ms, sym)
@@ -160,7 +173,11 @@ function collect_expansions(
         matches_e = Vector{Tuple{Int,Match}}()
         matches_s = Vector{Tuple{Int,Match}}()
         for (i, match) in matches
-            dfa_state = match.holes[end].metadata.dfa_state
+            hole = match.holes[end]
+            if typeof(hole) != TreeNodeHole
+                continue
+            end
+            dfa_state = hole.metadata.dfa_state
             if dfa_state === :E
                 push!(matches_e, (i, match))
             elseif dfa_state === :S
@@ -170,7 +187,6 @@ function collect_expansions(
         collect_abstraction_expansions_for_dfa_state!(matches_e, :E)
         collect_abstraction_expansions_for_dfa_state!(matches_s, :S)
     end
-
     result
 end
 
@@ -186,6 +202,9 @@ function collect_expansions(
     end
 
     node = matches[1][2].holes[end]
+    if typeof(node) != TreeNodeHole
+        return []
+    end
     isnothing(node.parent) && return [] # no identity abstraction allowed
 
     while !isnothing(node.parent)
@@ -211,7 +230,7 @@ function expand_general!(search_state, expansion)
     # pop hole
     hole = pop!(search_state.holes)
     # hole_dfa_state = pop!(search_state.hole_dfa_states)
-    is_hole(hole) || error("not a hole")
+    is_hole(hole) || error("not a hole: $hole")
     push!(search_state.holes_stack, hole)
     # push!(search_state.hole_dfa_states_stack,hole_dfa_state)
 
