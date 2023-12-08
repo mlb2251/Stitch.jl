@@ -381,7 +381,6 @@ function expand!(search_state, expansion, hole)
         updated_matches = Match[]
         used = false
         for (i, match) in enumerate(match_poss.alternatives)
-            # TODO handle returning multiple matches
             extras = expand_match!(expansion, match)
             push!(updated_matches, match)
             if extras === nothing
