@@ -33,7 +33,7 @@ const Program = ProgramGeneric{Metadata}
 
 abstract type Hole{S} end
 
-mutable struct MatchGeneric{M}
+mutable struct Match
     # represents a match of the current abstraction being constructed
     # match objects are created once at the start of each iteration, which each match
     #   corresponding to a node in the corpus
@@ -72,10 +72,9 @@ end
 
 mutable struct MatchPossibilities
     # represents the set of possible matches that could be made at a given location
-    alternatives::Vector{MatchGeneric{MatchPossibilities}}
+    alternatives::Vector{Match}
 end
 
-const Match = MatchGeneric{MatchPossibilities}
 const TreeNodeHole = SExpr
 
 struct RemainingSequenceHole <: Hole{SExpr}
