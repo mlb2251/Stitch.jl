@@ -23,7 +23,18 @@ function possible_expansions!(search_state)
     # filter!(e -> upper_bound_fn(search_state,e) > best_util, search_state.expansions);
 end
 
-function expansions!(typ, search_state)
+function expansions!(typ, search_state::SearchState{Match})
+    flattened_matches = [(i, match) for (i, match) in enumerate(search_state.matches)]
+    res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config)
+    for (expansion, tagged_matches) in res
+        push!(search_state.expansions, PossibleExpansion(
+            [m for (_, m) in tagged_matches],
+            expansion,
+        ))
+    end
+end
+
+function expansions!(typ, search_state::SearchState{MatchPossibilities})
     flattened_matches = Vector{Tuple{Int,Match}}()
     for (i, match_poss) in enumerate(search_state.matches)
         for match in match_poss.alternatives
@@ -327,6 +338,20 @@ function expand_general!(search_state, expansion)
     # expand the state
     expand!(search_state, expansion.data, hole)
 
+    expand_utilities!(expansion, search_state)
+
+    check_number_of_holes(search_state)
+end
+
+function expand_utilities!(expansion, search_state::SearchState{Match})
+    for match in search_state.matches
+        # save the local utility for backtracking
+        push!(match.local_utility_stack, match.local_utility)
+        match.local_utility += delta_local_utility(search_state.config, match, expansion.data)
+    end
+end
+
+function expand_utilities!(expansion, search_state::SearchState{MatchPossibilities})
     for match_poss in search_state.matches
         for match in match_poss.alternatives
             # save the local utility for backtracking
@@ -334,8 +359,6 @@ function expand_general!(search_state, expansion)
             match.local_utility += delta_local_utility(search_state.config, match, expansion.data)
         end
     end
-
-    check_number_of_holes(search_state)
 end
 
 function unexpand_general!(search_state::SearchState)
@@ -346,12 +369,7 @@ function unexpand_general!(search_state::SearchState)
     # pop the expansion to undo
     expansion = pop!(search_state.past_expansions)
 
-    for match_poss in search_state.matches
-        for match in match_poss.alternatives
-            # restore the local utility
-            match.local_utility = pop!(match.local_utility_stack)
-        end
-    end
+    unexpand_utilities!(search_state)
 
     unexpand!(search_state, expansion.data, hole)
 
@@ -369,11 +387,37 @@ function unexpand_general!(search_state::SearchState)
 
 end
 
-function check_number_of_holes(search_state)
+function unexpand_utilities!(search_state::SearchState{Match})
+    for match in search_state.matches
+        match.local_utility = pop!(match.local_utility_stack)
+    end
+end
+
+function unexpand_utilities!(search_state::SearchState{MatchPossibilities})
+    for match_poss in search_state.matches
+        for match in match_poss.alternatives
+            match.local_utility = pop!(match.local_utility_stack)
+        end
+    end
+end
+
+function check_number_of_holes(search_state::SearchState{Match})
+    all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes")
+end
+
+function check_number_of_holes(search_state::SearchState{MatchPossibilities})
     all(match_poss -> all(match -> length(match.holes) == length(search_state.holes), match_poss.alternatives), search_state.matches) || error("mismatched number of holes")
 end
 
-function expand!(search_state, expansion, hole)
+function expand!(search_state::SearchState{Match}, expansion, hole)
+    expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
+    for match in search_state.matches
+        extras = expand_match!(expansion, match)
+        @assert extras === nothing
+    end
+end
+
+function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
 
     expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
     new_match_poss = MatchPossibilities[]
@@ -590,7 +634,14 @@ function expand_match!(expansion::SequenceTerminatorExpansion, match)::Nothing
     return nothing
 end
 
-function unexpand!(search_state, expansion, hole)
+function unexpand!(search_state::SearchState{Match}, expansion, hole)
+    unexpand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
+    for match in search_state.matches
+        unexpand_match!(expansion, match)
+    end
+end
+
+function unexpand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
     unexpand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
     search_state.matches = pop!(search_state.matches_stack)
     for match_poss in search_state.matches
@@ -783,12 +834,23 @@ end
 function arg_capture(search_state)
     search_state.config.no_opt_arg_capture && return false
     for i in 1:search_state.abstraction.arity
-        first_match = search_state.matches[1].alternatives[1].unique_args[i].metadata.struct_hash
-        if all(match_poss -> all(match -> match.unique_args[i].metadata.struct_hash == first_match, match_poss.alternatives), search_state.matches)
-            return true
-        end
+        arg_capture(search_state, i)
     end
     false
+end
+
+function arg_capture(search_state::SearchState{Match}, i)
+    first_match = search_state.matches[1].unique_args[i].metadata.struct_hash
+    if all(match -> match.unique_args[i].metadata.struct_hash == first_match, search_state.matches)
+        return true
+    end
+end
+
+function arg_capture(search_state::SearchState{MatchPossibilities}, i)
+    first_match = search_state.matches[1].alternatives[1].unique_args[i].metadata.struct_hash
+    if all(match_poss -> all(match -> match.unique_args[i].metadata.struct_hash == first_match, match_poss.alternatives), search_state.matches)
+        return true
+    end
 end
 
 function is_single_task(search_state)
