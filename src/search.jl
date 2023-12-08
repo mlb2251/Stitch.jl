@@ -156,7 +156,7 @@ Base.@kwdef mutable struct PlotData
     pruned_bound::Vector{Tuple{Int,Float32}} = [(0, 0.0)]
 end
 
-mutable struct SearchState
+mutable struct SearchState{M}
     # config
     config::SearchConfig
     corpus::Corpus
@@ -172,14 +172,14 @@ mutable struct SearchState
     abstraction::Abstraction
     holes::Vector{SExpr}
     # hole_dfa_states::Vector{Symbol}
-    matches::Vector{Match}
+    matches::Vector{M}
     expansions::Vector{PossibleExpansion}
 
     # backtracking data
     holes_stack::Vector{SExpr}
     # hole_dfa_states_stack::Vector{Symbol}
     expansions_stack::Vector{Vector{PossibleExpansion}}
-    matches_stack::Vector{Vector{Match}}
+    matches_stack::Vector{Vector{M}}
     past_expansions::Vector{PossibleExpansion}
 
     function SearchState(corpus, config)
@@ -193,7 +193,7 @@ mutable struct SearchState
         all_nodes = map(m -> m.expr, matches)
         best_util = Float32(0)
         best_abstraction = nothing
-        new(config, corpus, all_nodes,
+        new{Match}(config, corpus, all_nodes,
             PlotData(), best_util, best_abstraction, Stats(),
             abstraction, [abstraction.body], matches, PossibleExpansion[],
             SExpr[], PossibleExpansion[], Match[], PossibleExpansion[])
