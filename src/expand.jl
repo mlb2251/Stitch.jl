@@ -667,7 +667,7 @@ function expand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes,
 
     insert_before_sequence_hole!(hole, holes) do i
         x = new_hole((hole, i))
-        x.leaf = Symbol("?$(expansion.data.idx)")
+        x.leaf = Symbol("?$(expansion.idx)")
         x
     end
     abstraction.choice_arity += 1
@@ -676,10 +676,10 @@ end
 function expand_match!(expansion::SequenceChoiceVarExpansion, match)::Vector{Match}
     not_consuming_hole = match
 
-    @assert !(expansion.data.idx in keys(match.choice_var_captures))
+    @assert !(expansion.idx in keys(match.choice_var_captures))
 
     # dont consume the hole
-    not_consuming_hole.choice_var_captures[expansion.data.idx] = nothing
+    not_consuming_hole.choice_var_captures[expansion.idx] = nothing
 
 
     # consume the hole
@@ -702,7 +702,7 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match)::Vector{Mat
     captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]
     @assert typeof(captured) == SExpr
 
-    consuming_hole.choice_var_captures[expansion.data.idx] = captured
+    consuming_hole.choice_var_captures[expansion.idx] = captured
 
     return [consuming_hole]
 end
@@ -879,7 +879,7 @@ end
 
 function unexpand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes, abstraction)
     remove_inserted_before_sequence_hole!(hole, holes) do m
-        m.leaf == Symbol("?$(expansion.data.idx)") || error("expected Symbol(?$(expansion.data.idx)), got $m")
+        m.leaf == Symbol("?$(expansion.idx)") || error("expected Symbol(?$(expansion.idx)), got $m")
     end
     abstraction.choice_arity -= 1
 end
@@ -887,7 +887,7 @@ end
 function unexpand_match!(expansion::SequenceChoiceVarExpansion, match)
     # we are operating on the non-consuming hole
     # just get rid of the element from the dictionary choice_var_captures
-    delete!(match.choice_var_captures, expansion.data.idx)
+    delete!(match.choice_var_captures, expansion.idx)
 end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
