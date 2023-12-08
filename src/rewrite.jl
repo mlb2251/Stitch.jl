@@ -97,8 +97,7 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
 end
 
 function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match) :: Tuple{Float64, Match}
-    ua = copy(m.unique_args)
-    util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, ua, init=0.0)
+    util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, m.unique_args, init=0.0)
     return util, m
 end
 
