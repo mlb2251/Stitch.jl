@@ -128,7 +128,7 @@ function delta_local_utility(config, match, expansion::SequenceTerminatorExpansi
     0
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceChoiceVarExpansion})
+function delta_local_utility(config, match, expansion::SequenceChoiceVarExpansion)
     if match.choice_var_captures[expansion.data.idx] === nothing
         return -symbol_size(SYM_CHOICE_VAR_NOTHING, config.size_by_symbol) + config.application_utility_choicevar
     else

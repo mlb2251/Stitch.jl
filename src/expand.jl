@@ -661,7 +661,7 @@ function expand_match!(expansion::SequenceTerminatorExpansion, match)::Nothing
     return nothing
 end
 
-function expand_abstraction!(expansion::PossibleExpansion{SequenceChoiceVarExpansion}, hole, holes, abstraction)
+function expand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes, abstraction)
     # take a hole (/seq <things> ...) and make it (/seq <things> ?? ...). Place the ?? above the ... on the stack,
     # but do *not* remove ... from the stack, since it will be consumed by the next expansion once the ?? is filled in
 
@@ -673,7 +673,7 @@ function expand_abstraction!(expansion::PossibleExpansion{SequenceChoiceVarExpan
     abstraction.choice_arity += 1
 end
 
-function expand_match!(expansion::PossibleExpansion{SequenceChoiceVarExpansion}, match)::Vector{Match}
+function expand_match!(expansion::SequenceChoiceVarExpansion, match)::Vector{Match}
     not_consuming_hole = match
 
     @assert !(expansion.data.idx in keys(match.choice_var_captures))
@@ -877,14 +877,14 @@ function unexpand_match!(expansion::SequenceTerminatorExpansion, match)
     push!(match.holes, pop!(match.holes_stack))
 end
 
-function unexpand_abstraction!(expansion::PossibleExpansion{SequenceChoiceVarExpansion}, hole, holes, abstraction)
+function unexpand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes, abstraction)
     remove_inserted_before_sequence_hole!(hole, holes) do m
         m.leaf == Symbol("?$(expansion.data.idx)") || error("expected Symbol(?$(expansion.data.idx)), got $m")
     end
     abstraction.choice_arity -= 1
 end
 
-function unexpand_match!(expansion::PossibleExpansion{SequenceChoiceVarExpansion}, match)
+function unexpand_match!(expansion::SequenceChoiceVarExpansion, match)
     # we are operating on the non-consuming hole
     # just get rid of the element from the dictionary choice_var_captures
     delete!(match.choice_var_captures, expansion.data.idx)
