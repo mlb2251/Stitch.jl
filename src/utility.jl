@@ -11,26 +11,34 @@ function symbol_size(sym::Symbol, size_by_symbol::Nothing)
     1.0
 end
 
-function upper_bound_inf(search_state, expansion) :: Float32
+function upper_bound_inf(search_state, expansion)::Float32
     Inf32
 end
 
 """
 sum over match locations of size of match location
 """
-function upper_bound_sum_subtree_sizes(search_state, expansion=nothing) :: Float32
-    matches = if isnothing(expansion) search_state.matches else expansion.matches end
+function upper_bound_sum_subtree_sizes(search_state, expansion=nothing)::Float32
+    matches = if isnothing(expansion)
+        search_state.matches
+    else
+        expansion.matches
+    end
     sum(m -> m.expr.metadata.size, matches)
 end
 
 """
 Same as summing over sizes of subtrees, but not doublecounting matches within children.
 """
-function upper_bound_with_conflicts(search_state, expansion=nothing) :: Float32
-    matches = if isnothing(expansion) search_state.matches else expansion.matches end
+function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
+    matches = if isnothing(expansion)
+        search_state.matches
+    else
+        expansion.matches
+    end
     issorted(matches, by=m -> expr_of(m).metadata.id) || error("matches is not sorted")
 
-    bound = 0.
+    bound = 0.0
     offset = length(matches)
 
     while true
@@ -53,7 +61,11 @@ function upper_bound_with_conflicts(search_state, expansion=nothing) :: Float32
         offset = searchsortedlast(
             matches,
             search_state.all_nodes[next_id].metadata.id,
-            by=m -> if typeof(m) === Int64 m else expr_of(m).metadata.id end
+            by=m -> if typeof(m) === Int64
+                m
+            else
+                expr_of(m).metadata.id
+            end
         )
         offset == 0 && break
     end
@@ -94,7 +106,7 @@ function delta_local_utility(config, match, expansion::PossibleExpansion{Abstrac
         # actually do nothing here
     else
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (multiuse utility; (usages-1)*cost(arg))
-        return match.holes_stack[end].metadata.size;
+        return match.holes_stack[end].metadata.size
     end
 end
 
@@ -125,7 +137,7 @@ size*matches utility
 # end
 
 
-function utility_rewrite(search_state) :: Float32
+function utility_rewrite(search_state)::Float32
     if is_identity_abstraction(search_state)
         return 0
     end
