@@ -87,6 +87,9 @@ fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
     nothing,
 )
 
+expr_of(m::Match) = m.expr
+
+
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
     expr = SExpr(nothing, children, parent, nothing)
     for (i, child) in enumerate(children)
