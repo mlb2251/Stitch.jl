@@ -75,7 +75,6 @@ function collect_rci(search_state::SearchState)::Tuple{Float64, MultiRewriteConf
         accept_util = if rci.rci_match === nothing
             0.0
         else
-            # TODO is this correct? I think by this point there should be a unique answer
             maximum(rci.rci_match.alternatives) do m
                 ua = copy(m.unique_args)
                 append!(ua, [v for (_, v) in m.choice_var_captures if !isnothing(v)])
