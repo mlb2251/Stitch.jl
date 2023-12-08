@@ -111,6 +111,7 @@ copy_match(m::Match) = Match(
     copy(m.sym_of_idx),
     copy(m.idx_of_sym),
     m.continuation,
+    copy(m.choice_var_captures),
 )
 
 
