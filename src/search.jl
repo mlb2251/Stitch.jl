@@ -185,7 +185,11 @@ mutable struct SearchState{M}
     function SearchState(corpus, config)
         abstraction = Abstraction(new_hole(nothing), 0, 0, :uninit_state, [], [])
 
-        typ = Match
+        typ = if config.match_sequences
+            MatchPossibilities
+        else
+            Match
+        end
 
         matches = init_all_corpus_matches(typ, corpus, config)
         if !isnothing(config.dfa)

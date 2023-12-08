@@ -846,6 +846,7 @@ function arg_capture(search_state::SearchState{Match}, i)
     if all(match -> match.unique_args[i].metadata.struct_hash == first_match, search_state.matches)
         return true
     end
+    return false
 end
 
 function arg_capture(search_state::SearchState{MatchPossibilities}, i)
@@ -853,6 +854,7 @@ function arg_capture(search_state::SearchState{MatchPossibilities}, i)
     if all(match_poss -> all(match -> match.unique_args[i].metadata.struct_hash == first_match, match_poss.alternatives), search_state.matches)
         return true
     end
+    return false
 end
 
 function is_single_task(search_state)
