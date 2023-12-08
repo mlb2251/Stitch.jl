@@ -66,17 +66,6 @@ mutable struct Match
     # metavariable for continuation
     continuation::Union{Nothing,SExpr}
 
-    Match(expr, id, config) = new(
-        expr,
-        Hole{SExpr}[],
-        Hole{SExpr}[expr],
-        SExpr[],
-        Float32[],
-        local_utility_init(config),
-        Symbol[],
-        Dict{Symbol,Int}(),
-        nothing
-    )
 end
 
 const TreeNodeHole = SExpr
@@ -85,6 +74,18 @@ struct RemainingSequenceHole <: Hole{SExpr}
     root_node::SExpr
     num_consumed::Int
 end
+
+fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
+    expr,
+    SExpr[],
+    Hole{SExpr}[expr],
+    Hole{SExpr}[],
+    Float32[],
+    local_utility_init(config),
+    Symbol[],
+    Dict{Symbol,Int}(),
+    nothing,
+)
 
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
     expr = SExpr(nothing, children, parent, nothing)

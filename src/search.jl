@@ -258,7 +258,7 @@ function init_all_corpus_matches(corpus, config::SearchConfig)::Vector{Match}
     id = 1
     for program in corpus.programs
         for expr in subexpressions(program.expr) # child-first traversal (postorder)
-            match = Match(expr, id, config)
+            match = fresh_match_possibilities(Match, expr, id, config)
             expr.metadata = Metadata(
                 program,
                 size(expr, config.size_by_symbol),
