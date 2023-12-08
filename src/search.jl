@@ -143,6 +143,7 @@ Base.@kwdef mutable struct SearchConfig
     application_utility_fixed::Float32 = -1.0
     application_utility_metavar::Float32 = 0
     application_utility_symvar::Float32 = 0
+    application_utility_choicevar::Float32 = -0.01
 
     # extensions
     match_sequences::Bool = false

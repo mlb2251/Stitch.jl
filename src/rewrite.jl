@@ -29,12 +29,13 @@ function rewrite(search_state::SearchState) :: Tuple{Corpus,Float32,Float32}
         + search_state.config.application_utility_metavar * search_state.abstraction.arity
         # per-symvar utility
         + search_state.config.application_utility_symvar * search_state.abstraction.sym_arity
+        # per-choice-var utility
+        + search_state.config.application_utility_choicevar * search_state.abstraction.choice_arity
     ) * length(search_state.matches)
     compressive_utility = corpus_compression_utility + abstraction_size_utility + additional_per_match_utility
 
     # @show rewritten
-    if !isapprox(cumulative_utility, compressive_utility)
-        # error("[$search_state] cumulative_utility != compressive_utility: $cumulative_utility != $compressive_utility")
+    if !isapprox(cumulative_utility, compressive_utility, rtol=1e-5)
         println("ERROR: [$search_state] cumulative_utility != compressive_utility: $cumulative_utility != $compressive_utility")
     end
 
@@ -118,6 +119,14 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
         end
         for sym in m.sym_of_idx
             push!(children, sexpr_leaf(sym))
+        end
+        for idx in range(0, length(m.choice_var_captures) - 1)
+            capture = m.choice_var_captures[idx]
+            if isnothing(capture)
+                push!(children, sexpr_leaf(Symbol("/nothing")))
+            else
+                push!(children, rewrite_inner(capture, search_state, rcis))
+            end
         end
         if !isnothing(m.continuation)
             push!(children, rewrite_inner(m.continuation, search_state, rcis))

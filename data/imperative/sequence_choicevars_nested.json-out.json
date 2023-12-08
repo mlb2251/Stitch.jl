@@ -5,17 +5,19 @@
         },
         "abstractions": [
             [
+                1,
                 0,
-                0,
-                "(/seq c d a ?0 b)",
+                "(/seq c d a ?0 (+ #0 3))",
                 "uninit_state",
-                [],
+                [
+                    "uninit_state"
+                ],
                 []
             ]
         ],
         "programs": [
-            "(fn_1 b)",
-            "(fn_1 /nothing)"
+            "(fn_1 1 (+ 1 2))",
+            "(fn_1 2 /nothing)"
         ]
     }
 ]

@@ -118,9 +118,9 @@ end
 
 function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceChoiceVarExpansion})
     if match.choice_var_captures[expansion.data.idx] === nothing
-        return -1 # TODO: parameterizable
+        return -1 + config.application_utility_choicevar # TODO: parameterizable
     else
-        return -0.01 # TODO: parameterizable
+        config.application_utility_choicevar
     end
 end
 
