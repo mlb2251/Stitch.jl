@@ -25,12 +25,12 @@ end
 
 abstract type Expansion end
 
-struct PossibleExpansion{T<:Expansion}
-    matches::Vector{MatchPossibilities}
+struct PossibleExpansion{M, T<:Expansion}
+    matches::Vector{M}
     data::T
 
-    function PossibleExpansion(matches, data::T) where {T}
-        new{T}(matches, data)
+    function PossibleExpansion(matches::Vector{M}, data::T) where {M, T}
+        new{M, T}(matches, data)
     end
 end
 
@@ -165,7 +165,7 @@ Base.@kwdef mutable struct PlotData
     pruned_bound::Vector{Tuple{Int,Float32}} = [(0, 0.0)]
 end
 
-mutable struct SearchState
+mutable struct SearchState{M}
     # config
     config::SearchConfig
     corpus::Corpus
@@ -181,19 +181,26 @@ mutable struct SearchState
     abstraction::Abstraction
     holes::Vector{SExpr}
     # hole_dfa_states::Vector{Symbol}
-    matches::Vector{MatchPossibilities}
+    matches::Vector{M}
     expansions::Vector{PossibleExpansion}
 
     # backtracking data
     holes_stack::Vector{SExpr}
     # hole_dfa_states_stack::Vector{Symbol}
     expansions_stack::Vector{Vector{PossibleExpansion}}
-    matches_stack::Vector{Vector{MatchPossibilities}}
+    matches_stack::Vector{Vector{M}}
     past_expansions::Vector{PossibleExpansion}
 
     function SearchState(corpus, config)
         abstraction = Abstraction(new_hole(nothing), 0, 0, 0, :uninit_state, [], [])
-        matches = init_all_corpus_matches(corpus, config)
+
+        typ = if config.match_sequences
+            MatchPossibilities
+        else
+            Match
+        end
+
+        matches = init_all_corpus_matches(typ, corpus, config)
         if !isnothing(config.dfa)
             for program in corpus.programs
                 run_dfa!(program.expr, config.dfa, :M)
@@ -202,7 +209,7 @@ mutable struct SearchState
         all_nodes = map(expr_of, matches)
         best_util = Float32(0)
         best_abstraction = nothing
-        new(config, corpus, all_nodes,
+        new{typ}(config, corpus, all_nodes,
             PlotData(), best_util, best_abstraction, Stats(),
             abstraction, [abstraction.body], matches, PossibleExpansion[],
             SExpr[], PossibleExpansion[], Match[], PossibleExpansion[])
@@ -262,12 +269,12 @@ Initializes a Match at every subtree in the corpus
 Note any filtering to the initial match set should NOT be done here because
 downstream we need this for SearchState.all_nodes
 """
-function init_all_corpus_matches(corpus, config::SearchConfig)::Vector{MatchPossibilities}
-    matches = MatchPossibilities[]
+function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vector{M} where M
+    matches = M[]
     id = 1
     for program in corpus.programs
         for expr in subexpressions(program.expr) # child-first traversal (postorder)
-            match = fresh_match_possibilities(expr, id, config)
+            match = fresh_match_possibilities(t, expr, id, config)
             expr.metadata = Metadata(
                 program,
                 size(expr, config.size_by_symbol),

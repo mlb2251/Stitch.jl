@@ -82,20 +82,23 @@ struct RemainingSequenceHole <: Hole{SExpr}
     num_consumed::Int
 end
 
-fresh_match_possibilities(expr, id, config) = MatchPossibilities(
+fresh_match_possibilities(::Type{MatchPossibilities}, expr, id, config) = MatchPossibilities(
     [
-    Match(
-        expr,
-        SExpr[],
-        Hole{SExpr}[expr],
-        Hole{SExpr}[],
-        Float32[],
-        local_utility_init(config),
-        Symbol[],
-        Dict{Symbol,Int}(),
-        nothing,
-        Dict{Int,Union{SExpr,Nothing}}()
-    )]
+        fresh_match_possibilities(Match, expr, id, config)
+    ]
+)
+
+fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
+    expr,
+    SExpr[],
+    Hole{SExpr}[expr],
+    Hole{SExpr}[],
+    Float32[],
+    local_utility_init(config),
+    Symbol[],
+    Dict{Symbol,Int}(),
+    nothing,
+    Dict{Int,Union{SExpr,Nothing}}(),
 )
 
 copy_match(m::Match) = Match(
@@ -108,12 +111,13 @@ copy_match(m::Match) = Match(
     copy(m.sym_of_idx),
     copy(m.idx_of_sym),
     m.continuation,
-    copy(m.choice_var_captures),
 )
 
 
+expr_of(m::Match) = m.expr
 expr_of(m::MatchPossibilities) = m.alternatives[1].expr
 
+max_local_utility(m::Match) = m.local_utility
 max_local_utility(m::MatchPossibilities) = maximum([match.local_utility for match in m.alternatives])
 
 function sexpr_node(children::Vector{SExpr}; parent=nothing)

@@ -1,5 +1,5 @@
 
-mutable struct RewriteConflictInfo
+mutable struct RewriteConflictInfo{M}
     # handling rewrite conflicts. When the same abstraction can be used in two overlapping places, we need to pick one.
     # e.g., program = (foo (foo (foo x))). abstraction = (foo (foo #0)). abstraction can either match
     # as (fn_1 (foo x)) or (foo (fn_1 x)). We need to pick one.
@@ -7,11 +7,11 @@ mutable struct RewriteConflictInfo
     # Simple bottom-up dynamic programming to figure out which is best
     cumulative_utility::Float32
     accept_rewrite::Bool
-    rci_match_possibilities::Union{MatchPossibilities,Nothing}
+    rci_match_possibilities::Union{M,Nothing}
     rci_match::Union{Match,Nothing}
 end
 
-const MultiRewriteConflictInfo = Dict{Int64,RewriteConflictInfo}
+const MultiRewriteConflictInfo{M} = Dict{Int64,RewriteConflictInfo{M}}
 
 function rewrite(search_state::SearchState)::Tuple{Corpus,Float32,Float32}
 
@@ -51,10 +51,10 @@ end
 """
 Just copying Eqn 15 from https://arxiv.org/pdf/2211.16605.pdf
 """
-function collect_rci(search_state::SearchState)::Tuple{Float64,MultiRewriteConflictInfo}
+function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteConflictInfo{M}} where M
 
     rcis = Dict(
-        expr.metadata.id => RewriteConflictInfo(
+        expr.metadata.id => RewriteConflictInfo{M}(
             NaN32, false, nothing, nothing
         )
         for expr in search_state.all_nodes
@@ -81,13 +81,8 @@ function collect_rci(search_state::SearchState)::Tuple{Float64,MultiRewriteConfl
         accept_util = if rci.rci_match_possibilities === nothing
             0.0
         else
-            # TODO is this correct? I think by this point there should be a unique answer
-            (util, i) = findmax(rci.rci_match_possibilities.alternatives) do m
-                ua = copy(m.unique_args)
-                append!(ua, [v for (_, v) in m.choice_var_captures if !isnothing(v)])
-                m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, ua, init=0.0)
-            end
-            rci.rci_match = rci.rci_match_possibilities.alternatives[i]
+            util, m = compute_best_utility(rcis, rci.rci_match_possibilities)
+            rci.rci_match = m
             util
         end
         rci.cumulative_utility = max(reject_util, accept_util)
@@ -101,6 +96,19 @@ function collect_rci(search_state::SearchState)::Tuple{Float64,MultiRewriteConfl
     corpus_util = sum(programs -> minimum(p -> rcis[p.expr.metadata.id].cumulative_utility, programs), values(search_state.corpus.programs_by_task))
     util = corpus_util - size(search_state.abstraction.body, search_state.config.size_by_symbol)
     return util, rcis
+end
+
+function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossibilities) :: Tuple{Float64, Match}
+    (util, i) = findmax(match.alternatives) do m
+        u, _ = compute_best_utility(rcis, m)
+        u
+    end
+    return util, match.alternatives[i]
+end
+
+function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match) :: Tuple{Float64, Match}
+    util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, m.unique_args, init=0.0)
+    return util, m
 end
 
 function bottom_up_utility(search_state::SearchState)::Float64
