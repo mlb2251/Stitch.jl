@@ -3,7 +3,7 @@ using JSON
 
 mutable struct Corpus
     programs::Vector{Program}
-    programs_by_task::Dict{Int, Vector{Program}}
+    programs_by_task::Dict{Int,Vector{Program}}
 
     function Corpus(programs)
         tasks = unique([p.task for p in programs])
@@ -25,7 +25,7 @@ end
 
 abstract type Expansion end
 
-struct PossibleExpansion{T <: Expansion}
+struct PossibleExpansion{T<:Expansion}
     matches::Vector{Match}
     data::T
 
@@ -59,7 +59,7 @@ end
 
 Base.show(io::IO, obj::ContinuationExpansion) = pretty_show(io, obj; indent=false)
 
-struct SequenceExpansion <: Expansion 
+struct SequenceExpansion <: Expansion
 end
 
 Base.show(io::IO, obj::SequenceExpansion) = pretty_show(io, obj; indent=false)
@@ -98,7 +98,7 @@ Base.copy(abstraction::Abstraction) = Abstraction(
     copy(abstraction.body), abstraction.arity, abstraction.sym_arity,
     abstraction.dfa_root, copy(abstraction.dfa_metavars), copy(abstraction.dfa_symvars))
 
-@Base.kwdef mutable struct Stats
+Base.@kwdef mutable struct Stats
     expansions::Int = 0
     completed::Int = 0
 
@@ -110,10 +110,10 @@ Base.show(io::IO, obj::Stats) = pretty_show(io, obj; indent=true)
 
 Base.@kwdef mutable struct SearchConfig
     new_abstraction_name::Symbol = :placeholder
-    track::Union{SExpr, Nothing} = nothing
+    track::Union{SExpr,Nothing} = nothing
     max_arity::Int = 2
     upper_bound_fn::Function = upper_bound_with_conflicts
-    expansion_processor::Union{Function, Nothing} = nothing
+    expansion_processor::Union{Function,Nothing} = nothing
     verbose::Bool = false
     verbose_best::Bool = true
     follow::Bool = false
@@ -123,7 +123,7 @@ Base.@kwdef mutable struct SearchConfig
 
     # only_match_semi::Bool = false
     autoexpand_head::Bool = false # auto expand head of list
-    dfa::Union{Dict{Symbol, Dict{Symbol,Vector{Symbol}}}, Nothing} = nothing
+    dfa::Union{Dict{Symbol,Dict{Symbol,Vector{Symbol}}},Nothing} = nothing
 
     # optimizations
     no_opt_arg_capture::Bool = false
@@ -146,14 +146,14 @@ end
 
 Base.@kwdef mutable struct PlotData
     normalized::Bool = false
-    best_util::Vector{Tuple{Int,Float32}} = [(0,0.)]
-    depth::Vector{Tuple{Int,Int}} = [(0,0)]
+    best_util::Vector{Tuple{Int,Float32}} = [(0, 0.0)]
+    depth::Vector{Tuple{Int,Int}} = [(0, 0)]
     num_matches::Vector{Tuple{Int,Int}} = []
     upper_bound::Vector{Tuple{Int,Float32}} = []
     size_matches::Vector{Tuple{Int,Float32}} = []
-    completed_util::Vector{Tuple{Int,Float32}} = [(0,0.)]
-    completed_approx_util::Vector{Tuple{Int,Float32}} = [(0,0.)]
-    pruned_bound::Vector{Tuple{Int,Float32}} = [(0,0.)]
+    completed_util::Vector{Tuple{Int,Float32}} = [(0, 0.0)]
+    completed_approx_util::Vector{Tuple{Int,Float32}} = [(0, 0.0)]
+    pruned_bound::Vector{Tuple{Int,Float32}} = [(0, 0.0)]
 end
 
 mutable struct SearchState
@@ -165,7 +165,7 @@ mutable struct SearchState
     # running data
     plot_data::PlotData
     best_util::Float32
-    best_abstraction::Union{Nothing, Abstraction}
+    best_abstraction::Union{Nothing,Abstraction}
     stats::Stats
 
     # current abstraction
@@ -208,7 +208,7 @@ function run_dfa!(expr, dfa, state)
     @assert is_leaf(head)
 
     # if head === :list
-        
+
     # end
 
     child_states = dfa[state][head.leaf]
@@ -218,7 +218,7 @@ function run_dfa!(expr, dfa, state)
     #     @show expr.children
     #     error()
     # end
-    for (i,child) in enumerate(expr.children[2:end])
+    for (i, child) in enumerate(expr.children[2:end])
         if i > length(child_states)
             i %= length(child_states)
             i += 1
@@ -231,19 +231,19 @@ Base.broadcastable(s::SearchState) = Ref(s)
 
 function Base.show(io::IO, search_state::SearchState)
     print(io,
-          "abstraction: ", search_state.abstraction.body,
-          " | matches: ", length(search_state.matches),
-          " | expansions: ", length(search_state.expansions),
-    );
+        "abstraction: ", search_state.abstraction.body,
+        " | matches: ", length(search_state.matches),
+        " | expansions: ", length(search_state.expansions),
+    )
 end
 
 function normalize!(plot_data::PlotData, search_state::SearchState)
     plot_data.normalized && return
     plot_data.normalized = true
-    plot_data.best_util = [(x, y/search_state.best_util) for (x,y) in plot_data.best_util]
-    plot_data.completed_util = [(x, y/search_state.best_util) for (x,y) in plot_data.completed_util]
-    plot_data.completed_approx_util = [(x, y/search_state.best_util) for (x,y) in plot_data.completed_approx_util]
-    plot_data.pruned_bound = [(x, y/search_state.best_util) for (x,y) in plot_data.pruned_bound]
+    plot_data.best_util = [(x, y / search_state.best_util) for (x, y) in plot_data.best_util]
+    plot_data.completed_util = [(x, y / search_state.best_util) for (x, y) in plot_data.completed_util]
+    plot_data.completed_approx_util = [(x, y / search_state.best_util) for (x, y) in plot_data.completed_approx_util]
+    plot_data.pruned_bound = [(x, y / search_state.best_util) for (x, y) in plot_data.pruned_bound]
 end
 
 
@@ -318,7 +318,7 @@ function expand_search_state!(search_state)
     end
 
 
-    !search_state.config.verbose || printstyled(search_state, "\n", color=:yellow);
+    !search_state.config.verbose || printstyled(search_state, "\n", color=:yellow)
     search_state.stats.comparable_worklist_steps += 1
     search_state.config.plot && push!(plot_data.depth, (search_state.stats.expansions, length(search_state.past_expansions)))
     search_state.config.plot && push!(plot_data.num_matches, (search_state.stats.expansions, length(search_state.matches)))
@@ -328,7 +328,7 @@ function stitch_search(corpus, config)
 
     size_by_symbol = config.size_by_symbol
     search_state = SearchState(corpus, config)
-    
+
     (; verbose, verbose_best, plot, silent) = config
 
     filter_init_allowed_matches!(search_state)
@@ -353,12 +353,12 @@ function stitch_search(corpus, config)
         expansion = pop!(search_state.expansions)
 
         # upper bound check
-        if config.upper_bound_fn(search_state,expansion) <= search_state.best_util
+        if config.upper_bound_fn(search_state, expansion) <= search_state.best_util
             is_tracked_pruned(search_state, expansion=expansion, message="$(@__FILE__):$(@__LINE__) - upper bound $(config.upper_bound_fn(search_state,expansion)) <= best util $(search_state.best_util)")
-            plot && push!(plot_data.pruned_bound, (search_state.stats.expansions, config.upper_bound_fn(search_state,expansion)))
+            plot && push!(plot_data.pruned_bound, (search_state.stats.expansions, config.upper_bound_fn(search_state, expansion)))
             continue # skip - worse than best so far
         end
-        
+
         # do the expansion
         expand_general!(search_state, expansion)
 
@@ -374,7 +374,7 @@ function stitch_search(corpus, config)
         search_state.stats.expansions += 1
 
         plot && push!(plot_data.upper_bound, (search_state.stats.expansions, upper_bound_fn(search_state)))
-        plot && push!(plot_data.size_matches, (search_state.stats.expansions, sum(match -> max(match.local_utility,0.), search_state.matches)))
+        plot && push!(plot_data.size_matches, (search_state.stats.expansions, sum(match -> max(match.local_utility, 0.0), search_state.matches)))
 
         # strict dominance check - https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
         if strictly_dominated(search_state)
@@ -391,13 +391,13 @@ function stitch_search(corpus, config)
         end
 
         # are we done?
-        if isempty(search_state.holes)            
+        if isempty(search_state.holes)
             search_state.stats.completed += 1
-            
+
             !verbose || println("completed: ", search_state.abstraction.body, " with utility ", bottom_up_utility(search_state), " used in $(length(search_state.matches)) places")
-            
+
             # cheaply upper bounded version of util that uses no conflict resolution
-            approx_util = sum(match -> max(match.local_utility,0.), search_state.matches)
+            approx_util = sum(match -> max(match.local_utility, 0.0), search_state.matches)
 
             plot && push!(plot_data.completed_approx_util, (search_state.stats.expansions, approx_util))
 
@@ -435,11 +435,11 @@ function stitch_search(corpus, config)
 
     if isnothing(search_state.best_abstraction)
         silent || println("No abstractions found")
-    else 
+    else
         silent || println("Best abstraction: ", search_state.best_abstraction.body, " with utility ", search_state.best_util, " compressed by ", size(search_state.corpus, size_by_symbol) / (size(search_state.corpus, size_by_symbol) - search_state.best_util), "x")
     end
 
-    silent || println(search_state.stats);
+    silent || println(search_state.stats)
 
     # plot
     if plot
@@ -453,11 +453,11 @@ function stitch_search(corpus, config)
     # recurse, but with follow=true so that we rapidly narrow in on the best abstraction
     # then the search state at that point gets returned
     config = deepcopy(config)
-    config.max_arity=10000
+    config.max_arity = 10000
     config.verbose = config.verbose_best = config.plot = false
     config.track = search_state.best_abstraction.body
     config.follow = config.silent = config.allow_single_task = true
-    res = stitch_search(corpus,config)
+    res = stitch_search(corpus, config)
     isnothing(res) && error("shouldnt be possible - we found it the first time around without tracking")
     res
 end
@@ -466,8 +466,8 @@ function plot(plot_data::PlotData, search_state::SearchState)
     # normalize utilities
     normalize!(plot_data, search_state)
 
-    p = Plots.plot(plot_data.best_util, title="Best Utility Over Time", xlabel="Expansions", ylabel="Utility", linetype=:steppre, xlim=(0, search_state.stats.expansions), ylim=(0,1));
-    
+    p = Plots.plot(plot_data.best_util, title="Best Utility Over Time", xlabel="Expansions", ylabel="Utility", linetype=:steppre, xlim=(0, search_state.stats.expansions), ylim=(0, 1))
+
     Plots.plot!(p, plot_data.completed_approx_util, seriestype=:scatter, alpha=0.5, label="completed approx util")
     Plots.plot!(p, plot_data.completed_util, seriestype=:scatter, alpha=0.5, label="completed util")
     # Plots.plot!(p, plot_data.pruned_bound, seriestype=:scatter, alpha=0.5, label="pruned bound")
@@ -534,21 +534,21 @@ end
 function compress_imperative(original_corpus, dfa_path; kwargs...)
     compress(
         original_corpus;
-        autoexpand_head = true,
+        autoexpand_head=true,
         # only_match_semi = true,
-        allow_single_task = false,
-        verbose_best = false,
-        dfa = load_dfa(dfa_path),
+        allow_single_task=false,
+        verbose_best=false,
+        dfa=load_dfa(dfa_path),
         kwargs...
     )
 end
 
-function load_corpus(file;truncate=nothing, kwargs...)
+function load_corpus(file; truncate=nothing, kwargs...)
     json = JSON.parsefile(file)
     if !isnothing(truncate)
         json = json[1:truncate]
     end
-    Corpus([Program(parse(SExpr, p),i,i) for (i,p) in enumerate(json)])
+    Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(json)])
 end
 
 
@@ -568,7 +568,7 @@ function load_dfa(file)
     end
     json = JSON.parsefile(file)
     # dfa tells you given your current state and current head symbol, what is the vector of next states for each of your children
-    dfa = Dict{Symbol, Dict{Symbol,Vector{Symbol}}}()
+    dfa = Dict{Symbol,Dict{Symbol,Vector{Symbol}}}()
     for (state_str, transitions) in json
         state = Symbol(state_str)
         dfa[state] = Dict{Symbol,Vector{Symbol}}()
