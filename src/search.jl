@@ -138,6 +138,9 @@ Base.@kwdef mutable struct SearchConfig
 
     # extensions
     match_sequences::Bool = false
+
+    # testing
+    strict = false
 end
 
 

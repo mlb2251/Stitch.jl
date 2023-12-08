@@ -40,7 +40,7 @@ function integrate(in_file, out_file)
     out = []
     for kwargs in argument_sets
         println(in_file, " ", kwargs)
-        abstractions, compressed_corpus = compress(corpus; proc_args(kwargs)...)
+        abstractions, compressed_corpus = compress(corpus; strict=true, proc_args(kwargs)...)
         abstractions = [abstraction_to_list(x) for x in abstractions]
         out_per = Dict(
             "args" => kwargs,

@@ -33,9 +33,13 @@ function rewrite(search_state::SearchState) :: Tuple{Corpus,Float32,Float32}
     compressive_utility = corpus_compression_utility + abstraction_size_utility + additional_per_match_utility
 
     # @show rewritten
-    if !isapprox(cumulative_utility, compressive_utility)
-        # error("[$search_state] cumulative_utility != compressive_utility: $cumulative_utility != $compressive_utility")
-        println("ERROR: [$search_state] cumulative_utility != compressive_utility: $cumulative_utility != $compressive_utility")
+    if !isapprox(cumulative_utility, compressive_utility, rtol=1e-5)
+        msg = "ERROR: [$search_state] cumulative_utility != compressive_utility: $cumulative_utility != $compressive_utility"
+        if search_state.config.strict
+            error(msg)
+        else
+            println(msg)
+        end
     end
 
     (rewritten, compressive_utility, cumulative_utility)
