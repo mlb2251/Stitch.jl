@@ -10,9 +10,9 @@ mutable struct RewriteConflictInfo
     rci_match::Union{Match,Nothing}
 end
 
-const MultiRewriteConflictInfo = Dict{Int64, RewriteConflictInfo}
+const MultiRewriteConflictInfo = Dict{Int64,RewriteConflictInfo}
 
-function rewrite(search_state::SearchState) :: Tuple{Corpus,Float32,Float32}
+function rewrite(search_state::SearchState)::Tuple{Corpus,Float32,Float32}
 
     cumulative_utility, rci = collect_rci(search_state)
 
@@ -48,7 +48,7 @@ end
 """
 Just copying Eqn 15 from https://arxiv.org/pdf/2211.16605.pdf
 """
-function collect_rci(search_state::SearchState)::Tuple{Float64, MultiRewriteConflictInfo}
+function collect_rci(search_state::SearchState)::Tuple{Float64,MultiRewriteConflictInfo}
 
     rcis = Dict(
         expr.metadata.id => RewriteConflictInfo(
@@ -68,7 +68,7 @@ function collect_rci(search_state::SearchState)::Tuple{Float64, MultiRewriteConf
             rcis[expr.metadata.id].cumulative_utility = 0.0
             rcis[expr.metadata.id].accept_rewrite = false
         end
-        return 0.
+        return 0.0
     end
 
     for expr in search_state.all_nodes
@@ -93,14 +93,14 @@ function collect_rci(search_state::SearchState)::Tuple{Float64, MultiRewriteConf
     return util, rcis
 end
 
-function bottom_up_utility(search_state :: SearchState) :: Float64
+function bottom_up_utility(search_state::SearchState)::Float64
     util, _ = collect_rci(search_state)
     return util
 end
 
 rewrite_program(program, search_state, rcis) = Program(rewrite_inner(program.expr, search_state, rcis), program.id, program.task)
 
-function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewriteConflictInfo) :: SExpr
+function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewriteConflictInfo)::SExpr
     rci = rcis[expr.metadata.id]
 
     # if cumulative utility <= 0 then there are no rewrites in this whole subtree
