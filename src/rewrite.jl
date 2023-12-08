@@ -101,7 +101,7 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossib
         u, _ = compute_best_utility(rcis, m)
         u
     end
-    return util, rci.rci_match_possibilities.alternatives[i]
+    return util, match.alternatives[i]
 end
 
 function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match) :: Tuple{Float64, Match}
