@@ -123,7 +123,7 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
         for idx in range(0, length(m.choice_var_captures) - 1)
             capture = m.choice_var_captures[idx]
             if isnothing(capture)
-                push!(children, sexpr_leaf(Symbol("/nothing")))
+                push!(children, sexpr_leaf(SYM_CHOICE_VAR_NOTHING))
             else
                 push!(children, rewrite_inner(capture, search_state, rcis))
             end
