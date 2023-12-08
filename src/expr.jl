@@ -89,6 +89,7 @@ fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
 
 expr_of(m::Match) = m.expr
 
+max_local_utility(m::Match) = m.local_utility
 
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
     expr = SExpr(nothing, children, parent, nothing)
