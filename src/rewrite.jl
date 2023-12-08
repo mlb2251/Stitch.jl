@@ -7,7 +7,8 @@ mutable struct RewriteConflictInfo
     # Simple bottom-up dynamic programming to figure out which is best
     cumulative_utility::Float32
     accept_rewrite::Bool
-    rci_match::Union{MatchPossibilities,Nothing}
+    rci_match_possibilities::Union{MatchPossibilities,Nothing}
+    rci_match::Union{Match,Nothing}
 end
 
 const MultiRewriteConflictInfo = Dict{Int64, RewriteConflictInfo}
@@ -49,13 +50,13 @@ function collect_rci(search_state::SearchState)::Tuple{Float64, MultiRewriteConf
 
     rcis = Dict(
         expr.metadata.id => RewriteConflictInfo(
-            NaN32, false, nothing
+            NaN32, false, nothing, nothing
         )
         for expr in search_state.all_nodes
     )
 
     for match in search_state.matches
-        rcis[expr_of(match).metadata.id].rci_match = match
+        rcis[expr_of(match).metadata.id].rci_match_possibilities = match
     end
 
     # special case the identity abstraction (\x. x) since it has a self loop dependency in terms of utility calculation
@@ -72,14 +73,17 @@ function collect_rci(search_state::SearchState)::Tuple{Float64, MultiRewriteConf
         rci = rcis[expr.metadata.id]
 
         reject_util = sum(child -> rcis[child.metadata.id].cumulative_utility, expr.children, init=0.0)
-        accept_util = if rci.rci_match === nothing
+        accept_util = if rci.rci_match_possibilities === nothing
             0.0
         else
-            maximum(rci.rci_match.alternatives) do m
+            # TODO is this correct? I think by this point there should be a unique answer
+            (util, i) = findmax(rci.rci_match_possibilities.alternatives) do m
                 ua = copy(m.unique_args)
                 append!(ua, [v for (_, v) in m.choice_var_captures if !isnothing(v)])
                 m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, ua, init=0.0)
             end
+            rci.rci_match = rci.rci_match_possibilities.alternatives[i]
+            util
         end
         rci.cumulative_utility = max(reject_util, accept_util)
         rci.accept_rewrite = accept_util > reject_util + 0.0001 # slightly in favor of rejection to avoid floating point rounding errors in the approximate equality case
@@ -108,9 +112,7 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
     rci.cumulative_utility > 0 || return copy(expr)
 
     if rci.accept_rewrite
-        # TODO is this correct? I think by this point there should be a unique answer
-        @assert length(rci.rci_match.alternatives) == 1
-        m = rci.rci_match.alternatives[1]
+        m = rci.rci_match
         # do a rewrite
         children = [sexpr_leaf(search_state.config.new_abstraction_name)]
         for arg in m.unique_args
