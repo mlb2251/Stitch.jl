@@ -72,10 +72,10 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
     bound
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SymbolExpansion})
+function delta_local_utility(config, match, expansion::SymbolExpansion)
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
     # node from the corpus.
-    if expansion.data.fresh
+    if expansion.fresh
         return config.application_utility_symvar
     else
         return 1
@@ -83,22 +83,22 @@ function delta_local_utility(config, match, expansion::PossibleExpansion{SymbolE
 end
 
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SyntacticLeafExpansion})
+function delta_local_utility(config, match, expansion::SyntacticLeafExpansion)
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    symbol_size(expansion.data.leaf, config.size_by_symbol)
+    symbol_size(expansion.leaf, config.size_by_symbol)
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SyntacticNodeExpansion})
+function delta_local_utility(config, match, expansion::SyntacticNodeExpansion)
     # let it be zero?
     # match.local_utility += 0.;
-    if expansion.data.head !== :no_expand_head
-        return symbol_size(expansion.data.head, config.size_by_symbol)
+    if expansion.head !== :no_expand_head
+        return symbol_size(expansion.head, config.size_by_symbol)
     end
     return 0
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{AbstractionExpansion})
-    if expansion.data.fresh
+function delta_local_utility(config, match, expansion::AbstractionExpansion)
+    if expansion.fresh
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility second term; cost_app * arity)
         # note: commented out with switch away from application penalty
         return config.application_utility_metavar
@@ -110,19 +110,19 @@ function delta_local_utility(config, match, expansion::PossibleExpansion{Abstrac
     end
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{ContinuationExpansion})
+function delta_local_utility(config, match, expansion::ContinuationExpansion)
     0
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceExpansion})
+function delta_local_utility(config, match, expansion::SequenceExpansion)
     symbol_size(SYM_SEQ_HEAD, config.size_by_symbol)
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceElementExpansion})
+function delta_local_utility(config, match, expansion::SequenceElementExpansion)
     0
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceTerminatorExpansion})
+function delta_local_utility(config, match, expansion::SequenceTerminatorExpansion)
     0
 end
 
