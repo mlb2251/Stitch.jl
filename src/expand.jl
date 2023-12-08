@@ -24,7 +24,7 @@ function possible_expansions!(search_state)
 end
 
 function expansions!(typ, search_state::SearchState{Match})
-    flattened_matches = [(i, match) for (i, match) in enumerate(search_state.matches)]
+    flattened_matches = [(i, m) for (i, m) in enumerate(search_state.matches)]
     res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config)
     for (expansion, tagged_matches) in res
         push!(search_state.expansions, PossibleExpansion(
@@ -834,7 +834,9 @@ end
 function arg_capture(search_state)
     search_state.config.no_opt_arg_capture && return false
     for i in 1:search_state.abstraction.arity
-        arg_capture(search_state, i)
+        if arg_capture(search_state, i)
+            return true
+        end
     end
     false
 end

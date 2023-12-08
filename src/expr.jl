@@ -65,9 +65,6 @@ mutable struct Match
 
     # metavariable for continuation
     continuation::Union{Nothing,SExpr}
-
-    # choice vars
-    choice_var_captures::Dict{Int,Union{SExpr,Nothing}}
 end
 
 mutable struct MatchPossibilities
@@ -98,7 +95,6 @@ fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
     Symbol[],
     Dict{Symbol,Int}(),
     nothing,
-    Dict{Int,Union{SExpr,Nothing}}()
 )
 
 copy_match(m::Match) = Match(
@@ -111,7 +107,6 @@ copy_match(m::Match) = Match(
     copy(m.sym_of_idx),
     copy(m.idx_of_sym),
     m.continuation,
-    copy(m.choice_var_captures),
 )
 
 

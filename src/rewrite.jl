@@ -105,9 +105,7 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossib
 end
 
 function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match) :: Tuple{Float64, Match}
-    ua = copy(m.unique_args)
-    append!(ua, [v for (_, v) in m.choice_var_captures if !isnothing(v)])
-    util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, ua, init=0.0)
+    util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, m.unique_args, init=0.0)
     return util, m
 end
 
