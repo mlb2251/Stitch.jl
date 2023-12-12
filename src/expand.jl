@@ -452,9 +452,7 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
             push!(new_match_poss, match_poss)
         end
     end
-    if whole_list_update
-        append!(new_match_poss, search_state.matches[idx+1:end])
-    else
+    if !whole_list_update
         new_match_poss = search_state.matches
     end
     push!(search_state.matches_stack, search_state.matches)
