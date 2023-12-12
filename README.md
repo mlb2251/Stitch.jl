@@ -13,7 +13,7 @@ A Match is a particular way in which an (potentially partial) abstraction can be
 the node in the corpus `(+ (+ 2 3) 5)` can be matched in exactly one way by the abstraction `(+ (+ ?? ??) ??)`.
 
 However, we specifically annotate each node in the corpus with a MatchPossibilities object. This object contains a list of all the ways in which the node can be matched by the abstraction. This comes up in cases such as sequences. For example, the node in the corpus `(seq a b b)` can be matched by the
-abstraction `(seq a ?0 b ??...)` in two ways, where `?0` is either `Just b` or `Nothing` and the hole is either `(seq)` or `(seq b)`, respectively.
+abstraction `(seq a ?0 b ...)` in two ways, where `?0` is either `Just b` or `Nothing` and the hole is either `(seq)` or `(seq b)`, respectively.
 
 We can conceptualize this as a Set of Matches, which leads to a Monad structure, as we will discuss later.
 
@@ -32,8 +32,7 @@ class Expansion e where
     expand_abstraction :: e -> State AbstractionInfo ()
     unexpand_abstraction :: e -> State AbstractionInfo ()
 
-    -- produce a list of matches that result from applying the expansion to a particular match
-    -- potentially mutating the match in the process
+    -- mutates the match and potentially splits it into multiple matches, the additional matches are returned
     expand_match :: e -> State Match [Match]
     -- unapply the mutations performed by expand_match
     unexpand_match :: e -> State Match ()
@@ -57,14 +56,50 @@ update_local_utility :: (Expansion e) => e -> State MatchPossibilities ()
 
 ### Expansion Interface (Julia)
 
+The Julia interface is a bit different, as we don't have a State monad. Instead, the interface is as follows:
+
 ```julia
-# corresponds to collect in Haskell
-collect_expansions(
-    ::Type{Expansion},
+# collect :: Abstraction -> [(i, Match)] -> [(e, [(i, Match)])]
+function collect_expansions(
+    ::Type{E},
     abstraction::Abstraction,
-    matches::Vector{Tuple{Int,Match}},
-    config
+    matches::Vector{Tuple{Int,Match}}, config
+)::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
+
+# expand_abstraction :: e -> State AbstractionInfo ()
+function expand_abstraction!(
+    expansion::E,
+    hole,
+    holes,
+    abstraction
 )
+
+# unexpand_abstraction :: e -> State AbstractionInfo ()
+function unexpand_abstraction!(
+    expansion::E,
+    hole,
+    holes,
+    abstraction
+)
+
+# expand_match :: e -> State Match [Match]
+function expand_match!(
+    expansion::E,
+    match
+)::Union{Nothing,Vector{Match}}
+
+# unexpand_match :: e -> State Match ()
+function unexpand_match!(
+    expansion::E,
+    match
+)
+
+# delta_local_utility :: e -> Match -> Float
+function delta_local_utility(
+    config,
+    match,
+    expansion::E
+)::Float
 ```
 
-We implement these 
+Here, the `!` indicates that the function mutates its arguments. The `config` argument is a dictionary that contains global configuration information, such as the maximum number of metavariables to use, etc.

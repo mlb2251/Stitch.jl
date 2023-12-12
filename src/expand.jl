@@ -428,12 +428,16 @@ function unexpand_utilities!(search_state::SearchState{MatchPossibilities})
     end
 end
 
-function check_number_of_holes(search_state::SearchState{Match})
-    all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes")
+function has_number_of_holes(match::Match, num_holes)
+    length(match.holes) == num_holes
 end
 
-function check_number_of_holes(search_state::SearchState{MatchPossibilities})
-    all(match_poss -> all(match -> length(match.holes) == length(search_state.holes), match_poss.alternatives), search_state.matches) || error("mismatched number of holes")
+function has_number_of_holes(match_poss::MatchPossibilities, num_holes)
+    all(m -> has_number_of_holes(m, num_holes), match_poss.alternatives)
+end
+
+function check_number_of_holes(search_state)
+    all(m -> has_number_of_holes(m, length(search_state.holes)), search_state.matches) || error("mismatched number of holes")
 end
 
 function expand!(search_state::SearchState{Match}, expansion, hole)
@@ -448,26 +452,37 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
 
     expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
     new_match_poss = MatchPossibilities[]
-    for match_poss in search_state.matches
+    whole_list_update = false
+    for (idx, match_poss) in enumerate(search_state.matches)
         updated_matches = Match[]
-        used = false
-        for (i, match) in enumerate(match_poss.alternatives)
+        match_poss_update = false
+        for (alt_idx, match) in enumerate(match_poss.alternatives)
             extras = expand_match!(expansion, match)
             push!(updated_matches, match)
             if extras === nothing
                 continue
             else
-                if !used
-                    used = true
-                    append!(updated_matches, match_poss.alternatives[1:i-1])
+                if !match_poss_update
+                    match_poss_update = true
+                    append!(updated_matches, match_poss.alternatives[1:alt_idx-1])
                 end
                 append!(updated_matches, extras)
             end
         end
-        if used
+        if match_poss_update
+            if !whole_list_update
+                whole_list_update = true
+                new_match_poss = MatchPossibilities[]
+                append!(new_match_poss, search_state.matches[1:idx-1])
+            end
             match_poss = MatchPossibilities(updated_matches)
+            push!(new_match_poss, match_poss)
         end
-        push!(new_match_poss, match_poss)
+    end
+    if whole_list_update
+        append!(new_match_poss, search_state.matches[idx+1:end])
+    else
+        new_match_poss = search_state.matches
     end
     push!(search_state.matches_stack, search_state.matches)
     search_state.matches = new_match_poss
