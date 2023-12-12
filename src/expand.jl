@@ -401,12 +401,16 @@ function unexpand_utilities!(search_state::SearchState{MatchPossibilities})
     end
 end
 
-function check_number_of_holes(search_state::SearchState{Match})
-    all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes")
+function has_number_of_holes(match::Match, num_holes)
+    length(match.holes) == num_holes
 end
 
-function check_number_of_holes(search_state::SearchState{MatchPossibilities})
-    all(match_poss -> all(match -> length(match.holes) == length(search_state.holes), match_poss.alternatives), search_state.matches) || error("mismatched number of holes")
+function has_number_of_holes(match_poss::MatchPossibilities, num_holes)
+    all(m -> has_number_of_holes(m, num_holes), match_poss.alternatives)
+end
+
+function check_number_of_holes(search_state)
+    all(m -> has_number_of_holes(m, length(search_state.holes)), search_state.matches) || error("mismatched number of holes")
 end
 
 function expand!(search_state::SearchState{Match}, expansion, hole)
