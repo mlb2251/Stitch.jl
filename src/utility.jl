@@ -36,6 +36,11 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
     else
         expansion.matches
     end
+
+    if length(matches) == 1
+        return 0
+    end
+
     @assert length(matches) > 0
 
     issorted(matches, by=m -> expr_of(m).metadata.id) || error("matches is not sorted")
@@ -71,7 +76,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         )
         offset == 0 && break
     end
-    bound
+    bound - size(search_state.abstraction.body, search_state.config.size_by_symbol)
 end
 
 function delta_local_utility(config, match, expansion::SymbolExpansion)
