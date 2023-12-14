@@ -5,6 +5,7 @@
             "application_utility_fixed": -3,
             "match_sequences": true,
             "dfa": "data_for_testing/dfa_imp.json",
+            "application_utility_choicevar": -1.01,
             "application_utility_metavar": -1,
             "size_by_symbol": "data_for_testing/size_by_symbol.json"
         },
@@ -12,7 +13,7 @@
             [
                 2,
                 5,
-                "(For (Name %5 Store) (Call (Name g_range Load) (list (BinOp (Name %4 Load) Sub (Constant i1 None))) nil) (/seq (Assign (list (Tuple (list (Name %2 Store) (Name %1 Store)) Store)) (Call (Name g_map Load) (list (Name g_int Load) (Call (Attribute (Call (Name g_input Load) nil nil) s_split Load) nil nil)) nil) None) ?0 ?1 (AugAssign (Subscript (Name %3 Load) #0 Store) Add (Constant i1 None)) (AugAssign (Subscript (Name %3 Load) #1 Store) Add (Constant i1 None))) nil None)",
+                "(For (Name %5 Store) (Call (Name g_range Load) (list (BinOp (Name %4 Load) Sub (Constant i1 None))) nil) (/seq (Assign (list (Tuple (list (Name %2 Store) (Name %1 Store)) Store)) (Call (Name g_map Load) (list (Name g_int Load) (Call (Attribute (Call (Name g_input Load) nil nil) s_split Load) nil nil)) nil) None) (AugAssign (Subscript (Name %3 Load) #0 Store) Add (Constant i1 None)) (AugAssign (Subscript (Name %3 Load) #1 Store) Add (Constant i1 None))) nil None)",
                 "S",
                 [
                     "E",
@@ -38,12 +39,20 @@
                 []
             ],
             [
-                0,
-                0,
-                "(/seq (Expr (Call (Name g_print Load) (list (Constant s_YES None)) nil)))",
+                2,
+                4,
+                "(For (Name %4 Store) (Call (Name g_range Load) (list (BinOp (Name %3 Load) Sub (Constant i1 None))) nil) (/seq (Assign (list (Tuple (list (Name %2 Store) (Name %1 Store)) Store)) #0 None) ?0 ?1 (AugAssign (Subscript #1 (Name %2 Load) Store) Add (Constant i1 None)) (AugAssign (Subscript #1 (Name %1 Load) Store) Add (Constant i1 None))) nil None)",
                 "S",
-                [],
-                []
+                [
+                    "E",
+                    "E"
+                ],
+                [
+                    "X",
+                    "X",
+                    "X",
+                    "X"
+                ]
             ]
         ],
         "programs": [
