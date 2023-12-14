@@ -72,7 +72,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         )
         offset == 0 && break
     end
-    bound
+    bound - size(search_state.abstraction.body, search_state.config.size_by_symbol)
 end
 
 function delta_local_utility(config, match, expansion::PossibleExpansion{SymbolExpansion})
