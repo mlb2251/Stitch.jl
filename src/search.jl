@@ -60,6 +60,8 @@ end
 Base.show(io::IO, obj::ContinuationExpansion) = pretty_show(io, obj; indent=false)
 
 struct SequenceExpansion <: Expansion
+    num_choicevars::Int
+    num_non_choicevars::Int
 end
 
 Base.show(io::IO, obj::SequenceExpansion) = pretty_show(io, obj; indent=false)

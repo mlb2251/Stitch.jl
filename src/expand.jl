@@ -262,16 +262,36 @@ function collect_expansions(
     config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
-    matches = filter(matches) do (i, match)
+    remaining_choicevars = config.max_choice_arity - abstraction.choice_arity
+
+    matches_by_num_nonchoicevars = Dict{Tuple{Int,Int},Vector{Tuple{Int,Match}}}()
+
+    for (i, match) in matches
         if typeof(match.holes[end]) != TreeNodeHole
-            return false
+            continue
         end
-        !is_leaf(match.holes[end]) && match.holes[end].children[1].leaf === SYM_SEQ_HEAD
+        if is_leaf(match.holes[end])
+            continue
+        end
+        if match.holes[end].children[1].leaf !== SYM_SEQ_HEAD
+            continue
+        end
+        # if remaining_choicevars == 0
+        #     n_non_choicevars = length(match.holes[end].children) - 1
+        # else
+        #     n_non_choicevars = 0
+        # end
+        # for_n_non_choicevars = get!(() -> Tuple{Int,Match}[], matches_by_num_nonchoicevars, n_non_choicevars)
+        # push!(for_n_non_choicevars, (i, match))
+        n_elements = length(match.holes[end].children) - 1
+        for n_choicevars in 0:remaining_choicevars
+            for n_non_choicevars in max(1, n_elements - n_choicevars):n_elements
+                for_n_non_choicevars = get!(() -> Tuple{Int,Match}[], matches_by_num_nonchoicevars, (n_choicevars, n_non_choicevars))
+                push!(for_n_non_choicevars, (i, match))
+            end
+        end
     end
-    if length(matches) == 0
-        return []
-    end
-    return [(SequenceExpansion(), matches)]
+    return [(SequenceExpansion(num_choicevars, num_non_choicevars), ms) for ((num_choicevars, num_non_choicevars), ms) in matches_by_num_nonchoicevars]
 end
 
 function collect_expansions(

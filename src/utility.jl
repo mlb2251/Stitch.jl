@@ -122,7 +122,8 @@ function delta_local_utility(config, match, expansion::ContinuationExpansion)
 end
 
 function delta_local_utility(config, match, expansion::SequenceExpansion)
-    symbol_size(SYM_SEQ_HEAD, config.size_by_symbol)
+    seq_head = symbol_size(SYM_SEQ_HEAD, config.size_by_symbol)
+    seq_head - expansion.num_choicevars * config.application_utility_choicevar
 end
 
 function delta_local_utility(config, match, expansion::SequenceElementExpansion)
@@ -135,9 +136,9 @@ end
 
 function delta_local_utility(config, match, expansion::SequenceChoiceVarExpansion)
     if match.choice_var_captures[expansion.idx] === nothing
-        return -symbol_size(SYM_CHOICE_VAR_NOTHING, config.size_by_symbol) + config.application_utility_choicevar
+        return -symbol_size(SYM_CHOICE_VAR_NOTHING, config.size_by_symbol)
     else
-        config.application_utility_choicevar
+        0
     end
 end
 
