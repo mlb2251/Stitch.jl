@@ -827,7 +827,7 @@ function unexpand_abstraction!(expansion::SequenceExpansion, hole, holes, abstra
     pop!(holes) === hole || error("expected same hole")
 
     # remove the ... and /seq from the sequence
-    pop!(hole.children).leaf == SYM_SEQ_HOLE || error("expected SYM_SEQ_HOLE")
+    is_seq_hole_token(pop!(hole.children)) || error("expected sequence hole token")
     pop!(hole.children).leaf === SYM_SEQ_HEAD || error("expected SYM_SEQ_HEAD")
 
     # set the head symbol of the hole, to make it a ?? hole
@@ -853,7 +853,7 @@ function remove_inserted_before_sequence_hole!(check_fn, hole, holes)
     # the right one.
 
     # remove the ... hole from the list of holes
-    pop!(hole.children).leaf == SYM_SEQ_HOLE || error("expected SYM_SEQ_HOLE")
+    is_seq_hole_token(pop!(hole.children)) || error("expected sequence hole token")
 
     # delete the <new> hole from the sequence
     check_fn(pop!(hole.children))
@@ -884,7 +884,7 @@ function unexpand_match!(expansion::SequenceElementExpansion, match)
 end
 
 function unexpand_abstraction!(expansion::SequenceTerminatorExpansion, hole, holes, abstraction)
-    # just put a SYM_SEQ_HOLE on the stack and at the end of the sequence
+    # just put a ... on the stack and at the end of the sequence
     new_hole = new_seq_hole((hole, length(hole.children) + 1))
     push!(hole.children, new_hole)
 end
