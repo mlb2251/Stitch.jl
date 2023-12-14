@@ -37,7 +37,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         expansion.matches
     end
 
-        if length(matches) == 1
+    if length(matches) == 1
         return 0
     end
 
