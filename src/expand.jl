@@ -629,7 +629,7 @@ function expand_abstraction!(expansion::SequenceExpansion, hole, holes, abstract
     hole.leaf = nothing
     head = new_hole((hole, 1))
     head.leaf = SYM_SEQ_HEAD
-    nh = new_seq_hole((hole, 2))
+    nh = new_seq_hole((hole, 2), expansion.num_non_choicevars, expansion.num_non_choicevars + expansion.num_choicevars)
 
     push!(hole.children, head)
     push!(hole.children, nh)
@@ -646,7 +646,7 @@ function expand_match!(expansion::SequenceExpansion, match)::Nothing
     return nothing
 end
 
-function insert_before_sequence_hole!(create_new, hole, holes)
+function insert_before_sequence_hole!(create_new, hole, holes; reduce_low)
     # take a hole (/seq <things> ...) and make it (/seq <things> <new> ...). Also manipulate the stack of holes,
     # so that the ... hole is updated for the fact that it is now one further to the right. It is not
     # removed because it can still be filled in with more elements.
@@ -656,9 +656,17 @@ function insert_before_sequence_hole!(create_new, hole, holes)
     i = length(hole.children)
     new_element = create_new(i)
     # overwrite the old ...
+    old_hole = hole.children[i]
+    sym_to_int = s -> parse(Int, string(s)[2:end])
+    low = sym_to_int(old_hole.children[2].leaf)
+    high = sym_to_int(old_hole.children[3].leaf)
+    if reduce_low
+        low -= 1
+    end
+    high -= 1
     hole.children[i] = new_element
 
-    new_sequence_hole = new_seq_hole((hole, i + 1))
+    new_sequence_hole = new_seq_hole((hole, i + 1), low, high)
     push!(hole.children, new_sequence_hole)
 
     push!(holes, hole)
@@ -666,7 +674,7 @@ function insert_before_sequence_hole!(create_new, hole, holes)
 end
 
 function expand_abstraction!(expansion::SequenceElementExpansion, hole, holes, abstraction)
-    element_hole = insert_before_sequence_hole!(i -> new_hole((hole, i)), hole, holes)
+    element_hole = insert_before_sequence_hole!(i -> new_hole((hole, i)), hole, holes, reduce_low=true)
     push!(holes, element_hole)
 end
 
@@ -867,19 +875,27 @@ function unexpand_match!(expansion::SequenceExpansion, match)
     @assert sequence_hole.root_node === original_hole
 end
 
-function remove_inserted_before_sequence_hole!(check_fn, hole, holes)
+function remove_inserted_before_sequence_hole!(check_fn, hole, holes; reduce_low)
     # undoes the effect of insert_before_sequence_hole!() by removing the hole that was inserted
     # before the ... hole. The check_fn is called on the hole that was removed, to make sure it is
     # the right one.
 
     # remove the ... hole from the list of holes
-    is_seq_hole_token(pop!(hole.children)) || error("expected sequence hole token")
+    old_hole = pop!(hole.children)
+    sym_to_int = s -> parse(Int, string(s)[2:end])
+    low = sym_to_int(old_hole.children[2].leaf)
+    high = sym_to_int(old_hole.children[3].leaf)
+    if reduce_low
+        low += 1
+    end
+    high += 1
+    is_seq_hole_token(old_hole) || error("expected sequence hole token")
 
     # delete the <new> hole from the sequence
     check_fn(pop!(hole.children))
 
     # put the ... hole back onto the end
-    new_sequence_hole = new_seq_hole((hole, length(hole.children)))
+    new_sequence_hole = new_seq_hole((hole, length(hole.children)), low, high)
     push!(hole.children, new_sequence_hole)
 
     # delete the (/seq <extra> ...) hole

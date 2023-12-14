@@ -199,11 +199,20 @@ const SYM_SEQ_HOLE = Symbol("...")
 const SYM_SEQ_HEAD = Symbol("/seq")
 const SYM_CHOICE_VAR_NOTHING = Symbol("/nothing")
 new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
-new_seq_hole(parent_and_argidx) = sexpr_leaf(SYM_SEQ_HOLE; parent=parent_and_argidx)
+function new_seq_hole(parent_and_argidx, low, high)
+    low = Symbol(low)
+    high = Symbol(high)
+    # (... low high)
+    return sexpr_node([
+        sexpr_leaf(SYM_SEQ_HOLE),
+        sexpr_leaf(low),
+        sexpr_leaf(high),
+    ]; parent=parent_and_argidx)
+end
 
 is_hole(e::SExpr) = e.leaf === SYM_HOLE
 is_seq_hole(e::SExpr) = e.leaf === nothing && is_seq_hole_token(e.children[end])
-is_seq_hole_token(e::SExpr) = e.leaf == SYM_SEQ_HOLE
+is_seq_hole_token(e::SExpr) = e.leaf === nothing && e.children[1].leaf === SYM_SEQ_HOLE
 
 "child-first traversal"
 function subexpressions(e::SExpr; subexprs=SExpr[])
