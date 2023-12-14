@@ -24,6 +24,7 @@ mutable struct Metadata
     num_nodes::Int
     struct_hash::Int
     dfa_state::Symbol
+    seq_element_dfa_state::Symbol
     # postorder location of the underlying node in the corpus.
     id::Int
 end

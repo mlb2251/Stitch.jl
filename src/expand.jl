@@ -325,19 +325,21 @@ function collect_expansions(
         return []
     end
 
-    matches = filter(matches) do (_, match)
+    matches_by_sym = Dict{Symbol,Vector{Tuple{Int,Match}}}()
+
+    for (tag, match) in matches
         hole = match.holes[end]
         if typeof(hole) != RemainingSequenceHole
-            return false
+            continue
         end
-        hole.num_consumed <= length(hole.root_node.children)
+        sym = hole.root_node.metadata.seq_element_dfa_state
+        if hole.num_consumed <= length(hole.root_node.children)
+            v = get!(matches_by_sym, sym, Tuple{Int,Match}[])
+            push!(v, (tag, match))
+        end
     end
 
-    if length(matches) == 0
-        return []
-    end
-
-    return [(SequenceChoiceVarExpansion(abstraction.choice_arity), matches)]
+    return [(SequenceChoiceVarExpansion(abstraction.choice_arity, k), m) for (k, m) in matches_by_sym]
 end
 
 """
@@ -684,6 +686,7 @@ function expand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes,
         x
     end
     abstraction.choice_arity += 1
+    push!(abstraction.dfa_choicevars, expansion.dfa_state)
 end
 
 function expand_match!(expansion::SequenceChoiceVarExpansion, match)::Vector{Match}
@@ -895,6 +898,7 @@ function unexpand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, hole
         m.leaf == Symbol("?$(expansion.idx)") || error("expected Symbol(?$(expansion.idx)), got $m")
     end
     abstraction.choice_arity -= 1
+    pop!(abstraction.dfa_choicevars)
 end
 
 function unexpand_match!(expansion::SequenceChoiceVarExpansion, match)

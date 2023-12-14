@@ -71,6 +71,7 @@ Base.show(io::IO, obj::SequenceElementExpansion) = pretty_show(io, obj; indent=f
 
 struct SequenceChoiceVarExpansion <: Expansion
     idx::Int
+    dfa_state::Symbol
 end
 
 Base.show(io::IO, obj::SequenceChoiceVarExpansion) = pretty_show(io, obj; indent=false)
@@ -97,13 +98,14 @@ mutable struct Abstraction
     dfa_root::Symbol
     dfa_metavars::Vector{Symbol}
     dfa_symvars::Vector{Symbol}
+    dfa_choicevars::Vector{Symbol}
 end
 
 Base.show(io::IO, obj::Abstraction) = pretty_show(io, obj; indent=false)
 
 Base.copy(abstraction::Abstraction) = Abstraction(
     copy(abstraction.body), abstraction.arity, abstraction.sym_arity, abstraction.choice_arity,
-    abstraction.dfa_root, copy(abstraction.dfa_metavars), copy(abstraction.dfa_symvars))
+    abstraction.dfa_root, copy(abstraction.dfa_metavars), copy(abstraction.dfa_symvars), copy(abstraction.dfa_choicevars))
 
 Base.@kwdef mutable struct Stats
     expansions::Int = 0
@@ -192,7 +194,7 @@ mutable struct SearchState{M}
     past_expansions::Vector{PossibleExpansion}
 
     function SearchState(corpus, config)
-        abstraction = Abstraction(new_hole(nothing), 0, 0, 0, :uninit_state, [], [])
+        abstraction = Abstraction(new_hole(nothing), 0, 0, 0, :uninit_state, [], [], [])
 
         typ = if config.match_sequences
             MatchPossibilities
@@ -223,11 +225,13 @@ function run_dfa!(expr, dfa, state)
     head = expr.children[1]
     @assert is_leaf(head)
 
-    # if head === :list
-
-    # end
-
     child_states = dfa[state][head.leaf]
+
+    if head.leaf === SYM_SEQ_HEAD
+        @assert length(child_states) == 1
+        expr.metadata.seq_element_dfa_state = child_states[1]
+    end
+
     # if length(child_states) != length(expr.children) - 1 # a state for everything except the head
     #     @show head
     #     @show child_states
@@ -280,6 +284,7 @@ function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vect
                 size(expr, config.size_by_symbol),
                 num_nodes(expr),
                 struct_hash(expr),
+                :uninit_state,
                 :uninit_state,
                 id
             )
@@ -518,7 +523,7 @@ function add_abstraction_to_dfa(dfa, symbol, abstraction)
         return nothing
     end
     dfa = deepcopy(dfa)
-    symbols = vcat(abstraction.dfa_metavars, abstraction.dfa_symvars)
+    symbols = vcat(abstraction.dfa_metavars, abstraction.dfa_symvars, abstraction.dfa_choicevars)
     dfa[abstraction.dfa_root][symbol] = symbols
     dfa
 end
