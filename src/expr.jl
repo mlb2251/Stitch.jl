@@ -54,6 +54,8 @@ mutable struct Match
     holes_stack::Vector{Hole{SExpr}}
     # history of the local utilities of the match
     local_utility_stack::Vector{Float32}
+    # group identifiers
+    group_ids_stack::Vector{Int64}
 
 
     # Local utility: utility if you rewrite at this location specifically. Match specific
@@ -95,6 +97,7 @@ fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
     Hole{SExpr}[expr],
     Hole{SExpr}[],
     Float32[],
+    Int64[],
     local_utility_init(config),
     Symbol[],
     Dict{Symbol,Int}(),
@@ -108,6 +111,7 @@ copy_match(m::Match) = Match(
     copy(m.holes),
     copy(m.holes_stack),
     copy(m.local_utility_stack),
+    copy(m.group_ids_stack),
     m.local_utility,
     copy(m.sym_of_idx),
     copy(m.idx_of_sym),

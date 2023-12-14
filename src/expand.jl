@@ -471,6 +471,27 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
                 append!(updated_matches, extras)
             end
         end
+        if typeof(expansion) === SequenceTerminatorExpansion
+            if length(updated_matches) > 1
+                was_updated = false
+                best_match_per_id = Dict{Int64,Match}()
+                for m in updated_matches
+                    id = m.group_ids_stack[end]
+                    if haskey(best_match_per_id, id)
+                        was_updated = true
+                        if best_match_per_id[id].local_utility < m.local_utility
+                            best_match_per_id[id] = m
+                        end
+                    else
+                        best_match_per_id[id] = m
+                    end
+                end
+                if was_updated
+                    match_poss_update = true
+                    updated_matches = [v for (_, v) in best_match_per_id]
+                end
+            end
+        end
         if match_poss_update
             if !whole_list_update
                 whole_list_update = true
@@ -623,6 +644,7 @@ function expand_match!(expansion::SequenceExpansion, match)::Nothing
     push!(match.holes_stack, hole)
     # add a hole representing the remaining sequence
     push!(match.holes, RemainingSequenceHole(hole, 1))
+    push!(match.group_ids_stack, rand(0:(1<<63)-1))
     return nothing
 end
 
@@ -845,6 +867,8 @@ function unexpand_match!(expansion::SequenceExpansion, match)
     @assert typeof(sequence_hole) == RemainingSequenceHole
     @assert sequence_hole.num_consumed == 1
     @assert sequence_hole.root_node === original_hole
+
+    pop!(match.group_ids_stack)
 end
 
 function remove_inserted_before_sequence_hole!(check_fn, hole, holes)
