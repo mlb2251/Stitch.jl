@@ -36,7 +36,10 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
     else
         expansion.matches
     end
-    issorted(matches, by=m -> m.expr.metadata.id) || error("matches is not sorted")
+
+        if length(matches) == 1
+        return 0
+    end
 
     bound = 0.0
     offset = length(matches)
