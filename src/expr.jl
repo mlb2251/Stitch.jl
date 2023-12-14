@@ -24,6 +24,7 @@ mutable struct Metadata
     num_nodes::Int
     struct_hash::Int
     dfa_state::Symbol
+    seq_element_dfa_state::Symbol
     # postorder location of the underlying node in the corpus.
     id::Int
 end
@@ -66,17 +67,13 @@ mutable struct Match
     # metavariable for continuation
     continuation::Union{Nothing,SExpr}
 
-    Match(expr, id, config) = new(
-        expr,
-        Hole{SExpr}[],
-        Hole{SExpr}[expr],
-        SExpr[],
-        Float32[],
-        local_utility_init(config),
-        Symbol[],
-        Dict{Symbol,Int}(),
-        nothing
-    )
+    # choice vars
+    choice_var_captures::Dict{Int,Union{SExpr,Nothing}}
+end
+
+mutable struct MatchPossibilities
+    # represents the set of possible matches that could be made at a given location
+    alternatives::Vector{Match}
 end
 
 const TreeNodeHole = SExpr
@@ -85,6 +82,45 @@ struct RemainingSequenceHole <: Hole{SExpr}
     root_node::SExpr
     num_consumed::Int
 end
+
+fresh_match_possibilities(::Type{MatchPossibilities}, expr, id, config) = MatchPossibilities(
+    [
+        fresh_match_possibilities(Match, expr, id, config)
+    ]
+)
+
+fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
+    expr,
+    SExpr[],
+    Hole{SExpr}[expr],
+    Hole{SExpr}[],
+    Float32[],
+    local_utility_init(config),
+    Symbol[],
+    Dict{Symbol,Int}(),
+    nothing,
+    Dict{Int,Union{SExpr,Nothing}}(),
+)
+
+copy_match(m::Match) = Match(
+    m.expr,
+    copy(m.unique_args),
+    copy(m.holes),
+    copy(m.holes_stack),
+    copy(m.local_utility_stack),
+    m.local_utility,
+    copy(m.sym_of_idx),
+    copy(m.idx_of_sym),
+    m.continuation,
+    copy(m.choice_var_captures),
+)
+
+
+expr_of(m::Match) = m.expr
+expr_of(m::MatchPossibilities) = m.alternatives[1].expr
+
+max_local_utility(m::Match) = m.local_utility
+max_local_utility(m::MatchPossibilities) = maximum([match.local_utility for match in m.alternatives])
 
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
     expr = SExpr(nothing, children, parent, nothing)
@@ -161,6 +197,7 @@ end
 const SYM_HOLE = Symbol("??")
 const SYM_SEQ_HOLE = Symbol("...")
 const SYM_SEQ_HEAD = Symbol("/seq")
+const SYM_CHOICE_VAR_NOTHING = Symbol("/nothing")
 new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
 new_seq_hole(parent_and_argidx) = sexpr_leaf(SYM_SEQ_HOLE; parent=parent_and_argidx)
 

@@ -1,0 +1,21 @@
+[
+    {
+        "args": {
+            "match_sequences": true
+        },
+        "abstractions": [
+            [
+                0,
+                0,
+                "(+ (/seq ?1 b b b b b) (/seq ?0 a a a a))",
+                "uninit_state",
+                [],
+                []
+            ]
+        ],
+        "programs": [
+            "(fn_1 /nothing b)",
+            "(fn_1 a /nothing)"
+        ]
+    }
+]
