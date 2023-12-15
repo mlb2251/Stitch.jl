@@ -59,10 +59,16 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         # in a child of the previous match, so we dont need to run a binary search since
         # this is what it would return anyways
         offset -= 1
-        offset == 0 && break
+        if offset == 0
+            # unsafe to update max_each in general since we can only update it when we
+            # know that this is independent of all other matches and thus, it can
+            # be treated as the "canonical" example of a match that isn't abstracted away
+            # so we update in the unique case where there's no children
+            max_each = max(max_each, size_at)
+            break
+        end
         if matches[offset].expr.metadata.id <= next_id
-            # safe to update max_each here since we know that this is independent of all other matches
-            # thus, it can be treated as the "canonical" example of a match that isn't abstracted away
+            # see above comment about why we can update max_each here
             max_each = max(max_each, size_at)
             continue
         end
