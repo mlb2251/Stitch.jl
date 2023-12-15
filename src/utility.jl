@@ -41,11 +41,13 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         return 0
     end
 
-    bound = 0.0
+    summation = 0.0
+    max_each = 0
     offset = length(matches)
 
     while true
-        bound += matches[offset].expr.metadata.size
+        size_at = matches[offset].expr.metadata.size
+        summation += size_at
         # since matches is sorted in child-first order, children are always to the left of parents. We
         # can use .num_nodes to see how many children a match has (how big the subtree is) and skip over that many
         # things.
@@ -58,7 +60,12 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         # this is what it would return anyways
         offset -= 1
         offset == 0 && break
-        matches[offset].expr.metadata.id <= next_id && continue
+        if matches[offset].expr.metadata.id <= next_id
+            # safe to update max_each here since we know that this is independent of all other matches
+            # thus, it can be treated as the "canonical" example of a match that isn't abstracted away
+            max_each = max(max_each, size_at)
+            continue
+        end
 
         # rarer case: run binary search to find the rightmost non-child of the previous match
         offset = searchsortedlast(
@@ -72,7 +79,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         )
         offset == 0 && break
     end
-    bound
+    summation - max_each
 end
 
 function delta_local_utility(config, match, expansion::PossibleExpansion{SymbolExpansion})
