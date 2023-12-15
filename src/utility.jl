@@ -50,7 +50,8 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
     offset = length(matches)
 
     while true
-        bound += expr_of(matches[offset]).metadata.size
+        size_at = expr_of(matches[offset]).metadata.size
+        summation += size_at
         # since matches is sorted in child-first order, children are always to the left of parents. We
         # can use .num_nodes to see how many children a match has (how big the subtree is) and skip over that many
         # things.
