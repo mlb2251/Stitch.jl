@@ -909,7 +909,7 @@ end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
 function strictly_dominated(search_state)
-    redundant_arg_elim(search_state) || arg_capture(search_state)
+    redundant_arg_elim(search_state) || arg_capture(search_state) || choice_var_homogenous(search_state)
 end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
@@ -955,6 +955,32 @@ end
 function arg_capture(search_state::SearchState{MatchPossibilities}, i)
     first_match = search_state.matches[1].alternatives[1].unique_args[i].metadata.struct_hash
     if all(match_poss -> all(match -> match.unique_args[i].metadata.struct_hash == first_match, match_poss.alternatives), search_state.matches)
+        return true
+    end
+    return false
+end
+
+function choice_var_homogenous(search_state)
+    search_state.config.no_opt_redundant_args && return false
+    for i in 0:search_state.abstraction.choice_arity - 1
+        if choice_var_homogenous(search_state, i)
+            return true
+        end
+    end
+    false
+end
+
+function choice_var_homogenous(search_state::SearchState{Match}, i)
+    first_match = search_state.matches[1].choice_var_captures[i] === nothing
+    if all(match -> (match.choice_var_captures[i] === nothing) == first_match, search_state.matches)
+        return true
+    end
+    return false
+end
+
+function choice_var_homogenous(search_state::SearchState{MatchPossibilities}, i)
+    first_match = search_state.matches[1].alternatives[1].choice_var_captures[i] === nothing
+    if all(match_poss -> all(match -> (match.choice_var_captures[i] === nothing) == first_match, match_poss.alternatives), search_state.matches)
         return true
     end
     return false
