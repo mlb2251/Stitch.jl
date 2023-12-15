@@ -382,7 +382,7 @@ function stitch_search(corpus, config)
         end
 
         # print out body, num matches, bound
-        printstyled("EXPAND: ", search_state.abstraction.body, " with ", length(search_state.matches), " matches and bound ", b, "\n", color=:blue)
+        # printstyled("EXPAND: ", search_state.abstraction.body, " with ", length(search_state.matches), " matches and bound ", b, "\n", color=:blue)
 
         # do the expansion
         expand_general!(search_state, expansion)
