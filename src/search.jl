@@ -25,12 +25,12 @@ end
 
 abstract type Expansion end
 
-struct PossibleExpansion{T<:Expansion}
-    matches::Vector{Match}
+struct PossibleExpansion{M, T<:Expansion}
+    matches::Vector{M}
     data::T
 
-    function PossibleExpansion(matches, data::T) where {T}
-        new{T}(matches, data)
+    function PossibleExpansion(matches::Vector{M}, data::T) where {M, T}
+        new{M, T}(matches, data)
     end
 end
 
@@ -156,7 +156,7 @@ Base.@kwdef mutable struct PlotData
     pruned_bound::Vector{Tuple{Int,Float32}} = [(0, 0.0)]
 end
 
-mutable struct SearchState
+mutable struct SearchState{M}
     # config
     config::SearchConfig
     corpus::Corpus
@@ -172,28 +172,35 @@ mutable struct SearchState
     abstraction::Abstraction
     holes::Vector{SExpr}
     # hole_dfa_states::Vector{Symbol}
-    matches::Vector{Match}
+    matches::Vector{M}
     expansions::Vector{PossibleExpansion}
 
     # backtracking data
     holes_stack::Vector{SExpr}
     # hole_dfa_states_stack::Vector{Symbol}
     expansions_stack::Vector{Vector{PossibleExpansion}}
-    matches_stack::Vector{Vector{Match}}
+    matches_stack::Vector{Vector{M}}
     past_expansions::Vector{PossibleExpansion}
 
     function SearchState(corpus, config)
         abstraction = Abstraction(new_hole(nothing), 0, 0, :uninit_state, [], [])
-        matches = init_all_corpus_matches(corpus, config)
+
+        typ = if config.match_sequences
+            MatchPossibilities
+        else
+            Match
+        end
+
+        matches = init_all_corpus_matches(typ, corpus, config)
         if !isnothing(config.dfa)
             for program in corpus.programs
                 run_dfa!(program.expr, config.dfa, :M)
             end
         end
-        all_nodes = map(m -> m.expr, matches)
+        all_nodes = map(expr_of, matches)
         best_util = Float32(0)
         best_abstraction = nothing
-        new(config, corpus, all_nodes,
+        new{typ}(config, corpus, all_nodes,
             PlotData(), best_util, best_abstraction, Stats(),
             abstraction, [abstraction.body], matches, PossibleExpansion[],
             SExpr[], PossibleExpansion[], Match[], PossibleExpansion[])
@@ -253,12 +260,12 @@ Initializes a Match at every subtree in the corpus
 Note any filtering to the initial match set should NOT be done here because
 downstream we need this for SearchState.all_nodes
 """
-function init_all_corpus_matches(corpus, config::SearchConfig)::Vector{Match}
-    matches = Match[]
+function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vector{M} where M
+    matches = M[]
     id = 1
     for program in corpus.programs
         for expr in subexpressions(program.expr) # child-first traversal (postorder)
-            match = Match(expr, id, config)
+            match = fresh_match_possibilities(t, expr, id, config)
             expr.metadata = Metadata(
                 program,
                 size(expr, config.size_by_symbol),
@@ -397,7 +404,7 @@ function stitch_search(corpus, config)
             !verbose || println("completed: ", search_state.abstraction.body, " with utility ", bottom_up_utility(search_state), " used in $(length(search_state.matches)) places")
 
             # cheaply upper bounded version of util that uses no conflict resolution
-            approx_util = sum(match -> max(match.local_utility, 0.0), search_state.matches)
+            approx_util = sum(match -> max(max_local_utility(match), 0.0), search_state.matches)
 
             plot && push!(plot_data.completed_approx_util, (search_state.stats.expansions, approx_util))
 
@@ -488,7 +495,7 @@ mutable struct SearchResult
 end
 
 function root_dfa_state(search_res)
-    dfa_states = [m.expr.metadata.dfa_state for m in search_res.matches]
+    dfa_states = [expr_of(m).metadata.dfa_state for m in search_res.matches]
     dfa_states = unique(dfa_states)
     if length(dfa_states) > 1
         error("multiple dfa states for a single abstraction")

@@ -65,18 +65,11 @@ mutable struct Match
 
     # metavariable for continuation
     continuation::Union{Nothing,SExpr}
+end
 
-    Match(expr, id, config) = new(
-        expr,
-        Hole{SExpr}[],
-        Hole{SExpr}[expr],
-        SExpr[],
-        Float32[],
-        local_utility_init(config),
-        Symbol[],
-        Dict{Symbol,Int}(),
-        nothing
-    )
+mutable struct MatchPossibilities
+    # represents the set of possible matches that could be made at a given location
+    alternatives::Vector{Match}
 end
 
 const TreeNodeHole = SExpr
@@ -85,6 +78,43 @@ struct RemainingSequenceHole <: Hole{SExpr}
     root_node::SExpr
     num_consumed::Int
 end
+
+fresh_match_possibilities(::Type{MatchPossibilities}, expr, id, config) = MatchPossibilities(
+    [
+        fresh_match_possibilities(Match, expr, id, config)
+    ]
+)
+
+fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
+    expr,
+    SExpr[],
+    Hole{SExpr}[expr],
+    Hole{SExpr}[],
+    Float32[],
+    local_utility_init(config),
+    Symbol[],
+    Dict{Symbol,Int}(),
+    nothing,
+)
+
+copy_match(m::Match) = Match(
+    m.expr,
+    copy(m.unique_args),
+    copy(m.holes),
+    copy(m.holes_stack),
+    copy(m.local_utility_stack),
+    m.local_utility,
+    copy(m.sym_of_idx),
+    copy(m.idx_of_sym),
+    m.continuation,
+)
+
+
+expr_of(m::Match) = m.expr
+expr_of(m::MatchPossibilities) = m.alternatives[1].expr
+
+max_local_utility(m::Match) = m.local_utility
+max_local_utility(m::MatchPossibilities) = maximum([match.local_utility for match in m.alternatives])
 
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
     expr = SExpr(nothing, children, parent, nothing)

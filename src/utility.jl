@@ -34,14 +34,14 @@ function id_of_next_match_to_consider(m)
     # this implicitly assumes that we will skip over all children of a match. This is true for the current
     # search algorithm, but may not be true in the future, if we, e.g., want to exclude "tails" of sequence
     # matches from the overlap calculation.
-    m.expr.metadata.id - m.expr.metadata.num_nodes
+    expr_of(m).metadata.id - expr_of(m).metadata.num_nodes
 end
 
 function upper_bound_on_match_size(m)::Float32
     # an upper bound on the size of the match region. This needs to be an upper bound on the size of the
     # region skipped when running `id_of_next_match_to_consider`.
 
-    m.expr.metadata.size
+    expr_of(m).metadata.size
 end
 
 """
@@ -58,7 +58,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         return 0
     end
 
-    issorted(matches, by=m -> m.expr.metadata.id) || error("matches is not sorted")
+    issorted(matches, by=m -> expr_of(m).metadata.id) || error("matches is not sorted")
 
     summation = 0.0
     max_each = 0
@@ -86,7 +86,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
             max_each = max(max_each, size_at)
             break
         end
-        if matches[offset].expr.metadata.id <= next_id
+        if expr_of(matches[offset]).metadata.id <= next_id
             # see above comment about why we can update max_each here
             max_each = max(max_each, size_at)
             continue
@@ -99,7 +99,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
             by=m -> if typeof(m) === Int64
                 m
             else
-                m.expr.metadata.id
+                expr_of(m).metadata.id
             end
         )
         offset == 0 && break
@@ -107,10 +107,10 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
     summation - max_each
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SymbolExpansion})
+function delta_local_utility(config, match, expansion::SymbolExpansion)
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
     # node from the corpus.
-    if expansion.data.fresh
+    if expansion.fresh
         return config.application_utility_symvar
     else
         return 1
@@ -118,22 +118,22 @@ function delta_local_utility(config, match, expansion::PossibleExpansion{SymbolE
 end
 
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SyntacticLeafExpansion})
+function delta_local_utility(config, match, expansion::SyntacticLeafExpansion)
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    symbol_size(expansion.data.leaf, config.size_by_symbol)
+    symbol_size(expansion.leaf, config.size_by_symbol)
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SyntacticNodeExpansion})
+function delta_local_utility(config, match, expansion::SyntacticNodeExpansion)
     # let it be zero?
     # match.local_utility += 0.;
-    if expansion.data.head !== :no_expand_head
-        return symbol_size(expansion.data.head, config.size_by_symbol)
+    if expansion.head !== :no_expand_head
+        return symbol_size(expansion.head, config.size_by_symbol)
     end
     return 0
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{AbstractionExpansion})
-    if expansion.data.fresh
+function delta_local_utility(config, match, expansion::AbstractionExpansion)
+    if expansion.fresh
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility second term; cost_app * arity)
         # note: commented out with switch away from application penalty
         return config.application_utility_metavar
@@ -145,19 +145,19 @@ function delta_local_utility(config, match, expansion::PossibleExpansion{Abstrac
     end
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{ContinuationExpansion})
+function delta_local_utility(config, match, expansion::ContinuationExpansion)
     0
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceExpansion})
+function delta_local_utility(config, match, expansion::SequenceExpansion)
     symbol_size(SYM_SEQ_HEAD, config.size_by_symbol)
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceElementExpansion})
+function delta_local_utility(config, match, expansion::SequenceElementExpansion)
     0
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceTerminatorExpansion})
+function delta_local_utility(config, match, expansion::SequenceTerminatorExpansion)
     0
 end
 
