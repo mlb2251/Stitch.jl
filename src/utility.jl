@@ -27,6 +27,23 @@ function upper_bound_sum_subtree_sizes(search_state, expansion=nothing)::Float32
     sum(m -> m.expr.metadata.size, matches)
 end
 
+function id_of_next_match_to_consider(m)
+    # since matches is sorted in child-first order, children are always to the left of parents. We
+    # can use .num_nodes to see how many children a match has (how big the subtree is) and skip over that many
+    # things.
+    # this implicitly assumes that we will skip over all children of a match. This is true for the current
+    # search algorithm, but may not be true in the future, if we, e.g., want to exclude "tails" of sequence
+    # matches from the overlap calculation.
+    m.expr.metadata.id - m.expr.metadata.num_nodes
+end
+
+function upper_bound_on_match_size(m)::Float32
+    # an upper bound on the size of the match region. This needs to be an upper bound on the size of the
+    # region skipped when running `id_of_next_match_to_consider`.
+
+    m.expr.metadata.size
+end
+
 """
 Same as summing over sizes of subtrees, but not doublecounting matches within children.
 """
@@ -48,12 +65,12 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
     offset = length(matches)
 
     while true
-        size_at = matches[offset].expr.metadata.size
+        size_at = upper_bound_on_match_size(matches[offset])
         summation += size_at
         # since matches is sorted in child-first order, children are always to the left of parents. We
         # can use .num_nodes to see how many children a match has (how big the subtree is) and skip over that many
         # things.
-        next_id = matches[offset].expr.metadata.id - matches[offset].expr.metadata.num_nodes
+        next_id = id_of_next_match_to_consider(matches[offset])
         next_id == 0 && break
         search_state.all_nodes[next_id].metadata.id == next_id || error("all_nodes is not in the right order")
 
