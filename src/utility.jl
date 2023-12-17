@@ -41,6 +41,8 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         return 0
     end
 
+    issorted(matches, by=m -> m.expr.metadata.id) || error("matches is not sorted")
+
     summation = 0.0
     max_each = 0
     offset = length(matches)
