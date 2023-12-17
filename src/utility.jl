@@ -45,11 +45,13 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
 
     issorted(matches, by=m -> expr_of(m).metadata.id) || error("matches is not sorted")
 
-    bound = 0.0
+    summation = 0.0
+    max_each = 0
     offset = length(matches)
 
     while true
-        bound += expr_of(matches[offset]).metadata.size
+        size_at = expr_of(matches[offset]).metadata.size
+        summation += size_at
         # since matches is sorted in child-first order, children are always to the left of parents. We
         # can use .num_nodes to see how many children a match has (how big the subtree is) and skip over that many
         # things.
@@ -61,8 +63,19 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         # in a child of the previous match, so we dont need to run a binary search since
         # this is what it would return anyways
         offset -= 1
-        offset == 0 && break
-        expr_of(matches[offset]).metadata.id <= next_id && continue
+        if offset == 0
+            # unsafe to update max_each in general since we can only update it when we
+            # know that this is independent of all other matches and thus, it can
+            # be treated as the "canonical" example of a match that isn't abstracted away
+            # so we update in the unique case where there's no children
+            max_each = max(max_each, size_at)
+            break
+        end
+        if expr_of(matches[offset]).metadata.id <= next_id
+            # see above comment about why we can update max_each here
+            max_each = max(max_each, size_at)
+            continue
+        end
 
         # rarer case: run binary search to find the rightmost non-child of the previous match
         offset = searchsortedlast(
@@ -76,7 +89,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         )
         offset == 0 && break
     end
-    bound# - size(search_state.abstraction.body, search_state.config.size_by_symbol)
+    summation - max_each
 end
 
 function delta_local_utility(config, match, expansion::SymbolExpansion)
