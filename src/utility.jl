@@ -24,6 +24,11 @@ function upper_bound_sum_subtree_sizes(search_state, expansion=nothing)::Float32
     else
         expansion.matches
     end
+
+    if !search_state.config.no_opt_arg_capture && length(matches) == 1
+        return 0
+    end
+
     sum(m -> m.expr.metadata.size, matches)
 end
 
