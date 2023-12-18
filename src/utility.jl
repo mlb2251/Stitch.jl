@@ -90,6 +90,29 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
     summation - max_each
 end
 
+"""
+compute a bound based on an upper bound that takes into account the fact that variables
+    aren't counted. Specifically, for each one, it is a sum of the size of the abstraction
+    and the size of the remaining holes.
+"""
+function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
+    matches = if isnothing(expansion)
+        search_state.matches
+    else
+        expansion.matches
+    end
+
+    summation = 0.0
+    max_each = 0
+    for match in matches
+        size_at = match.expr.metadata.size
+        summation += size_at
+        max_each = max(max_each, size_at)
+    end
+    summation - max_each
+end
+
+
 function delta_local_utility(config, match, expansion::PossibleExpansion{SymbolExpansion})
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
     # node from the corpus.
