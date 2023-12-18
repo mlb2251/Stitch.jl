@@ -106,16 +106,7 @@ function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
         return 0
     end
 
-    summation = 0.0
-    max_each = 0
-    # println(search_state.abstraction.body)
-    for match in matches
-        # println(match.local_utility)
-        size_at = match.local_utility + holes_size(match)
-        summation += size_at
-        max_each = max(max_each, size_at)
-    end
-    summation - max_each
+    sum(match -> match.local_utility + holes_size(match), matches, init=0.0)
 end
 
 holes_size(m::Match) = sum(size_hole, m.holes, init=0.0)
