@@ -37,7 +37,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         expansion.matches
     end
 
-    if length(matches) == 1
+    if search_state.config.no_opt_arg_capture || length(matches) == 1
         return 0
     end
 
