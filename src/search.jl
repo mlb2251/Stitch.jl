@@ -60,6 +60,7 @@ end
 Base.show(io::IO, obj::ContinuationExpansion) = pretty_show(io, obj; indent=false)
 
 struct SequenceExpansion <: Expansion
+    is_root::Bool
 end
 
 Base.show(io::IO, obj::SequenceExpansion) = pretty_show(io, obj; indent=false)
@@ -77,6 +78,7 @@ end
 Base.show(io::IO, obj::SequenceChoiceVarExpansion) = pretty_show(io, obj; indent=false)
 
 struct SequenceTerminatorExpansion <: Expansion
+    is_subseq::Bool
 end
 
 Base.show(io::IO, obj::SequenceTerminatorExpansion) = pretty_show(io, obj; indent=false)

@@ -108,6 +108,9 @@ end
 
 function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match) :: Tuple{Float64, Match}
     args = vcat(m.unique_args, [v for (_, v) in m.choice_var_captures if !isnothing(v)])
+    if m.start_items !== nothing
+        args = vcat(args, expr_of(m).children[1:m.start_items])
+    end
     util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, args, init=0.0)
     return util, m
 end
@@ -146,7 +149,24 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
         if !isnothing(m.continuation)
             push!(children, rewrite_inner(m.continuation, search_state, rcis))
         end
-        return sexpr_node(children)
+        if m.start_items !== nothing || m.end_items !== nothing
+            sequence = SExpr[sexpr_leaf(SYM_SEQ_HEAD)]
+            if m.start_items !== nothing
+                for i in 2:m.start_items
+                    push!(sequence, rewrite_inner(expr.children[i], search_state, rcis))
+                end
+            end
+            push!(sequence, sexpr_node([sexpr_leaf(SYM_SPLICE), sexpr_node(children)]))
+            if m.end_items !== nothing
+                for i in m.end_items+1:length(expr.children)
+                    push!(sequence, rewrite_inner(expr.children[i], search_state, rcis))
+                end
+            end
+            out = sexpr_node(sequence)
+            return out
+        else
+            return sexpr_node(children)
+        end
     else
         # don't rewrite - just recurse
         return sexpr_node([rewrite_inner(child, search_state, rcis) for child in expr.children])
