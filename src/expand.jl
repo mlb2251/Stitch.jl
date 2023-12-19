@@ -1,4 +1,4 @@
-
+using Random
 
 function possible_expansions!(search_state)
     isempty(search_state.expansions) || error("expansions should be empty")
@@ -12,6 +12,11 @@ function possible_expansions!(search_state)
         expansions!(SequenceElementExpansion, search_state)
         expansions!(SequenceTerminatorExpansion, search_state)
         expansions!(SequenceChoiceVarExpansion, search_state)
+    end
+
+    if search_state.config.shuffle_expansions_seed !== nothing
+        rng = MersenneTwister(search_state.config.shuffle_expansions_seed)
+        shuffle!(rng, search_state.expansions)
     end
 
     # sort!(search_state.expansions, by=e -> length(e.matches)*e.matches[1].local_utility)

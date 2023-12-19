@@ -152,6 +152,7 @@ Base.@kwdef mutable struct SearchConfig
 
     # testing
     strict = false
+    shuffle_expansions_seed:: Union{Nothing, Int64} = nothing
 end
 
 
