@@ -98,10 +98,8 @@ function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
         return 0
     end
 
-    sum(match -> match.local_utility + holes_size(match), matches, init=0.0)
+    sum(match -> match.local_utility + match.holes_size, matches, init=0.0)
 end
-
-holes_size(m::Match) = sum(size_hole, m.holes, init=0.0)
 
 function delta_local_utility(config, match, expansion::PossibleExpansion{SymbolExpansion})
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)

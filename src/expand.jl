@@ -369,6 +369,7 @@ end
 
 function expand_match!(expansion::PossibleExpansion{SyntacticLeafExpansion}, match)
     hole = pop!(match.holes)
+    match.holes_size -= hole.metadata.size
     push!(match.holes_stack, hole)
     @assert is_leaf(hole)
 end
@@ -411,6 +412,7 @@ function expand_match!(expansion::PossibleExpansion{SyntacticNodeExpansion}, mat
     # add all the children of the hole as new holes (except possibly the head)
     if expansion.data.head !== :no_expand_head
         append!(match.holes, hole.children[2:end])
+        match.holes_size -= hole.children[1].metadata.size
     else
         append!(match.holes, hole.children)
     end
@@ -428,6 +430,7 @@ end
 
 function expand_match!(expansion::PossibleExpansion{AbstractionExpansion}, match)
     hole = pop!(match.holes)
+    match.holes_size -= hole.metadata.size
     push!(match.holes_stack, hole)
     if expansion.data.fresh
         push!(match.unique_args, hole) # move the hole to be an argument
@@ -447,6 +450,7 @@ end
 function expand_match!(expansion::PossibleExpansion{SymbolExpansion}, match)
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
+    match.holes_size -= hole.metadata.size
     push!(match.holes_stack, hole)
 
     @assert string(hole.leaf)[1] == '&'
@@ -467,6 +471,7 @@ end
 function expand_match!(expansion::PossibleExpansion{ContinuationExpansion}, match)
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
+    match.holes_size -= hole.metadata.size
     push!(match.holes_stack, hole)
     @assert isnothing(match.continuation)
     match.continuation = hole
@@ -491,6 +496,7 @@ function expand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
     push!(match.holes_stack, hole)
     # add a hole representing the remaining sequence
     push!(match.holes, RemainingSequenceHole(hole, 1))
+    match.holes_size -= hole.children[1].metadata.size # remove the /seq node
 end
 
 function expand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansion}, hole, holes, abstraction)
@@ -518,6 +524,8 @@ function expand_match!(expansion::PossibleExpansion{SequenceElementExpansion}, m
     new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1)
     push!(match.holes, new_sequence_hole)
     push!(match.holes, new_sequence_hole.root_node.children[new_sequence_hole.num_consumed])
+
+    # this does not affect holes_size since we are just replacing a ... with a ?? and a ...
 end
 
 function expand_abstraction!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, hole, holes, abstraction)
@@ -531,6 +539,8 @@ function expand_match!(expansion::PossibleExpansion{SequenceTerminatorExpansion}
     @assert typeof(last_hole) == RemainingSequenceHole
     @assert last_hole.num_consumed == length(last_hole.root_node.children)
     push!(match.holes_stack, last_hole)
+
+    # this does not affect holes_size since we are just removing a ... that currently matches nothing
 end
 
 function unexpand!(search_state, expansion, hole)
@@ -547,6 +557,8 @@ end
 function unexpand_match!(expansion::PossibleExpansion{SyntacticLeafExpansion}, match)
     hole = pop!(match.holes_stack)
     push!(match.holes, hole)
+
+    match.holes_size += hole.metadata.size
 end
 
 function unexpand_abstraction!(expansion::PossibleExpansion{SyntacticNodeExpansion}, hole, holes, abstraction)
@@ -575,6 +587,10 @@ function unexpand_match!(expansion::PossibleExpansion{SyntacticNodeExpansion}, m
     hole = pop!(match.holes_stack)
     length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
     push!(match.holes, hole)
+
+    if expansion.data.head !== :no_expand_head
+        match.holes_size += hole.children[1].metadata.size
+    end
 end
 
 function unexpand_abstraction!(expansion::PossibleExpansion{AbstractionExpansion}, hole, holes, abstraction)
@@ -591,6 +607,8 @@ function unexpand_match!(expansion::PossibleExpansion{AbstractionExpansion}, mat
     if expansion.data.fresh
         pop!(match.unique_args) === hole || error("expected same hole")
     end
+
+    match.holes_size += hole.metadata.size
 end
 
 function unexpand_abstraction!(expansion::PossibleExpansion{SymbolExpansion}, hole, holes, abstraction)
@@ -610,6 +628,8 @@ function unexpand_match!(expansion::PossibleExpansion{SymbolExpansion}, match)
         pop!(match.sym_of_idx)
         delete!(match.idx_of_sym, hole.leaf)
     end
+
+    match.holes_size += hole.metadata.size
 end
 
 function unexpand_abstraction!(expansion::PossibleExpansion{ContinuationExpansion}, hole, holes, abstraction)
@@ -621,6 +641,8 @@ function unexpand_match!(expansion::PossibleExpansion{ContinuationExpansion}, ma
     push!(match.holes, hole)
     @assert match.continuation === hole
     match.continuation = nothing
+
+    match.holes_size += hole.metadata.size
 end
 
 function unexpand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, hole, holes, abstraction)
@@ -645,6 +667,9 @@ function unexpand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
     @assert typeof(sequence_hole) == RemainingSequenceHole
     @assert sequence_hole.num_consumed == 1
     @assert sequence_hole.root_node === original_hole
+
+    # put back the /seq node
+    match.holes_size += original_hole.children[1].metadata.size
 end
 
 function unexpand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansion}, hole, holes, abstraction)
@@ -671,6 +696,8 @@ function unexpand_match!(expansion::PossibleExpansion{SequenceElementExpansion},
     typeof(pop!(match.holes)) == RemainingSequenceHole || error("expected RemainingSequenceHole")
     # put the original ... hole back on the stack
     push!(match.holes, pop!(match.holes_stack))
+
+    # doesn't affect holes_size since we are just replacing a ?? and ... with a ...
 end
 
 function unexpand_abstraction!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, hole, holes, abstraction)
@@ -681,6 +708,8 @@ end
 
 function unexpand_match!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, match)
     push!(match.holes, pop!(match.holes_stack))
+
+    # doesn't affect holes_size since we are just adding a ... that currently matches nothing
 end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
