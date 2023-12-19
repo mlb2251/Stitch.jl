@@ -1,0 +1,21 @@
+[
+    {
+        "args": {},
+        "abstractions": [
+            [
+                0,
+                1,
+                "(+ %1 (+ %1 (+ %1 (+ %1 2))))",
+                "uninit_state",
+                [],
+                [
+                    "uninit_state"
+                ]
+            ]
+        ],
+        "programs": [
+            "(fn_1 &x:0)",
+            "(fn_1 &y:0)"
+        ]
+    }
+]
