@@ -15,6 +15,7 @@ end
 
 function proc_args(args)
     args = Dict{Symbol,Any}(Symbol(k) => v for (k, v) in args)
+    shuf = nothing
     if :dfa in keys(args)
         args[:dfa] = load_dfa(args[:dfa])
     end
@@ -23,7 +24,22 @@ function proc_args(args)
         sbs = Dict{Symbol,Float32}(Symbol(k) => v for (k, v) in sbs)
         args[:size_by_symbol] = sbs
     end
-    args
+    if :shuf in keys(args)
+        # delete the shuf key so it doesn't get passed to the search
+        shuf = args[:shuf]
+        delete!(args, :shuf)
+    end
+    args, shuf
+end
+
+function compute(corpus, kwargs, kwargs_specific; seed=nothing)
+    abstractions, compressed_corpus = compress(corpus; strict=true, shuffle_expansions_seed=seed, kwargs_specific...)
+    abstractions = [abstraction_to_list(x) for x in abstractions]
+    return Dict(
+        "args" => kwargs,
+        "abstractions" => abstractions,
+        "programs" => [string(x) for x in compressed_corpus.programs],
+    )
 end
 
 function integrate(in_file, out_file)
@@ -40,13 +56,15 @@ function integrate(in_file, out_file)
     out = []
     for kwargs in argument_sets
         println(in_file, " ", kwargs)
-        abstractions, compressed_corpus = compress(corpus; strict=true, proc_args(kwargs)...)
-        abstractions = [abstraction_to_list(x) for x in abstractions]
-        out_per = Dict(
-            "args" => kwargs,
-            "abstractions" => abstractions,
-            "programs" => [string(x) for x in compressed_corpus.programs],
-        )
+        kwargs_specific, shuf = proc_args(kwargs)
+        out_per = compute(corpus, kwargs, kwargs_specific)
+        if !isnothing(shuf)
+            for seed in 1:shuf
+                println("seed ", seed)
+                out_shufd = compute(corpus, kwargs, kwargs_specific; seed=seed)
+                @test out_shufd == out_per
+            end
+        end
         push!(out, out_per)
     end
     if is_testing
