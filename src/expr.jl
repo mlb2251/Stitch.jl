@@ -89,9 +89,6 @@ struct RemainingSequenceHole <: Hole{SExpr}
     num_consumed::Int
 end
 
-size_hole(h::TreeNodeHole) = h.metadata.size
-size_hole(h::RemainingSequenceHole) = sum(x -> x.metadata.size, h.root_node.children[h.num_consumed+1:end], init=0.0)
-
 function sexpr_node(children::Vector{SExpr}; parent=nothing)
     expr = SExpr(nothing, children, parent, nothing)
     for (i, child) in enumerate(children)
