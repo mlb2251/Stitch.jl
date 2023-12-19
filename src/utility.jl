@@ -48,17 +48,15 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
 
     issorted(matches, by=m -> m.expr.metadata.id) || error("matches is not sorted")
 
-    summation = 0.0
-    max_each = 0
+    bound = 0.0
     offset = length(matches)
 
     while true
-        size_at = matches[offset].expr.metadata.size
-        summation += size_at
+        bound += matches[offset].expr.metadata.size
         # since matches is sorted in child-first order, children are always to the left of parents. We
         # can use .num_nodes to see how many children a match has (how big the subtree is) and skip over that many
         # things.
-        next_id = matches[offset].expr.metadata.id - 1
+        next_id = matches[offset].expr.metadata.id - matches[offset].expr.metadata.num_nodes
         next_id == 0 && break
         search_state.all_nodes[next_id].metadata.id == next_id || error("all_nodes is not in the right order")
 
@@ -66,19 +64,8 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         # in a child of the previous match, so we dont need to run a binary search since
         # this is what it would return anyways
         offset -= 1
-        if offset == 0
-            # unsafe to update max_each in general since we can only update it when we
-            # know that this is independent of all other matches and thus, it can
-            # be treated as the "canonical" example of a match that isn't abstracted away
-            # so we update in the unique case where there's no children
-            max_each = max(max_each, size_at)
-            break
-        end
-        if matches[offset].expr.metadata.id <= next_id
-            # see above comment about why we can update max_each here
-            max_each = max(max_each, size_at)
-            continue
-        end
+        offset == 0 && break
+        matches[offset].expr.metadata.id <= next_id && continue
 
         # rarer case: run binary search to find the rightmost non-child of the previous match
         offset = searchsortedlast(
@@ -92,7 +79,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         )
         offset == 0 && break
     end
-    summation - max_each
+    bound
 end
 
 function delta_local_utility(config, match, expansion::PossibleExpansion{SymbolExpansion})
