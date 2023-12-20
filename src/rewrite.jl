@@ -149,7 +149,7 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
         if !isnothing(m.continuation)
             push!(children, rewrite_inner(m.continuation, search_state, rcis))
         end
-        if m.start_items !== nothing || m.end_items !== nothing
+        if expr_of(m).metadata.id == expr.metadata.id && (m.start_items !== nothing || m.end_items !== nothing)
             sequence = SExpr[sexpr_leaf(SYM_SEQ_HEAD)]
             if m.start_items !== nothing
                 for i in 2:m.start_items

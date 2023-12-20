@@ -84,6 +84,7 @@ const TreeNodeHole = SExpr
 struct RemainingSequenceHole <: Hole{SExpr}
     root_node::SExpr
     num_consumed::Int
+    is_subseq::Bool
 end
 
 fresh_match_possibilities(::Type{MatchPossibilities}, expr, id, config) = MatchPossibilities(

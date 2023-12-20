@@ -308,19 +308,29 @@ function collect_expansions(
     config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
-    is_subseq = !is_leaf(abstraction.body) && abstraction.body.children[1].leaf === SYM_SUBSEQ_HEAD
+    matches_by_subseq = [Vector{Tuple{Int,Match}}(), Vector{Tuple{Int,Match}}()]
 
-    matches = filter(matches) do (_, match)
+    for (tag, match) in matches
         hole = match.holes[end]
         if typeof(hole) != RemainingSequenceHole
-            return false
+            continue
         end
-        is_subseq || hole.num_consumed == length(hole.root_node.children)
+        if hole.is_subseq
+            push!(matches_by_subseq[2], (tag, match))
+        else
+            if hole.num_consumed == length(hole.root_node.children)
+                push!(matches_by_subseq[1], (tag, match))
+            end
+        end
     end
-    if length(matches) == 0
-        return []
+    result = Tuple{Expansion,Vector{Tuple{Int,Match}}}[]
+    if length(matches_by_subseq[1]) > 0
+        push!(result, (SequenceTerminatorExpansion(false), matches_by_subseq[1]))
     end
-    return [(SequenceTerminatorExpansion(is_subseq), matches)]
+    if length(matches_by_subseq[2]) > 0
+        push!(result, (SequenceTerminatorExpansion(true), matches_by_subseq[2]))
+    end
+    return result
 end
 
 function collect_expansions(
@@ -641,7 +651,7 @@ function expand_match!(expansion::SequenceExpansion, match)::Union{Nothing,Vecto
         match_main = match
     end
     # add a hole representing the remaining sequence
-    push!(match_main.holes, RemainingSequenceHole(hole, 1))
+    push!(match_main.holes, RemainingSequenceHole(hole, 1, expansion.is_root))
     if !expansion.is_root
         return nothing
     end
@@ -650,7 +660,7 @@ function expand_match!(expansion::SequenceExpansion, match)::Union{Nothing,Vecto
     for start_consumes in 1:length(hole.children)-1
         # add a hole representing the remaining sequence
         match_copy = copy_match(match)
-        push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes + 1))
+        push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_root))
         match_copy.start_items = start_consumes + 1
         push!(matches, match_copy)
     end
@@ -687,7 +697,7 @@ function expand_match!(expansion::SequenceElementExpansion, match)::Nothing
     # push the hole back on the stack
     push!(match.holes_stack, last_hole)
 
-    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1)
+    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1, last_hole.is_subseq)
     push!(match.holes, new_sequence_hole)
     push!(match.holes, new_sequence_hole.root_node.children[new_sequence_hole.num_consumed])
     return nothing
@@ -746,7 +756,7 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match)::Vector{Mat
     # push the hole back on the stack
     push!(consuming_hole.holes_stack, last_hole)
 
-    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1)
+    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1, last_hole.is_subseq)
     push!(consuming_hole.holes, new_sequence_hole)
 
     captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]
