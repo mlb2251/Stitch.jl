@@ -1,6 +1,7 @@
 
 
 is_testing = true
+strict = true
 
 function abstraction_to_list(abstraction)
     return [
@@ -33,7 +34,7 @@ function proc_args(args)
 end
 
 function compute(corpus, kwargs, kwargs_specific; seed=nothing)
-    abstractions, compressed_corpus = compress(corpus; strict=true, shuffle_expansions_seed=seed, kwargs_specific...)
+    abstractions, compressed_corpus = compress(corpus; strict=strict, shuffle_expansions_seed=seed, kwargs_specific...)
     abstractions = [abstraction_to_list(x) for x in abstractions]
     return Dict(
         "args" => kwargs,
