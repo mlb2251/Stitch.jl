@@ -131,7 +131,7 @@ function delta_local_utility(config, match, expansion::ContinuationExpansion)
 end
 
 function delta_local_utility(config, match, expansion::SequenceExpansion)
-    if expansion.is_root
+    if expansion.is_subseq
         # don't count the root /seq node
         return 0
     end

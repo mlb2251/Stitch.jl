@@ -632,7 +632,7 @@ function expand_abstraction!(expansion::SequenceExpansion, hole, holes, abstract
     # take a hole ?? and make it (/seq ...). The hole is then pushed to the stack
     hole.leaf = nothing
     head = new_hole((hole, 1))
-    head.leaf = if expansion.is_root
+    head.leaf = if expansion.is_subseq
         SYM_SUBSEQ_HEAD
     else
         SYM_SEQ_HEAD
@@ -649,15 +649,15 @@ function expand_match!(expansion::SequenceExpansion, match)::Union{Nothing,Vecto
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
-    if expansion.is_root
+    if expansion.is_subseq
         match_main = match
         match = copy_match(match)
     else
         match_main = match
     end
     # add a hole representing the remaining sequence
-    push!(match_main.holes, RemainingSequenceHole(hole, 1, expansion.is_root))
-    if !expansion.is_root
+    push!(match_main.holes, RemainingSequenceHole(hole, 1, expansion.is_subseq))
+    if !expansion.is_subseq
         return nothing
     end
     matches = Match[]
@@ -665,7 +665,7 @@ function expand_match!(expansion::SequenceExpansion, match)::Union{Nothing,Vecto
     for start_consumes in 1:length(hole.children)-1
         # add a hole representing the remaining sequence
         match_copy = copy_match(match)
-        push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_root))
+        push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_subseq))
         match_copy.start_items = start_consumes + 1
         push!(matches, match_copy)
     end
@@ -878,7 +878,7 @@ function unexpand_abstraction!(expansion::SequenceExpansion, hole, holes, abstra
     # remove the ... and /seq from the sequence
     is_seq_hole_token(pop!(hole.children)) || error("expected sequence hole token")
     head = pop!(hole.children).leaf
-    if expansion.is_root
+    if expansion.is_subseq
         head === SYM_SUBSEQ_HEAD || error("expected SYM_SUBSEQ_HEAD")
     else
         head === SYM_SEQ_HEAD || error("expected SYM_SEQ_HEAD")
@@ -900,7 +900,7 @@ function unexpand_match!(expansion::SequenceExpansion, match)
     @assert sequence_hole.num_consumed == 1
     @assert sequence_hole.root_node === original_hole
 
-    if expansion.is_root
+    if expansion.is_subseq
         match.start_items = nothing
     end
 end
