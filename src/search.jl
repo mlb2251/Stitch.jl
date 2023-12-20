@@ -122,7 +122,7 @@ Base.@kwdef mutable struct SearchConfig
     track::Union{SExpr,Nothing} = nothing
     max_arity::Int = 2
     max_choice_arity::Int = 2
-    upper_bound_fn::Function = upper_bound_with_conflicts
+    upper_bound_fn::Function = upper_bound_sum_subtree_sizes
     expansion_processor::Union{Function,Nothing} = nothing
     verbose::Bool = false
     verbose_best::Bool = true
