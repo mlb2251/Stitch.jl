@@ -7,15 +7,15 @@
             [
                 0,
                 0,
-                "(/seq c d a ?0 b)",
+                "(/subseq c d a b)",
                 "uninit_state",
                 [],
                 []
             ]
         ],
         "programs": [
-            "(fn_1 b)",
-            "(fn_1 /nothing)"
+            "(/seq (/splice (fn_1)) b)",
+            "(/seq (/splice (fn_1)))"
         ]
     }
 ]
