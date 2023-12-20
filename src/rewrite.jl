@@ -135,8 +135,7 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
         for sym in m.sym_of_idx
             push!(children, sexpr_leaf(sym))
         end
-        for idx in 1:length(m.choice_var_captures)
-            capture = m.choice_var_captures[idx]
+        for capture in m.choice_var_captures
             if isnothing(capture)
                 push!(children, sexpr_leaf(SYM_CHOICE_VAR_NOTHING))
             else
