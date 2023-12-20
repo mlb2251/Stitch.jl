@@ -107,7 +107,7 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossib
 end
 
 function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match) :: Tuple{Float64, Match}
-    args = vcat(m.unique_args, [v for (_, v) in m.choice_var_captures if !isnothing(v)])
+    args = vcat(m.unique_args, [v for v in m.choice_var_captures if !isnothing(v)])
     util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, args, init=0.0)
     return util, m
 end
