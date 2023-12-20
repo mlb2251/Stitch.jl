@@ -101,6 +101,10 @@ mutable struct Abstraction
     dfa_choicevars::Vector{Symbol}
 end
 
+total_arity(a) = a.arity + a.choice_arity # sym arity is not included
+can_accept_metavar(a, config) = total_arity(a) < config.max_arity
+can_accept_choicevar(a, config) = a.choice_arity < config.max_choice_arity && can_accept_metavar(a, config)
+
 Base.show(io::IO, obj::Abstraction) = pretty_show(io, obj; indent=false)
 
 Base.copy(abstraction::Abstraction) = Abstraction(
