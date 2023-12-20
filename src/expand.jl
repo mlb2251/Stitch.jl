@@ -697,10 +697,10 @@ end
 function expand_match!(expansion::SequenceChoiceVarExpansion, match)::Vector{Match}
     not_consuming_hole = match
 
-    @assert !(expansion.idx in keys(match.choice_var_captures))
+    @assert expansion.idx == length(match.choice_var_captures)
 
     # dont consume the hole
-    not_consuming_hole.choice_var_captures[expansion.idx] = nothing
+    not_consuming_hole.choice_var_captures[expansion.idx + 1] = nothing
 
 
     # consume the hole
@@ -723,7 +723,7 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match)::Vector{Mat
     captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]
     @assert typeof(captured) == SExpr
 
-    consuming_hole.choice_var_captures[expansion.idx] = captured
+    consuming_hole.choice_var_captures[expansion.idx + 1] = captured
 
     return [consuming_hole]
 end
@@ -909,7 +909,7 @@ end
 function unexpand_match!(expansion::SequenceChoiceVarExpansion, match)
     # we are operating on the non-consuming hole
     # just get rid of the element from the dictionary choice_var_captures
-    delete!(match.choice_var_captures, expansion.idx)
+    delete!(match.choice_var_captures, expansion.idx + 1)
 end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
@@ -967,7 +967,7 @@ end
 
 function choice_var_homogenous(search_state)
     search_state.config.no_opt_redundant_args && return false
-    for i in 0:search_state.abstraction.choice_arity - 1
+    for i in 1:search_state.abstraction.choice_arity
         if choice_var_homogenous(search_state, i)
             return true
         end
