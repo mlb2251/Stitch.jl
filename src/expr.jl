@@ -71,7 +71,7 @@ mutable struct Match
     end_items:: Union{Nothing,Int}
 
     # choice vars
-    choice_var_captures::Dict{Int,Union{SExpr,Nothing}}
+    choice_var_captures::Vector{Union{SExpr,Nothing}}
 end
 
 mutable struct MatchPossibilities
@@ -105,7 +105,7 @@ fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
     nothing,
     nothing,
     nothing,
-    Dict{Int,Union{SExpr,Nothing}}(),
+    Union{SExpr,Nothing}[],
 )
 
 copy_match(m::Match) = Match(

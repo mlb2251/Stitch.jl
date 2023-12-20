@@ -199,7 +199,7 @@ function collect_expansions(
             push!(result, (AbstractionExpansion(i, false, sym), ms_specific))
         end
 
-        if abstraction.arity < config.max_arity
+        if can_accept_metavar(abstraction, config)
             # fresh variable
             push!(result, (AbstractionExpansion(abstraction.arity, true, sym), ms))
         end
@@ -345,7 +345,7 @@ function collect_expansions(
     config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
-    if abstraction.choice_arity >= config.max_choice_arity
+    if !can_accept_choicevar(abstraction, config)
         return []
     end
 
@@ -741,10 +741,10 @@ end
 function expand_match!(expansion::SequenceChoiceVarExpansion, match)::Vector{Match}
     not_consuming_hole = match
 
-    @assert !(expansion.idx in keys(match.choice_var_captures))
+    @assert expansion.idx == length(match.choice_var_captures)
 
     # dont consume the hole
-    not_consuming_hole.choice_var_captures[expansion.idx] = nothing
+    push!(not_consuming_hole.choice_var_captures, nothing)
 
 
     # consume the hole
@@ -767,7 +767,7 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match)::Vector{Mat
     captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]
     @assert typeof(captured) == SExpr
 
-    consuming_hole.choice_var_captures[expansion.idx] = captured
+    consuming_hole.choice_var_captures[end] = captured
 
     return [consuming_hole]
 end
@@ -966,12 +966,14 @@ end
 function unexpand_match!(expansion::SequenceChoiceVarExpansion, match)
     # we are operating on the non-consuming hole
     # just get rid of the element from the dictionary choice_var_captures
-    delete!(match.choice_var_captures, expansion.idx)
+    pop!(match.choice_var_captures)
+
+    @assert expansion.idx == length(match.choice_var_captures)
 end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
 function strictly_dominated(search_state)
-    redundant_arg_elim(search_state) || arg_capture(search_state) || choice_var_homogenous(search_state)
+    redundant_arg_elim(search_state) || arg_capture(search_state) || choice_var_always_used_or_not(search_state)
 end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
@@ -1022,17 +1024,21 @@ function arg_capture(search_state::SearchState{MatchPossibilities}, i)
     return false
 end
 
-function choice_var_homogenous(search_state)
+function choice_var_always_used_or_not(search_state)
+    # returns true iff there exists a choice variable that is always used or always not used
+    # a choice variable that is always used can be replaced with a metavariable
+    #       this holds since choice variables and metavariables draw from the same arity pool
+    # a choice variable that is always not used can be removed
     search_state.config.no_opt_redundant_args && return false
-    for i in 0:search_state.abstraction.choice_arity - 1
-        if choice_var_homogenous(search_state, i)
+    for i in 1:search_state.abstraction.choice_arity
+        if choice_var_always_used_or_not(search_state, i)
             return true
         end
     end
     false
 end
 
-function choice_var_homogenous(search_state::SearchState{Match}, i)
+function choice_var_always_used_or_not(search_state::SearchState{Match}, i)
     first_match = search_state.matches[1].choice_var_captures[i] === nothing
     if all(match -> (match.choice_var_captures[i] === nothing) == first_match, search_state.matches)
         return true
@@ -1040,7 +1046,7 @@ function choice_var_homogenous(search_state::SearchState{Match}, i)
     return false
 end
 
-function choice_var_homogenous(search_state::SearchState{MatchPossibilities}, i)
+function choice_var_always_used_or_not(search_state::SearchState{MatchPossibilities}, i)
     first_match = search_state.matches[1].alternatives[1].choice_var_captures[i] === nothing
     if all(match_poss -> all(match -> (match.choice_var_captures[i] === nothing) == first_match, match_poss.alternatives), search_state.matches)
         return true

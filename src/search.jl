@@ -103,6 +103,10 @@ mutable struct Abstraction
     dfa_choicevars::Vector{Symbol}
 end
 
+total_arity(a) = a.arity + a.choice_arity # sym arity is not included
+can_accept_metavar(a, config) = total_arity(a) < config.max_arity
+can_accept_choicevar(a, config) = a.choice_arity < config.max_choice_arity && can_accept_metavar(a, config)
+
 Base.show(io::IO, obj::Abstraction) = pretty_show(io, obj; indent=false)
 
 Base.copy(abstraction::Abstraction) = Abstraction(
@@ -377,15 +381,11 @@ function stitch_search(corpus, config)
         expansion = pop!(search_state.expansions)
 
         # upper bound check
-        b = config.upper_bound_fn(search_state, expansion)
-        if b <= search_state.best_util
+        if config.upper_bound_fn(search_state, expansion) <= search_state.best_util
             is_tracked_pruned(search_state, expansion=expansion, message="$(@__FILE__):$(@__LINE__) - upper bound $(config.upper_bound_fn(search_state,expansion)) <= best util $(search_state.best_util)")
             plot && push!(plot_data.pruned_bound, (search_state.stats.expansions, config.upper_bound_fn(search_state, expansion)))
             continue # skip - worse than best so far
         end
-
-        # print out body, num matches, bound
-        # printstyled("EXPAND: ", search_state.abstraction.body, " with ", length(search_state.matches), " matches and bound ", b, "\n", color=:blue)
 
         # do the expansion
         expand_general!(search_state, expansion)
