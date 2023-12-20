@@ -267,8 +267,6 @@ function collect_expansions(
     config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
-    is_root = is_leaf(abstraction.body)
-
     matches = filter(matches) do (i, match)
         if typeof(match.holes[end]) != TreeNodeHole
             return false
@@ -278,7 +276,14 @@ function collect_expansions(
     if length(matches) == 0
         return []
     end
-    return [(SequenceExpansion(is_root), matches)]
+
+    is_root = is_leaf(abstraction.body)
+
+    if is_root
+        return [(SequenceExpansion(true), matches), (SequenceExpansion(false), matches)]
+    else
+        return [(SequenceExpansion(false), matches)]
+    end
 end
 
 function collect_expansions(
