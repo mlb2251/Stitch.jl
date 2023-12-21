@@ -80,10 +80,12 @@ function cli()
         Dict([
             ("arity", abstraction.arity),
             ("sym_arity", abstraction.sym_arity),
+            ("choice_arity", abstraction.choice_arity),
             ("body", string(abstraction.body)),
             ("dfa_root", abstraction.dfa_root),
             ("dfa_metavars", abstraction.dfa_metavars),
             ("dfa_symvars", abstraction.dfa_symvars),
+            ("dfa_choicevars", abstraction.dfa_choicevars),
         ])
         for abstraction in abstractions
     ]))
