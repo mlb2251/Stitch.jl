@@ -1,30 +1,28 @@
 
 using Stitch
 using Test
-import JSON
+using Statistics
+using JSON
 
 include("./framework.jl")
-
-is_testing = false
-strict = false
-
-run(s) = integrate(s, "$s-out.json")
 
 function fn_to_run()
     oldstd = stdout
     redirect_stdout(devnull)
-    full_tests()
+    t = @elapsed full_tests()
     redirect_stdout(oldstd) # recover original stdout
+    println(t)
+    t
 end
 
 function main()
     fn_to_run()
     times = []
-    for x in 1:3
-        t = @elapsed fn_to_run()
+    for x in 1:5
+        t = fn_to_run()
         push!(times, t)
     end
-    println("Individual times: ", [x for x in times], ". Mean: ", sum(times) / length(times))
+    println("Individual times: ", [round(x, digits=2) for x in times], ". Median: ", round(Statistics.median(times), digits=2))
 end
 
 main()
