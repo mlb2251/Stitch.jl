@@ -22,7 +22,7 @@ function main()
         t = fn_to_run()
         push!(times, t)
     end
-    println("Individual times: ", [round(x, digits=2) for x in times], ". Mean: ", round(Statistics.median(times), digits=2))
+    println("Individual times: ", [round(x, digits=2) for x in times], ". Median: ", round(Statistics.median(times), digits=2))
 end
 
 main()
