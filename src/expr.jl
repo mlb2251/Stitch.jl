@@ -3,7 +3,7 @@ abstract type Hole{S} end
 """
 An expression. See SExpr for the version that's always used - the definition is split into
 SExprGeneric and SExpr because mutually recursive types are supported in julia so we can't
-directly have Expr and Match that point to each other and without using generics.
+directly have SExpr -> Metadata -> ProgramGeneric -> SExpr.
 """
 mutable struct SExprGeneric{M} <: Hole{SExprGeneric{M}}
     leaf::Union{Symbol,Nothing}
@@ -31,8 +31,6 @@ end
 
 const SExpr = SExprGeneric{Metadata}
 const Program = ProgramGeneric{Metadata}
-
-abstract type Hole{S} end
 
 mutable struct Match
     # represents a match of the current abstraction being constructed
