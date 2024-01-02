@@ -2,6 +2,7 @@
 using Stitch
 using Test
 using Statistics
+using JSON
 
 include("./framework.jl")
 
