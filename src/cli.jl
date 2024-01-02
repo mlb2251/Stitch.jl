@@ -69,6 +69,7 @@ function cli()
         args["dfa"],
         iterations=args["iterations"],
         max_arity=args["max-arity"],
+        match_sequences=true,
         size_by_symbol=size_by_symbol,
         application_utility_fixed=args["application-utility-fixed"],
         application_utility_metavar=args["application-utility-metavar"],
