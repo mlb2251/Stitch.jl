@@ -48,19 +48,22 @@ function expansions!(typ, search_state::SearchState{MatchPossibilities})
         end
     end
     res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config)
+    out = [Match[] for _ in 1:length(search_state.matches)]
     for (expansion, tagged_matches) in res
-        out = [Match[] for _ in 1:length(search_state.matches)]
         for (i, match) in tagged_matches
             push!(out[i], match)
         end
         push!(search_state.expansions, PossibleExpansion(
             [
-                MatchPossibilities(out[i])
-                for i in 1:length(search_state.matches)
-                if length(out[i]) != 0
+                MatchPossibilities(o)
+                for o in out
+                if length(o) != 0
             ],
             expansion,
         ))
+        for o in out
+            clear!(o)
+        end
     end
 end
 
