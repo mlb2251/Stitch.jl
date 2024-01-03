@@ -49,20 +49,16 @@ function expansions!(typ, search_state::SearchState{MatchPossibilities})
     end
     res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config)
     for (expansion, tagged_matches) in res
-        out = Dict{Int,Vector{Match}}()
-        ks = Vector{Int}()
+        out = [Match[] for _ in 1:length(search_state.matches)]
         for (i, match) in tagged_matches
-            if !(i in keys(out))
-                push!(ks, i)
-            end
-            push!(get!(out, i, Match[]), match)
-        end
-        poss = Vector{MatchPossibilities}()
-        for i in ks
-            push!(poss, MatchPossibilities(out[i]))
+            push!(out[i], match)
         end
         push!(search_state.expansions, PossibleExpansion(
-            poss,
+            [
+                MatchPossibilities(out[i])
+                for i in 1:length(search_state.matches)
+                if length(out[i]) != 0
+            ],
             expansion,
         ))
     end
