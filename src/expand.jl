@@ -62,7 +62,7 @@ function expansions!(typ, search_state::SearchState{MatchPossibilities})
             expansion,
         ))
         for o in out
-            clear!(o)
+            empty!(o)
         end
     end
 end
