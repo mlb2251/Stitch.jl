@@ -6,6 +6,8 @@
         "application_utility_metavar": -1,
         "application_utility_choicevar": -1.01,
         "application_utility_symvar": -0.5,
-        "match_sequences": true
+        "match_sequences": true,
+        "max_arity": 3,
+        "iterations": 1
     }
 ]

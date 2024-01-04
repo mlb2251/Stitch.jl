@@ -24,6 +24,7 @@ mutable struct Metadata
     num_nodes::Int
     struct_hash::Int
     dfa_state::Symbol
+    seq_element_dfa_state::Symbol
     # postorder location of the underlying node in the corpus.
     id::Int
 end
@@ -63,6 +64,9 @@ mutable struct Match
 
     # metavariable for continuation
     continuation::Union{Nothing,SExpr}
+
+    # choice vars
+    choice_var_captures::Vector{Union{SExpr,Nothing}}
 end
 
 mutable struct MatchPossibilities
@@ -93,6 +97,7 @@ fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
     Symbol[],
     Dict{Symbol,Int}(),
     nothing,
+    Union{SExpr,Nothing}[],
 )
 
 copy_match(m::Match) = Match(
@@ -105,6 +110,7 @@ copy_match(m::Match) = Match(
     copy(m.sym_of_idx),
     copy(m.idx_of_sym),
     m.continuation,
+    copy(m.choice_var_captures),
 )
 
 
@@ -189,6 +195,7 @@ end
 const SYM_HOLE = Symbol("??")
 const SYM_SEQ_HOLE = Symbol("...")
 const SYM_SEQ_HEAD = Symbol("/seq")
+const SYM_CHOICE_VAR_NOTHING = Symbol("/nothing")
 new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
 new_seq_hole(parent_and_argidx) = sexpr_leaf(SYM_SEQ_HOLE; parent=parent_and_argidx)
 

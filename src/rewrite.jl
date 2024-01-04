@@ -30,6 +30,8 @@ function rewrite(search_state::SearchState)::Tuple{Corpus,Float32,Float32}
         + search_state.config.application_utility_metavar * search_state.abstraction.arity
         # per-symvar utility
         + search_state.config.application_utility_symvar * search_state.abstraction.sym_arity
+        # per-choice-var utility
+        + search_state.config.application_utility_choicevar * search_state.abstraction.choice_arity
     ) * length(search_state.matches)
     compressive_utility = corpus_compression_utility + abstraction_size_utility + additional_per_match_utility
 
@@ -105,7 +107,8 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossib
 end
 
 function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match) :: Tuple{Float64, Match}
-    util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, m.unique_args, init=0.0)
+    args = vcat(m.unique_args, [v for v in m.choice_var_captures if !isnothing(v)])
+    util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, args, init=0.0)
     return util, m
 end
 
@@ -131,6 +134,13 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
         end
         for sym in m.sym_of_idx
             push!(children, sexpr_leaf(sym))
+        end
+        for capture in m.choice_var_captures
+            if isnothing(capture)
+                push!(children, sexpr_leaf(SYM_CHOICE_VAR_NOTHING))
+            else
+                push!(children, rewrite_inner(capture, search_state, rcis))
+            end
         end
         if !isnothing(m.continuation)
             push!(children, rewrite_inner(m.continuation, search_state, rcis))
