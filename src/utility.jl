@@ -25,11 +25,11 @@ function upper_bound_sum_subtree_sizes(search_state, expansion=nothing)::Float32
         expansion.matches
     end
 
-    if !search_state.config.no_opt_arg_capture && length(matches) == 1
+    if !search_state.config.no_exclude_single_match && length(matches) == 1
         return 0
     end
 
-    sum(m -> m.expr.metadata.size, matches)
+    sum(m -> expr_of(m).metadata.size, matches)
 end
 
 """
@@ -42,21 +42,23 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         expansion.matches
     end
 
-    if !search_state.config.no_opt_arg_capture && length(matches) == 1
+    if !search_state.config.no_exclude_single_match && length(matches) == 1
         return 0
     end
 
-    issorted(matches, by=m -> m.expr.metadata.id) || error("matches is not sorted")
+    @assert length(matches) > 0
+
+    issorted(matches, by=m -> expr_of(m).metadata.id) || error("matches is not sorted")
 
     bound = 0.0
     offset = length(matches)
 
     while true
-        bound += matches[offset].expr.metadata.size
+        bound += expr_of(matches[offset]).metadata.size
         # since matches is sorted in child-first order, children are always to the left of parents. We
         # can use .num_nodes to see how many children a match has (how big the subtree is) and skip over that many
         # things.
-        next_id = matches[offset].expr.metadata.id - matches[offset].expr.metadata.num_nodes
+        next_id = expr_of(matches[offset]).metadata.id - expr_of(matches[offset]).metadata.num_nodes
         next_id == 0 && break
         search_state.all_nodes[next_id].metadata.id == next_id || error("all_nodes is not in the right order")
 
@@ -65,7 +67,8 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         # this is what it would return anyways
         offset -= 1
         offset == 0 && break
-        matches[offset].expr.metadata.id <= next_id && continue
+        expr_of(matches[offset]).metadata.id <= next_id && continue
+        
 
         # rarer case: run binary search to find the rightmost non-child of the previous match
         offset = searchsortedlast(
@@ -74,7 +77,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
             by=m -> if typeof(m) === Int64
                 m
             else
-                m.expr.metadata.id
+                expr_of(m).metadata.id
             end
         )
         offset == 0 && break
@@ -101,10 +104,10 @@ function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
     sum(match -> match.local_utility + match.holes_size, matches, init=0.0)
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SymbolExpansion})
+function delta_local_utility(config, match, expansion::SymbolExpansion)
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
     # node from the corpus.
-    if expansion.data.fresh
+    if expansion.fresh
         return config.application_utility_symvar
     else
         return 1
@@ -112,22 +115,22 @@ function delta_local_utility(config, match, expansion::PossibleExpansion{SymbolE
 end
 
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SyntacticLeafExpansion})
+function delta_local_utility(config, match, expansion::SyntacticLeafExpansion)
     # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (abstraction size)
-    symbol_size(expansion.data.leaf, config.size_by_symbol)
+    symbol_size(expansion.leaf, config.size_by_symbol)
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SyntacticNodeExpansion})
+function delta_local_utility(config, match, expansion::SyntacticNodeExpansion)
     # let it be zero?
     # match.local_utility += 0.;
-    if expansion.data.head !== :no_expand_head
-        return symbol_size(expansion.data.head, config.size_by_symbol)
+    if expansion.head !== :no_expand_head
+        return symbol_size(expansion.head, config.size_by_symbol)
     end
     return 0
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{AbstractionExpansion})
-    if expansion.data.fresh
+function delta_local_utility(config, match, expansion::AbstractionExpansion)
+    if expansion.fresh
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility second term; cost_app * arity)
         # note: commented out with switch away from application penalty
         return config.application_utility_metavar
@@ -139,20 +142,28 @@ function delta_local_utility(config, match, expansion::PossibleExpansion{Abstrac
     end
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{ContinuationExpansion})
+function delta_local_utility(config, match, expansion::ContinuationExpansion)
     0
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceExpansion})
+function delta_local_utility(config, match, expansion::SequenceExpansion)
     symbol_size(SYM_SEQ_HEAD, config.size_by_symbol)
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceElementExpansion})
+function delta_local_utility(config, match, expansion::SequenceElementExpansion)
     0
 end
 
-function delta_local_utility(config, match, expansion::PossibleExpansion{SequenceTerminatorExpansion})
+function delta_local_utility(config, match, expansion::SequenceTerminatorExpansion)
     0
+end
+
+function delta_local_utility(config, match, expansion::SequenceChoiceVarExpansion)
+    if match.choice_var_captures[expansion.idx + 1] === nothing
+        return -symbol_size(SYM_CHOICE_VAR_NOTHING, config.size_by_symbol) + config.application_utility_choicevar
+    else
+        config.application_utility_choicevar
+    end
 end
 
 local_utility_init(config::SearchConfig) = config.application_utility_fixed
@@ -176,4 +187,4 @@ function utility_rewrite(search_state)::Float32
     size(search_state.corpus, size_by_symbol) - size(rewritten, size_by_symbol)
 end
 
-is_identity_abstraction(search_state) = length(search_state.past_expansions) == 1 && isa(search_state.past_expansions[1].match, AbstractionExpansion)
+is_identity_abstraction(search_state) = length(search_state.past_expansions) == 1 && isa(search_state.past_expansions[1].data, AbstractionExpansion)

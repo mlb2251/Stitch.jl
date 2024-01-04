@@ -1,5 +1,5 @@
 
-mutable struct RewriteConflictInfo
+mutable struct RewriteConflictInfo{M}
     # handling rewrite conflicts. When the same abstraction can be used in two overlapping places, we need to pick one.
     # e.g., program = (foo (foo (foo x))). abstraction = (foo (foo #0)). abstraction can either match
     # as (fn_1 (foo x)) or (foo (fn_1 x)). We need to pick one.
@@ -7,10 +7,11 @@ mutable struct RewriteConflictInfo
     # Simple bottom-up dynamic programming to figure out which is best
     cumulative_utility::Float32
     accept_rewrite::Bool
+    rci_match_possibilities::Union{M,Nothing}
     rci_match::Union{Match,Nothing}
 end
 
-const MultiRewriteConflictInfo = Dict{Int64,RewriteConflictInfo}
+const MultiRewriteConflictInfo{M} = Dict{Int64,RewriteConflictInfo{M}}
 
 function rewrite(search_state::SearchState)::Tuple{Corpus,Float32,Float32}
 
@@ -29,6 +30,8 @@ function rewrite(search_state::SearchState)::Tuple{Corpus,Float32,Float32}
         + search_state.config.application_utility_metavar * search_state.abstraction.arity
         # per-symvar utility
         + search_state.config.application_utility_symvar * search_state.abstraction.sym_arity
+        # per-choice-var utility
+        + search_state.config.application_utility_choicevar * search_state.abstraction.choice_arity
     ) * length(search_state.matches)
     compressive_utility = corpus_compression_utility + abstraction_size_utility + additional_per_match_utility
 
@@ -48,17 +51,17 @@ end
 """
 Just copying Eqn 15 from https://arxiv.org/pdf/2211.16605.pdf
 """
-function collect_rci(search_state::SearchState)::Tuple{Float64,MultiRewriteConflictInfo}
+function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteConflictInfo{M}} where M
 
     rcis = Dict(
-        expr.metadata.id => RewriteConflictInfo(
-            NaN32, false, nothing
+        expr.metadata.id => RewriteConflictInfo{M}(
+            NaN32, false, nothing, nothing
         )
         for expr in search_state.all_nodes
     )
 
     for match in search_state.matches
-        rcis[match.expr.metadata.id].rci_match = match
+        rcis[expr_of(match).metadata.id].rci_match_possibilities = match
     end
 
     # special case the identity abstraction (\x. x) since it has a self loop dependency in terms of utility calculation
@@ -75,10 +78,12 @@ function collect_rci(search_state::SearchState)::Tuple{Float64,MultiRewriteConfl
         rci = rcis[expr.metadata.id]
 
         reject_util = sum(child -> rcis[child.metadata.id].cumulative_utility, expr.children, init=0.0)
-        accept_util = if rci.rci_match === nothing
+        accept_util = if rci.rci_match_possibilities === nothing
             0.0
         else
-            rci.rci_match.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, rci.rci_match.unique_args, init=0.0)
+            util, m = compute_best_utility(rcis, rci.rci_match_possibilities)
+            rci.rci_match = m
+            util
         end
         rci.cumulative_utility = max(reject_util, accept_util)
         rci.accept_rewrite = accept_util > reject_util + 0.0001 # slightly in favor of rejection to avoid floating point rounding errors in the approximate equality case
@@ -91,6 +96,20 @@ function collect_rci(search_state::SearchState)::Tuple{Float64,MultiRewriteConfl
     corpus_util = sum(programs -> minimum(p -> rcis[p.expr.metadata.id].cumulative_utility, programs), values(search_state.corpus.programs_by_task))
     util = corpus_util - size(search_state.abstraction.body, search_state.config.size_by_symbol)
     return util, rcis
+end
+
+function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossibilities) :: Tuple{Float64, Match}
+    (util, i) = findmax(match.alternatives) do m
+        u, _ = compute_best_utility(rcis, m)
+        u
+    end
+    return util, match.alternatives[i]
+end
+
+function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match) :: Tuple{Float64, Match}
+    args = vcat(m.unique_args, [v for v in m.choice_var_captures if !isnothing(v)])
+    util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, args, init=0.0)
+    return util, m
 end
 
 function bottom_up_utility(search_state::SearchState)::Float64
@@ -115,6 +134,13 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
         end
         for sym in m.sym_of_idx
             push!(children, sexpr_leaf(sym))
+        end
+        for capture in m.choice_var_captures
+            if isnothing(capture)
+                push!(children, sexpr_leaf(SYM_CHOICE_VAR_NOTHING))
+            else
+                push!(children, rewrite_inner(capture, search_state, rcis))
+            end
         end
         if !isnothing(m.continuation)
             push!(children, rewrite_inner(m.continuation, search_state, rcis))

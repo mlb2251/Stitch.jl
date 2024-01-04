@@ -1,6 +1,7 @@
 
 
 is_testing = true
+strict = true
 
 function abstraction_to_list(abstraction)
     return [
@@ -33,7 +34,7 @@ function proc_args(args)
 end
 
 function compute(corpus, kwargs, kwargs_specific; seed=nothing)
-    abstractions, compressed_corpus = compress(corpus; strict=true, shuffle_expansions_seed=seed, kwargs_specific...)
+    abstractions, compressed_corpus = compress(corpus; strict=strict, shuffle_expansions_seed=seed, kwargs_specific...)
     abstractions = [abstraction_to_list(x) for x in abstractions]
     return Dict(
         "args" => kwargs,
@@ -75,6 +76,30 @@ function integrate(in_file, out_file)
     else
         open(out_file, "w") do io
             JSON.print(io, out, 4)
+        end
+    end
+end
+
+function full_tests()
+    @testset "integration" begin
+        # one test set for each folder in data/
+        for folder in readdir("data")
+            if !isdir("data/$folder")
+                continue
+            end
+            @testset "$folder" begin
+                for file in readdir("data/$folder")
+                    if !endswith(file, ".json")
+                        continue
+                    end
+                    if endswith(file, "-out.json") || endswith(file, "-args.json")
+                        continue
+                    end
+                    in_file = "data/$folder/$file"
+                    out_file = "data/$folder/$file-out.json"
+                    integrate(in_file, out_file)
+                end
+            end
         end
     end
 end

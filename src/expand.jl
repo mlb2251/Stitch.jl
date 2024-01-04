@@ -11,6 +11,7 @@ function possible_expansions!(search_state)
         expansions!(SequenceExpansion, search_state)
         expansions!(SequenceElementExpansion, search_state)
         expansions!(SequenceTerminatorExpansion, search_state)
+        expansions!(SequenceChoiceVarExpansion, search_state)
     end
 
     if search_state.config.shuffle_expansions_seed !== nothing
@@ -28,12 +29,40 @@ function possible_expansions!(search_state)
     # filter!(e -> upper_bound_fn(search_state,e) > best_util, search_state.expansions);
 end
 
-function expansions!(typ, search_state)
+function expansions!(typ, search_state::SearchState{Match})
     flattened_matches = [(i, m) for (i, m) in enumerate(search_state.matches)]
     res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config)
     for (expansion, tagged_matches) in res
         push!(search_state.expansions, PossibleExpansion(
             [m for (_, m) in tagged_matches],
+            expansion,
+        ))
+    end
+end
+
+function expansions!(typ, search_state::SearchState{MatchPossibilities})
+    flattened_matches = Vector{Tuple{Int,Match}}()
+    for (i, match_poss) in enumerate(search_state.matches)
+        for match in match_poss.alternatives
+            push!(flattened_matches, (i, match))
+        end
+    end
+    res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config)
+    for (expansion, tagged_matches) in res
+        out = Dict{Int,Vector{Match}}()
+        ks = Vector{Int}()
+        for (i, match) in tagged_matches
+            if !(i in keys(out))
+                push!(ks, i)
+            end
+            push!(get!(out, i, Match[]), match)
+        end
+        poss = Vector{MatchPossibilities}()
+        for i in ks
+            push!(poss, MatchPossibilities(out[i]))
+        end
+        push!(search_state.expansions, PossibleExpansion(
+            poss,
             expansion,
         ))
     end
@@ -170,7 +199,7 @@ function collect_expansions(
             push!(result, (AbstractionExpansion(i, false, sym), ms_specific))
         end
 
-        if abstraction.arity < config.max_arity
+        if can_accept_metavar(abstraction, config)
             # fresh variable
             push!(result, (AbstractionExpansion(abstraction.arity, true, sym), ms))
         end
@@ -290,6 +319,34 @@ function collect_expansions(
     return [(SequenceTerminatorExpansion(), matches)]
 end
 
+function collect_expansions(
+    ::Type{SequenceChoiceVarExpansion},
+    abstraction::Abstraction,
+    matches::Vector{Tuple{Int,Match}},
+    config
+)::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
+
+    if !can_accept_choicevar(abstraction, config)
+        return []
+    end
+
+    matches_by_sym = Dict{Symbol,Vector{Tuple{Int,Match}}}()
+
+    for (tag, match) in matches
+        hole = match.holes[end]
+        if typeof(hole) != RemainingSequenceHole
+            continue
+        end
+        sym = hole.root_node.metadata.seq_element_dfa_state
+        if hole.num_consumed <= length(hole.root_node.children)
+            v = get!(matches_by_sym, sym, Tuple{Int,Match}[])
+            push!(v, (tag, match))
+        end
+    end
+
+    return [(SequenceChoiceVarExpansion(abstraction.choice_arity, k), m) for (k, m) in matches_by_sym]
+end
+
 """
 Saves current state to the stack, and reinitializes as a fresh state
 """
@@ -313,15 +370,29 @@ function expand_general!(search_state, expansion)
     search_state.matches = expansion.matches
 
     # expand the state
-    expand!(search_state, expansion, hole)
+    expand!(search_state, expansion.data, hole)
 
-    for match in expansion.matches
-        # save the local utility for backtracking
-        push!(match.local_utility_stack, match.local_utility)
-        match.local_utility += delta_local_utility(search_state.config, match, expansion)
-    end
+    expand_utilities!(expansion, search_state)
 
     check_number_of_holes(search_state)
+end
+
+function expand_utilities!(expansion, search_state::SearchState{Match})
+    for match in search_state.matches
+        # save the local utility for backtracking
+        push!(match.local_utility_stack, match.local_utility)
+        match.local_utility += delta_local_utility(search_state.config, match, expansion.data)
+    end
+end
+
+function expand_utilities!(expansion, search_state::SearchState{MatchPossibilities})
+    for match_poss in search_state.matches
+        for match in match_poss.alternatives
+            # save the local utility for backtracking
+            push!(match.local_utility_stack, match.local_utility)
+            match.local_utility += delta_local_utility(search_state.config, match, expansion.data)
+        end
+    end
 end
 
 function unexpand_general!(search_state::SearchState)
@@ -332,13 +403,13 @@ function unexpand_general!(search_state::SearchState)
     # pop the expansion to undo
     expansion = pop!(search_state.past_expansions)
 
+    unexpand_utilities!(search_state)
+
+    unexpand!(search_state, expansion.data, hole)
+
     # unexpand - this should be an inverse to expand!()
     search_state.matches === expansion.matches || error("mismatched matches")
-    for match in search_state.matches
-        match.local_utility = pop!(match.local_utility_stack)
-    end
 
-    unexpand!(search_state, expansion, hole)
     # restore other state
     search_state.expansions = pop!(search_state.expansions_stack)
     search_state.matches = pop!(search_state.matches_stack)
@@ -350,104 +421,168 @@ function unexpand_general!(search_state::SearchState)
 
 end
 
-function check_number_of_holes(search_state)
-    all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes")
-end
-
-function expand!(search_state, expansion, hole)
-
-    expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
+function unexpand_utilities!(search_state::SearchState{Match})
     for match in search_state.matches
-        expand_match!(expansion, match)
+        match.local_utility = pop!(match.local_utility_stack)
     end
 end
 
-function expand_abstraction!(expansion::PossibleExpansion{SyntacticLeafExpansion}, hole, holes, abstraction)
-    # set the head symbol of the hole
-    hole.leaf = expansion.data.leaf
+function unexpand_utilities!(search_state::SearchState{MatchPossibilities})
+    for match_poss in search_state.matches
+        for match in match_poss.alternatives
+            match.local_utility = pop!(match.local_utility_stack)
+        end
+    end
 end
 
-function expand_match!(expansion::PossibleExpansion{SyntacticLeafExpansion}, match)
+function has_number_of_holes(match::Match, num_holes)
+    length(match.holes) == num_holes
+end
+
+function has_number_of_holes(match_poss::MatchPossibilities, num_holes)
+    all(m -> has_number_of_holes(m, num_holes), match_poss.alternatives)
+end
+
+function check_number_of_holes(search_state)
+    all(m -> has_number_of_holes(m, length(search_state.holes)), search_state.matches) || error("mismatched number of holes")
+end
+
+function expand!(search_state::SearchState{Match}, expansion, hole)
+    expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
+    for match in search_state.matches
+        extras = expand_match!(expansion, match)
+        @assert extras === nothing
+    end
+end
+
+function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
+
+    expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
+    new_match_poss = MatchPossibilities[]
+    whole_list_update = false
+    for (idx, match_poss) in enumerate(search_state.matches)
+        updated_matches = Match[]
+        match_poss_update = false
+        for (alt_idx, match) in enumerate(match_poss.alternatives)
+            extras = expand_match!(expansion, match)
+            push!(updated_matches, match)
+            if extras === nothing
+                continue
+            else
+                if !match_poss_update
+                    match_poss_update = true
+                    append!(updated_matches, match_poss.alternatives[1:alt_idx-1])
+                end
+                append!(updated_matches, extras)
+            end
+        end
+        if match_poss_update
+            if !whole_list_update
+                whole_list_update = true
+                new_match_poss = MatchPossibilities[]
+                append!(new_match_poss, search_state.matches[1:idx-1])
+            end
+            match_poss = MatchPossibilities(updated_matches)
+            push!(new_match_poss, match_poss)
+        end
+    end
+    if !whole_list_update
+        new_match_poss = search_state.matches
+    end
+    push!(search_state.matches_stack, search_state.matches)
+    search_state.matches = new_match_poss
+end
+
+function expand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abstraction)
+    # set the head symbol of the hole
+    hole.leaf = expansion.leaf
+end
+
+function expand_match!(expansion::SyntacticLeafExpansion, match)::Nothing
     hole = pop!(match.holes)
     match.holes_size -= hole.metadata.size
     push!(match.holes_stack, hole)
     @assert is_leaf(hole)
+    return nothing
 end
-function expand_abstraction!(expansion::PossibleExpansion{SyntacticNodeExpansion}, hole, holes, abstraction)
+
+function expand_abstraction!(expansion::SyntacticNodeExpansion, hole, holes, abstraction)
     # make it no longer a leaf
     hole.leaf = nothing
 
     # add fresh holes to .args and also keep track of them in search_state.abstraction.holes
-    for i in 1:expansion.data.num_holes
+    for i in 1:expansion.num_holes
         h = new_hole((hole, i))
         push!(hole.children, h)
-        if i == 1 && expansion.data.head !== :no_expand_head
+        if i == 1 && expansion.head !== :no_expand_head
             # set the head symbol of the hole and dont push it to the list of search state holes
-            h.leaf = expansion.data.head
+            h.leaf = expansion.head
         else
             push!(holes, h)
-            # state = if expansion.data.head === :no_expand_head || isnothing(search_state.config.dfa)
+            # state = if expansion.head === :no_expand_head || isnothing(search_state.config.dfa)
             #     :no_dfa_state
             # else
             #     @show i
             #     @show dfa_state
-            #     @show expansion.data.head
-            #     @show search_state.config.dfa[dfa_state][expansion.data.head]
-            #     search_state.config.dfa[dfa_state][expansion.data.head][i-1]
+            #     @show expansion.head
+            #     @show search_state.config.dfa[dfa_state][expansion.head]
+            #     search_state.config.dfa[dfa_state][expansion.head][i-1]
             # end
             # push!(search_state.hole_dfa_states, state)
         end
     end
 
     # reverse holes so they go left to right
-    # @views reverse!(search_state.holes[end-expansion.data.num_holes+1:end]) 
+    # @views reverse!(search_state.holes[end-expansion.num_holes+1:end]) 
 end
 
-function expand_match!(expansion::PossibleExpansion{SyntacticNodeExpansion}, match)
+function expand_match!(expansion::SyntacticNodeExpansion, match)::Nothing
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
-    length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion.data)")
+    length(hole.children) == expansion.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion)")
     push!(match.holes_stack, hole)
 
     # add all the children of the hole as new holes (except possibly the head)
-    if expansion.data.head !== :no_expand_head
+    if expansion.head !== :no_expand_head
         append!(match.holes, hole.children[2:end])
         match.holes_size -= hole.children[1].metadata.size
     else
         append!(match.holes, hole.children)
     end
+    return nothing
 end
 
 
-function expand_abstraction!(expansion::PossibleExpansion{AbstractionExpansion}, hole, holes, abstraction)
-    hole.leaf = Symbol("#$(expansion.data.index)")
+function expand_abstraction!(expansion::AbstractionExpansion, hole, holes, abstraction)
+    hole.leaf = Symbol("#$(expansion.index)")
 
-    if expansion.data.fresh
+    if expansion.fresh
         abstraction.arity += 1
-        push!(abstraction.dfa_metavars, expansion.data.dfa_state)
+        push!(abstraction.dfa_metavars, expansion.dfa_state)
     end
 end
 
-function expand_match!(expansion::PossibleExpansion{AbstractionExpansion}, match)
+function expand_match!(expansion::AbstractionExpansion, match)::Nothing
     hole = pop!(match.holes)
     match.holes_size -= hole.metadata.size
     push!(match.holes_stack, hole)
-    if expansion.data.fresh
+    if expansion.fresh
         push!(match.unique_args, hole) # move the hole to be an argument
     end
+    return nothing
 end
 
-function expand_abstraction!(expansion::PossibleExpansion{SymbolExpansion}, hole, holes, abstraction)
+function expand_abstraction!(expansion::SymbolExpansion, hole, holes, abstraction)
     # set the head symbol of the hole
-    hole.leaf = Symbol("%$(expansion.data.idx)")
+    hole.leaf = Symbol("%$(expansion.idx)")
 
-    if expansion.data.fresh
+    if expansion.fresh
         abstraction.sym_arity += 1
-        push!(abstraction.dfa_symvars, expansion.data.dfa_state)
+        push!(abstraction.dfa_symvars, expansion.dfa_state)
     end
 end
 
-function expand_match!(expansion::PossibleExpansion{SymbolExpansion}, match)
+function expand_match!(expansion::SymbolExpansion, match)::Nothing
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
     match.holes_size -= hole.metadata.size
@@ -455,29 +590,31 @@ function expand_match!(expansion::PossibleExpansion{SymbolExpansion}, match)
 
     @assert string(hole.leaf)[1] == '&'
 
-    if expansion.data.fresh
+    if expansion.fresh
         # this is a new symbol
         push!(match.sym_of_idx, hole.leaf)
-        match.idx_of_sym[hole.leaf] = expansion.data.idx
+        match.idx_of_sym[hole.leaf] = expansion.idx
     end
+    return nothing
 end
 
 
-function expand_abstraction!(expansion::PossibleExpansion{ContinuationExpansion}, hole, holes, abstraction)
+function expand_abstraction!(expansion::ContinuationExpansion, hole, holes, abstraction)
     # set the head symbol of the hole
     hole.leaf = Symbol("#continuation")
 end
 
-function expand_match!(expansion::PossibleExpansion{ContinuationExpansion}, match)
+function expand_match!(expansion::ContinuationExpansion, match)::Nothing
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
     match.holes_size -= hole.metadata.size
     push!(match.holes_stack, hole)
     @assert isnothing(match.continuation)
     match.continuation = hole
+    return nothing
 end
 
-function expand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, hole, holes, abstraction)
+function expand_abstraction!(expansion::SequenceExpansion, hole, holes, abstraction)
     # take a hole ?? and make it (/seq ...). The hole is then pushed to the stack
     hole.leaf = nothing
     head = new_hole((hole, 1))
@@ -490,32 +627,41 @@ function expand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, ho
     push!(holes, hole)
 end
 
-function expand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
+function expand_match!(expansion::SequenceExpansion, match)::Nothing
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
     # add a hole representing the remaining sequence
     push!(match.holes, RemainingSequenceHole(hole, 1))
     match.holes_size -= hole.children[1].metadata.size # remove the /seq node
+    return nothing
 end
 
-function expand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansion}, hole, holes, abstraction)
-    # take a hole (/seq <things> ...) and make it (/seq <things> ?? ...). Place the ?? above the ... on the stack,
-    # but do *not* remove ... from the stack, since it will be consumed by the next expansion once the ?? is filled in
+function insert_before_sequence_hole!(create_new, hole, holes)
+    # take a hole (/seq <things> ...) and make it (/seq <things> <new> ...). Also manipulate the stack of holes,
+    # so that the ... hole is updated for the fact that it is now one further to the right. It is not
+    # removed because it can still be filled in with more elements.
+
+    # The newly created hole is then returned
 
     i = length(hole.children)
-    element_hole = new_hole((hole, i))
+    new_element = create_new(i)
     # overwrite the old ...
-    hole.children[i] = element_hole
+    hole.children[i] = new_element
 
     new_sequence_hole = new_seq_hole((hole, i + 1))
     push!(hole.children, new_sequence_hole)
 
     push!(holes, hole)
+    new_element
+end
+
+function expand_abstraction!(expansion::SequenceElementExpansion, hole, holes, abstraction)
+    element_hole = insert_before_sequence_hole!(i -> new_hole((hole, i)), hole, holes)
     push!(holes, element_hole)
 end
 
-function expand_match!(expansion::PossibleExpansion{SequenceElementExpansion}, match)
+function expand_match!(expansion::SequenceElementExpansion, match)::Nothing
     last_hole = pop!(match.holes)
     @assert typeof(last_hole) == RemainingSequenceHole
     # push the hole back on the stack
@@ -526,14 +672,15 @@ function expand_match!(expansion::PossibleExpansion{SequenceElementExpansion}, m
     push!(match.holes, new_sequence_hole.root_node.children[new_sequence_hole.num_consumed])
 
     # this does not affect holes_size since we are just replacing a ... with a ?? and a ...
+    return nothing
 end
 
-function expand_abstraction!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, hole, holes, abstraction)
+function expand_abstraction!(expansion::SequenceTerminatorExpansion, hole, holes, abstraction)
     # just remove the last hole, and implicitly close off the sequence
     pop!(hole.children)
 end
 
-function expand_match!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, match)
+function expand_match!(expansion::SequenceTerminatorExpansion, match)::Nothing
     # pop next hole and save it for future backtracking
     last_hole = pop!(match.holes)
     @assert typeof(last_hole) == RemainingSequenceHole
@@ -541,51 +688,109 @@ function expand_match!(expansion::PossibleExpansion{SequenceTerminatorExpansion}
     push!(match.holes_stack, last_hole)
 
     # this does not affect holes_size since we are just removing a ... that currently matches nothing
+    return nothing
 end
 
-function unexpand!(search_state, expansion, hole)
+function expand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes, abstraction)
+    # take a hole (/seq <things> ...) and make it (/seq <things> ?? ...). Place the ?? above the ... on the stack,
+    # but do *not* remove ... from the stack, since it will be consumed by the next expansion once the ?? is filled in
+
+    insert_before_sequence_hole!(hole, holes) do i
+        x = new_hole((hole, i))
+        x.leaf = Symbol("?$(expansion.idx)")
+        x
+    end
+    abstraction.choice_arity += 1
+    push!(abstraction.dfa_choicevars, expansion.dfa_state)
+end
+
+function expand_match!(expansion::SequenceChoiceVarExpansion, match)::Vector{Match}
+    not_consuming_hole = match
+
+    @assert expansion.idx == length(match.choice_var_captures)
+
+    # dont consume the hole
+    push!(not_consuming_hole.choice_var_captures, nothing)
+
+
+    # consume the hole
+    # first check if there's more space in the sequence
+    last_hole = match.holes[end]
+    @assert typeof(last_hole) == RemainingSequenceHole
+    if last_hole.num_consumed == length(last_hole.root_node.children)
+        # no more space in the sequence, so we can't consume the hole
+        return []
+    end
+    consuming_hole = copy_match(match)
+
+    pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
+    # push the hole back on the stack
+    push!(consuming_hole.holes_stack, last_hole)
+
+    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1)
+    push!(consuming_hole.holes, new_sequence_hole)
+
+    captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]
+    @assert typeof(captured) == SExpr
+
+    consuming_hole.choice_var_captures[end] = captured
+
+    return [consuming_hole]
+end
+
+function unexpand!(search_state::SearchState{Match}, expansion, hole)
     unexpand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
     for match in search_state.matches
         unexpand_match!(expansion, match)
     end
 end
 
-function unexpand_abstraction!(expansion::PossibleExpansion{SyntacticLeafExpansion}, hole, holes, abstraction)
+function unexpand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
+    unexpand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
+    search_state.matches = pop!(search_state.matches_stack)
+    for match_poss in search_state.matches
+        for match in match_poss.alternatives
+            unexpand_match!(expansion, match)
+        end
+    end
+end
+
+function unexpand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abstraction)
     hole.leaf = SYM_HOLE
 end
 
-function unexpand_match!(expansion::PossibleExpansion{SyntacticLeafExpansion}, match)
+function unexpand_match!(expansion::SyntacticLeafExpansion, match)
     hole = pop!(match.holes_stack)
     push!(match.holes, hole)
 
     match.holes_size += hole.metadata.size
 end
 
-function unexpand_abstraction!(expansion::PossibleExpansion{SyntacticNodeExpansion}, hole, holes, abstraction)
+function unexpand_abstraction!(expansion::SyntacticNodeExpansion, hole, holes, abstraction)
     hole.leaf = SYM_HOLE
 
     # pop from .args and holes
-    for i in 1:expansion.data.num_holes
-        if expansion.data.head !== :no_expand_head && i == expansion.data.num_holes
-            pop!(hole.children).leaf === expansion.data.head || error("expected same head")
+    for i in 1:expansion.num_holes
+        if expansion.head !== :no_expand_head && i == expansion.num_holes
+            pop!(hole.children).leaf === expansion.head || error("expected same head")
         else
             pop!(hole.children).leaf === pop!(holes).leaf === SYM_HOLE || error("not a hole")
         end
     end
 end
 
-function unexpand_match!(expansion::PossibleExpansion{SyntacticNodeExpansion}, match)
-    num_remove = if expansion.data.head !== :no_expand_head
-        expansion.data.num_holes - 1
+function unexpand_match!(expansion::SyntacticNodeExpansion, match)
+    num_remove = if expansion.head !== :no_expand_head
+        expansion.num_holes - 1
     else
-        expansion.data.num_holes
+        expansion.num_holes
     end
     for _ in 1:num_remove
         pop!(match.holes)
     end
 
     hole = pop!(match.holes_stack)
-    length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
+    length(hole.children) == expansion.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
     push!(match.holes, hole)
 
     if expansion.data.head !== :no_expand_head
@@ -593,38 +798,38 @@ function unexpand_match!(expansion::PossibleExpansion{SyntacticNodeExpansion}, m
     end
 end
 
-function unexpand_abstraction!(expansion::PossibleExpansion{AbstractionExpansion}, hole, holes, abstraction)
+function unexpand_abstraction!(expansion::AbstractionExpansion, hole, holes, abstraction)
     hole.leaf = SYM_HOLE
-    if expansion.data.fresh
+    if expansion.fresh
         abstraction.arity -= 1
         pop!(abstraction.dfa_metavars)
     end
 end
 
-function unexpand_match!(expansion::PossibleExpansion{AbstractionExpansion}, match)
+function unexpand_match!(expansion::AbstractionExpansion, match)
     hole = pop!(match.holes_stack)
     push!(match.holes, hole)
-    if expansion.data.fresh
+    if expansion.fresh
         pop!(match.unique_args) === hole || error("expected same hole")
     end
 
     match.holes_size += hole.metadata.size
 end
 
-function unexpand_abstraction!(expansion::PossibleExpansion{SymbolExpansion}, hole, holes, abstraction)
+function unexpand_abstraction!(expansion::SymbolExpansion, hole, holes, abstraction)
     # set the head symbol of the hole
     hole.leaf = SYM_HOLE
-    if expansion.data.fresh
+    if expansion.fresh
         abstraction.sym_arity -= 1
         pop!(abstraction.dfa_symvars)
     end
 end
 
-function unexpand_match!(expansion::PossibleExpansion{SymbolExpansion}, match)
+function unexpand_match!(expansion::SymbolExpansion, match)
     hole = pop!(match.holes_stack)
     push!(match.holes, hole)
 
-    if expansion.data.fresh
+    if expansion.fresh
         pop!(match.sym_of_idx)
         delete!(match.idx_of_sym, hole.leaf)
     end
@@ -632,11 +837,11 @@ function unexpand_match!(expansion::PossibleExpansion{SymbolExpansion}, match)
     match.holes_size += hole.metadata.size
 end
 
-function unexpand_abstraction!(expansion::PossibleExpansion{ContinuationExpansion}, hole, holes, abstraction)
+function unexpand_abstraction!(expansion::ContinuationExpansion, hole, holes, abstraction)
     hole.leaf = SYM_HOLE
 end
 
-function unexpand_match!(expansion::PossibleExpansion{ContinuationExpansion}, match)
+function unexpand_match!(expansion::ContinuationExpansion, match)
     hole = pop!(match.holes_stack)
     push!(match.holes, hole)
     @assert match.continuation === hole
@@ -645,7 +850,7 @@ function unexpand_match!(expansion::PossibleExpansion{ContinuationExpansion}, ma
     match.holes_size += hole.metadata.size
 end
 
-function unexpand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, hole, holes, abstraction)
+function unexpand_abstraction!(expansion::SequenceExpansion, hole, holes, abstraction)
     pop!(holes) === hole || error("expected same hole")
 
     # remove the ... and /seq from the sequence
@@ -657,7 +862,7 @@ function unexpand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, 
 
 end
 
-function unexpand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
+function unexpand_match!(expansion::SequenceExpansion, match)
     # remove the ... hole
     sequence_hole = pop!(match.holes)
     # get the original hole and put it back on the stack
@@ -672,15 +877,16 @@ function unexpand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
     match.holes_size += original_hole.children[1].metadata.size
 end
 
-function unexpand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansion}, hole, holes, abstraction)
-    # remove the ?? hole from the list of holes
-    pop!(holes).leaf == SYM_HOLE || error("expected SYM_HOLE")
+function remove_inserted_before_sequence_hole!(check_fn, hole, holes)
+    # undoes the effect of insert_before_sequence_hole!() by removing the hole that was inserted
+    # before the ... hole. The check_fn is called on the hole that was removed, to make sure it is
+    # the right one.
 
     # remove the ... hole from the list of holes
     is_seq_hole_token(pop!(hole.children)) || error("expected sequence hole token")
 
-    # delete the ?? hole from the sequence
-    pop!(hole.children).leaf == SYM_HOLE || error("expected SYM_HOLE")
+    # delete the <new> hole from the sequence
+    check_fn(pop!(hole.children))
 
     # put the ... hole back onto the end
     new_sequence_hole = new_seq_hole((hole, length(hole.children)))
@@ -690,7 +896,16 @@ function unexpand_abstraction!(expansion::PossibleExpansion{SequenceElementExpan
     pop!(holes) === hole || error("expected same sequence")
 end
 
-function unexpand_match!(expansion::PossibleExpansion{SequenceElementExpansion}, match)
+function unexpand_abstraction!(expansion::SequenceElementExpansion, hole, holes, abstraction)
+    # remove the ?? hole from the list of holes
+    pop!(holes).leaf === SYM_HOLE || error("expected SYM_HOLE")
+
+    remove_inserted_before_sequence_hole!(hole, holes) do m
+        m.leaf == SYM_HOLE || error("expected SYM_HOLE")
+    end
+end
+
+function unexpand_match!(expansion::SequenceElementExpansion, match)
     # get rid of the ?? and ... holes
     typeof(pop!(match.holes)) == TreeNodeHole || error("expected TreeNodeHole")
     typeof(pop!(match.holes)) == RemainingSequenceHole || error("expected RemainingSequenceHole")
@@ -700,21 +915,37 @@ function unexpand_match!(expansion::PossibleExpansion{SequenceElementExpansion},
     # doesn't affect holes_size since we are just replacing a ?? and ... with a ...
 end
 
-function unexpand_abstraction!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, hole, holes, abstraction)
+function unexpand_abstraction!(expansion::SequenceTerminatorExpansion, hole, holes, abstraction)
     # just put a ... on the stack and at the end of the sequence
     new_hole = new_seq_hole((hole, length(hole.children) + 1))
     push!(hole.children, new_hole)
 end
 
-function unexpand_match!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, match)
+function unexpand_match!(expansion::SequenceTerminatorExpansion, match)
     push!(match.holes, pop!(match.holes_stack))
 
     # doesn't affect holes_size since we are just adding a ... that currently matches nothing
 end
 
+function unexpand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes, abstraction)
+    remove_inserted_before_sequence_hole!(hole, holes) do m
+        m.leaf == Symbol("?$(expansion.idx)") || error("expected Symbol(?$(expansion.idx)), got $m")
+    end
+    abstraction.choice_arity -= 1
+    pop!(abstraction.dfa_choicevars)
+end
+
+function unexpand_match!(expansion::SequenceChoiceVarExpansion, match)
+    # we are operating on the non-consuming hole
+    # just get rid of the element from the dictionary choice_var_captures
+    pop!(match.choice_var_captures)
+
+    @assert expansion.idx == length(match.choice_var_captures)
+end
+
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
 function strictly_dominated(search_state)
-    redundant_arg_elim(search_state) || arg_capture(search_state)
+    redundant_arg_elim(search_state) || arg_capture(search_state) || choice_var_always_used_or_not(search_state)
 end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
@@ -730,6 +961,10 @@ function redundant_arg_elim(search_state)
     false
 end
 
+function args_match(matches::Vector{MatchPossibilities}, i, j)
+    all(match_poss -> args_match(match_poss.alternatives, i, j), matches)
+end
+
 function args_match(matches::Vector{Match}, i, j)
     all(match -> match.unique_args[i].metadata.struct_hash == match.unique_args[j].metadata.struct_hash, matches)
 end
@@ -738,17 +973,62 @@ end
 function arg_capture(search_state)
     search_state.config.no_opt_arg_capture && return false
     for i in 1:search_state.abstraction.arity
-        first_match = search_state.matches[1].unique_args[i].metadata.struct_hash
-        if all(match -> match.unique_args[i].metadata.struct_hash == first_match, search_state.matches)
+        if arg_capture(search_state, i)
             return true
         end
     end
     false
 end
 
+function arg_capture(search_state::SearchState{Match}, i)
+    first_match = search_state.matches[1].unique_args[i].metadata.struct_hash
+    if all(match -> match.unique_args[i].metadata.struct_hash == first_match, search_state.matches)
+        return true
+    end
+    return false
+end
+
+function arg_capture(search_state::SearchState{MatchPossibilities}, i)
+    first_match = search_state.matches[1].alternatives[1].unique_args[i].metadata.struct_hash
+    if all(match_poss -> all(match -> match.unique_args[i].metadata.struct_hash == first_match, match_poss.alternatives), search_state.matches)
+        return true
+    end
+    return false
+end
+
+function choice_var_always_used_or_not(search_state)
+    # returns true iff there exists a choice variable that is always used or always not used
+    # a choice variable that is always used can be replaced with a metavariable
+    #       this holds since choice variables and metavariables draw from the same arity pool
+    # a choice variable that is always not used can be removed
+    search_state.config.no_opt_redundant_args && return false
+    for i in 1:search_state.abstraction.choice_arity
+        if choice_var_always_used_or_not(search_state, i)
+            return true
+        end
+    end
+    false
+end
+
+function choice_var_always_used_or_not(search_state::SearchState{Match}, i)
+    first_match = search_state.matches[1].choice_var_captures[i] === nothing
+    if all(match -> (match.choice_var_captures[i] === nothing) == first_match, search_state.matches)
+        return true
+    end
+    return false
+end
+
+function choice_var_always_used_or_not(search_state::SearchState{MatchPossibilities}, i)
+    first_match = search_state.matches[1].alternatives[1].choice_var_captures[i] === nothing
+    if all(match_poss -> all(match -> (match.choice_var_captures[i] === nothing) == first_match, match_poss.alternatives), search_state.matches)
+        return true
+    end
+    return false
+end
+
 function is_single_task(search_state)
-    first = search_state.matches[1].expr.metadata.program.task
-    all(match -> match.expr.metadata.program.task == first, search_state.matches)
+    first = expr_of(search_state.matches[1]).metadata.program.task
+    all(match -> expr_of(match).metadata.program.task == first, search_state.matches)
 end
 
 mutable struct SamplingProcessor{F<:Function}

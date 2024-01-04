@@ -1,0 +1,29 @@
+[
+    {
+        "args": {
+            "iterations": 1,
+            "application_utility_symvar": -0.5,
+            "application_utility_fixed": -3,
+            "match_sequences": true,
+            "dfa": "data_for_testing/dfa_imp.json",
+            "max_arity": 3,
+            "application_utility_choicevar": -1.01,
+            "application_utility_metavar": -1,
+            "size_by_symbol": "data_for_testing/size_by_symbol.json"
+        },
+        "abstractions": [
+            [
+                0,
+                0,
+                "(Call (Name g_map Load) (list (Name g_int Load) (Call (Attribute (Call (Name g_input Load) nil nil) s_split Load) nil nil)) nil)",
+                "X",
+                [],
+                []
+            ]
+        ],
+        "programs": [
+            "(/seq (Assign (list (Name &t:0 Store)) (Call (Name g_int Load) (list (Call (Name g_input Load) nil nil)) nil) None) (For (Name &i:0 Store) (Call (Name g_range Load) (list (Name &t:0 Load)) nil) (/seq (Assign (list (Tuple (list (Name &l:0 Store) (Name &r:0 Store) (Name &d:0 Store)) Store)) (fn_1) None) (If (Compare (Name &l:0 Load) (list Gt) (list (Name &d:0 Load))) (/seq (Expr (Call (Name g_print Load) (list (Name &d:0 Load)) nil))) (/seq (Expr (Call (Name g_print Load) (list (BinOp (BinOp (BinOp (Name &r:0 Load) Add (Name &d:0 Load)) FloorDiv (Name &d:0 Load)) Mult (Name &d:0 Load))) nil))))) nil None))",
+            "(/seq (Assign (list (Name &n:0 Store)) (Call (Name g_int Load) (list (Call (Name g_input Load) nil nil)) nil) None) (For (Name &i:0 Store) (Call (Name g_range Load) (list (Name &n:0 Load)) nil) (/seq (Assign (list (Tuple (list (Name &a:0 Store) (Name &b:0 Store) (Name &c:0 Store)) Store)) (fn_1) None) (If (Compare (Name &c:0 Load) (list Gt) (list (Name &b:0 Load))) (/seq (Expr (Call (Name g_print Load) (list (Name &c:0 Load)) nil))) (/seq (If (Compare (Name &c:0 Load) (list Lt) (list (Name &a:0 Load))) (/seq (Expr (Call (Name g_print Load) (list (Name &c:0 Load)) nil))) (/seq))))) nil None))"
+        ]
+    }
+]
