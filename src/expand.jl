@@ -28,7 +28,7 @@ function possible_expansions!(search_state)
     # filter!(e -> upper_bound_fn(search_state,e) > best_util, search_state.expansions);
 end
 
-function expansions!(typ, search_state)
+function expansions!(typ, search_state::SearchState{Match})
     flattened_matches = [(i, m) for (i, m) in enumerate(search_state.matches)]
     res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config)
     for (expansion, tagged_matches) in res
@@ -315,13 +315,17 @@ function expand_general!(search_state, expansion)
     # expand the state
     expand!(search_state, expansion.data, hole)
 
+    expand_utilities!(expansion, search_state)
+
+    check_number_of_holes(search_state)
+end
+
+function expand_utilities!(expansion, search_state::SearchState{Match})
     for match in expansion.matches
         # save the local utility for backtracking
         push!(match.local_utility_stack, match.local_utility)
         match.local_utility += delta_local_utility(search_state.config, match, expansion.data)
     end
-
-    check_number_of_holes(search_state)
 end
 
 function unexpand_general!(search_state::SearchState)
@@ -332,9 +336,7 @@ function unexpand_general!(search_state::SearchState)
     # pop the expansion to undo
     expansion = pop!(search_state.past_expansions)
 
-    for match in search_state.matches
-        match.local_utility = pop!(match.local_utility_stack)
-    end
+    unexpand_utilities!(search_state)
 
     unexpand!(search_state, expansion.data, hole)
 
@@ -352,15 +354,22 @@ function unexpand_general!(search_state::SearchState)
 
 end
 
-function check_number_of_holes(search_state)
+function unexpand_utilities!(search_state::SearchState{Match})
+    for match in search_state.matches
+        match.local_utility = pop!(match.local_utility_stack)
+    end
+end
+
+function check_number_of_holes(search_state::SearchState{Match})
     all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes")
 end
 
-function expand!(search_state, expansion, hole)
 
+function expand!(search_state::SearchState{Match}, expansion, hole)
     expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
     for match in search_state.matches
-        expand_match!(expansion, match)
+        extras = expand_match!(expansion, match)
+        @assert extras === nothing
     end
 end
 
@@ -552,7 +561,7 @@ function expand_match!(expansion::SequenceTerminatorExpansion, match)::Nothing
     return nothing
 end
 
-function unexpand!(search_state, expansion, hole)
+function unexpand!(search_state::SearchState{Match}, expansion, hole)
     unexpand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
     for match in search_state.matches
         unexpand_match!(expansion, match)
@@ -738,17 +747,24 @@ end
 function arg_capture(search_state)
     search_state.config.no_opt_arg_capture && return false
     for i in 1:search_state.abstraction.arity
-        first_match = search_state.matches[1].unique_args[i].metadata.struct_hash
-        if all(match -> match.unique_args[i].metadata.struct_hash == first_match, search_state.matches)
+        if arg_capture(search_state, i)
             return true
         end
     end
     false
 end
 
+function arg_capture(search_state::SearchState{Match}, i)
+    first_match = search_state.matches[1].unique_args[i].metadata.struct_hash
+    if all(match -> match.unique_args[i].metadata.struct_hash == first_match, search_state.matches)
+        return true
+    end
+    false
+end
+
 function is_single_task(search_state)
-    first = search_state.matches[1].expr.metadata.program.task
-    all(match -> match.expr.metadata.program.task == first, search_state.matches)
+    first = expr_of(search_state.matches[1]).metadata.program.task
+    all(match -> expr_of(match).metadata.program.task == first, search_state.matches)
 end
 
 mutable struct SamplingProcessor{F<:Function}
