@@ -793,7 +793,7 @@ function unexpand_match!(expansion::SyntacticNodeExpansion, match)
     length(hole.children) == expansion.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
     push!(match.holes, hole)
 
-    if expansion.data.head !== :no_expand_head
+    if expansion.head !== :no_expand_head
         match.holes_size += hole.children[1].metadata.size
     end
 end

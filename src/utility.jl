@@ -101,8 +101,11 @@ function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
         return 0
     end
 
-    sum(match -> match.local_utility + match.holes_size, matches, init=0.0)
+    sum(match -> sum_no_variables(match), matches, init=0.0)
 end
+
+sum_no_variables(match::Match) = match.local_utility + match.holes_size
+sum_no_variables(match::MatchPossibilities) = maximum([sum_no_variables(x) for x in match.alternatives])
 
 function delta_local_utility(config, match, expansion::SymbolExpansion)
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
