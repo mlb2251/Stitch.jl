@@ -1,0 +1,37 @@
+[
+    {
+        "args": {
+            "application_utility_fixed": 0,
+            "application_utility_metavar": 0
+        },
+        "abstractions": [
+            [
+                0,
+                0,
+                "None",
+                "uninit_state",
+                [],
+                []
+            ],
+            [
+                0,
+                0,
+                "(fn_1)",
+                "uninit_state",
+                [],
+                []
+            ],
+            [
+                0,
+                0,
+                "(fn_2)",
+                "uninit_state",
+                [],
+                []
+            ]
+        ],
+        "programs": [
+            "(Module (/seq (FunctionDef &f: 0 (arguments nil (list (arg &x: 1 (fn_3) (fn_3))) (fn_3) nil nil (fn_3) nil) (/seq (Return (Constant i4 (fn_3)))) nil (fn_3) (fn_3))) nil)"
+        ]
+    }
+]
