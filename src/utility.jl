@@ -24,6 +24,11 @@ function upper_bound_sum_subtree_sizes(search_state, expansion=nothing)::Float32
     else
         expansion.matches
     end
+
+    if !search_state.config.no_exclude_single_match && length(matches) == 1
+        return 0
+    end
+
     sum(m -> m.expr.metadata.size, matches)
 end
 
@@ -36,6 +41,11 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
     else
         expansion.matches
     end
+
+    if !search_state.config.no_exclude_single_match && length(matches) == 1
+        return 0
+    end
+
     issorted(matches, by=m -> m.expr.metadata.id) || error("matches is not sorted")
 
     bound = 0.0
