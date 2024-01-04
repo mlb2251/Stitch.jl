@@ -11,6 +11,7 @@ function possible_expansions!(search_state)
         expansions!(SequenceExpansion, search_state)
         expansions!(SequenceElementExpansion, search_state)
         expansions!(SequenceTerminatorExpansion, search_state)
+        expansions!(SequenceChoiceVarExpansion, search_state)
     end
 
     if search_state.config.shuffle_expansions_seed !== nothing
@@ -198,7 +199,7 @@ function collect_expansions(
             push!(result, (AbstractionExpansion(i, false, sym), ms_specific))
         end
 
-        if abstraction.arity < config.max_arity
+        if can_accept_metavar(abstraction, config)
             # fresh variable
             push!(result, (AbstractionExpansion(abstraction.arity, true, sym), ms))
         end
@@ -316,6 +317,34 @@ function collect_expansions(
         return []
     end
     return [(SequenceTerminatorExpansion(), matches)]
+end
+
+function collect_expansions(
+    ::Type{SequenceChoiceVarExpansion},
+    abstraction::Abstraction,
+    matches::Vector{Tuple{Int,Match}},
+    config
+)::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
+
+    if !can_accept_choicevar(abstraction, config)
+        return []
+    end
+
+    matches_by_sym = Dict{Symbol,Vector{Tuple{Int,Match}}}()
+
+    for (tag, match) in matches
+        hole = match.holes[end]
+        if typeof(hole) != RemainingSequenceHole
+            continue
+        end
+        sym = hole.root_node.metadata.seq_element_dfa_state
+        if hole.num_consumed <= length(hole.root_node.children)
+            v = get!(matches_by_sym, sym, Tuple{Int,Match}[])
+            push!(v, (tag, match))
+        end
+    end
+
+    return [(SequenceChoiceVarExpansion(abstraction.choice_arity, k), m) for (k, m) in matches_by_sym]
 end
 
 """
@@ -652,6 +681,53 @@ function expand_match!(expansion::SequenceTerminatorExpansion, match)::Nothing
     return nothing
 end
 
+function expand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes, abstraction)
+    # take a hole (/seq <things> ...) and make it (/seq <things> ?? ...). Place the ?? above the ... on the stack,
+    # but do *not* remove ... from the stack, since it will be consumed by the next expansion once the ?? is filled in
+
+    insert_before_sequence_hole!(hole, holes) do i
+        x = new_hole((hole, i))
+        x.leaf = Symbol("?$(expansion.idx)")
+        x
+    end
+    abstraction.choice_arity += 1
+    push!(abstraction.dfa_choicevars, expansion.dfa_state)
+end
+
+function expand_match!(expansion::SequenceChoiceVarExpansion, match)::Vector{Match}
+    not_consuming_hole = match
+
+    @assert expansion.idx == length(match.choice_var_captures)
+
+    # dont consume the hole
+    push!(not_consuming_hole.choice_var_captures, nothing)
+
+
+    # consume the hole
+    # first check if there's more space in the sequence
+    last_hole = match.holes[end]
+    @assert typeof(last_hole) == RemainingSequenceHole
+    if last_hole.num_consumed == length(last_hole.root_node.children)
+        # no more space in the sequence, so we can't consume the hole
+        return []
+    end
+    consuming_hole = copy_match(match)
+
+    pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
+    # push the hole back on the stack
+    push!(consuming_hole.holes_stack, last_hole)
+
+    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1)
+    push!(consuming_hole.holes, new_sequence_hole)
+
+    captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]
+    @assert typeof(captured) == SExpr
+
+    consuming_hole.choice_var_captures[end] = captured
+
+    return [consuming_hole]
+end
+
 function unexpand!(search_state::SearchState{Match}, expansion, hole)
     unexpand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
     for match in search_state.matches
@@ -822,9 +898,25 @@ function unexpand_match!(expansion::SequenceTerminatorExpansion, match)
     push!(match.holes, pop!(match.holes_stack))
 end
 
+function unexpand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes, abstraction)
+    remove_inserted_before_sequence_hole!(hole, holes) do m
+        m.leaf == Symbol("?$(expansion.idx)") || error("expected Symbol(?$(expansion.idx)), got $m")
+    end
+    abstraction.choice_arity -= 1
+    pop!(abstraction.dfa_choicevars)
+end
+
+function unexpand_match!(expansion::SequenceChoiceVarExpansion, match)
+    # we are operating on the non-consuming hole
+    # just get rid of the element from the dictionary choice_var_captures
+    pop!(match.choice_var_captures)
+
+    @assert expansion.idx == length(match.choice_var_captures)
+end
+
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
 function strictly_dominated(search_state)
-    redundant_arg_elim(search_state) || arg_capture(search_state)
+    redundant_arg_elim(search_state) || arg_capture(search_state) || choice_var_always_used_or_not(search_state)
 end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
@@ -870,6 +962,36 @@ end
 function arg_capture(search_state::SearchState{MatchPossibilities}, i)
     first_match = search_state.matches[1].alternatives[1].unique_args[i].metadata.struct_hash
     if all(match_poss -> all(match -> match.unique_args[i].metadata.struct_hash == first_match, match_poss.alternatives), search_state.matches)
+        return true
+    end
+    return false
+end
+
+function choice_var_always_used_or_not(search_state)
+    # returns true iff there exists a choice variable that is always used or always not used
+    # a choice variable that is always used can be replaced with a metavariable
+    #       this holds since choice variables and metavariables draw from the same arity pool
+    # a choice variable that is always not used can be removed
+    search_state.config.no_opt_redundant_args && return false
+    for i in 1:search_state.abstraction.choice_arity
+        if choice_var_always_used_or_not(search_state, i)
+            return true
+        end
+    end
+    false
+end
+
+function choice_var_always_used_or_not(search_state::SearchState{Match}, i)
+    first_match = search_state.matches[1].choice_var_captures[i] === nothing
+    if all(match -> (match.choice_var_captures[i] === nothing) == first_match, search_state.matches)
+        return true
+    end
+    return false
+end
+
+function choice_var_always_used_or_not(search_state::SearchState{MatchPossibilities}, i)
+    first_match = search_state.matches[1].alternatives[1].choice_var_captures[i] === nothing
+    if all(match_poss -> all(match -> (match.choice_var_captures[i] === nothing) == first_match, match_poss.alternatives), search_state.matches)
         return true
     end
     return false

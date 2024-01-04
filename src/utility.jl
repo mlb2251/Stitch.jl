@@ -46,6 +46,8 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         return 0
     end
 
+    @assert length(matches) > 0
+
     issorted(matches, by=m -> expr_of(m).metadata.id) || error("matches is not sorted")
 
     bound = 0.0
@@ -135,6 +137,14 @@ end
 
 function delta_local_utility(config, match, expansion::SequenceTerminatorExpansion)
     0
+end
+
+function delta_local_utility(config, match, expansion::SequenceChoiceVarExpansion)
+    if match.choice_var_captures[expansion.idx + 1] === nothing
+        return -symbol_size(SYM_CHOICE_VAR_NOTHING, config.size_by_symbol) + config.application_utility_choicevar
+    else
+        config.application_utility_choicevar
+    end
 end
 
 local_utility_init(config::SearchConfig) = config.application_utility_fixed
