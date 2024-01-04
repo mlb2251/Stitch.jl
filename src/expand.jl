@@ -369,11 +369,13 @@ function expand_abstraction!(expansion::PossibleExpansion{SyntacticLeafExpansion
     hole.leaf = expansion.data.leaf
 end
 
-function expand_match!(expansion::PossibleExpansion{SyntacticLeafExpansion}, match)
+function expand_match!(expansion::PossibleExpansion{SyntacticLeafExpansion}, match)::Nothing
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
     @assert is_leaf(hole)
+    return nothing
 end
+
 function expand_abstraction!(expansion::PossibleExpansion{SyntacticNodeExpansion}, hole, holes, abstraction)
     # make it no longer a leaf
     hole.leaf = nothing
@@ -404,7 +406,7 @@ function expand_abstraction!(expansion::PossibleExpansion{SyntacticNodeExpansion
     # @views reverse!(search_state.holes[end-expansion.data.num_holes+1:end]) 
 end
 
-function expand_match!(expansion::PossibleExpansion{SyntacticNodeExpansion}, match)
+function expand_match!(expansion::PossibleExpansion{SyntacticNodeExpansion}, match)::Nothing
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
     length(hole.children) == expansion.data.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion.data)")
@@ -416,6 +418,7 @@ function expand_match!(expansion::PossibleExpansion{SyntacticNodeExpansion}, mat
     else
         append!(match.holes, hole.children)
     end
+    return nothing
 end
 
 
@@ -428,12 +431,13 @@ function expand_abstraction!(expansion::PossibleExpansion{AbstractionExpansion},
     end
 end
 
-function expand_match!(expansion::PossibleExpansion{AbstractionExpansion}, match)
+function expand_match!(expansion::PossibleExpansion{AbstractionExpansion}, match)::Nothing
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
     if expansion.data.fresh
         push!(match.unique_args, hole) # move the hole to be an argument
     end
+    return nothing
 end
 
 function expand_abstraction!(expansion::PossibleExpansion{SymbolExpansion}, hole, holes, abstraction)
@@ -446,7 +450,7 @@ function expand_abstraction!(expansion::PossibleExpansion{SymbolExpansion}, hole
     end
 end
 
-function expand_match!(expansion::PossibleExpansion{SymbolExpansion}, match)
+function expand_match!(expansion::PossibleExpansion{SymbolExpansion}, match)::Nothing
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
@@ -458,6 +462,7 @@ function expand_match!(expansion::PossibleExpansion{SymbolExpansion}, match)
         push!(match.sym_of_idx, hole.leaf)
         match.idx_of_sym[hole.leaf] = expansion.data.idx
     end
+    return nothing
 end
 
 
@@ -466,12 +471,13 @@ function expand_abstraction!(expansion::PossibleExpansion{ContinuationExpansion}
     hole.leaf = Symbol("#continuation")
 end
 
-function expand_match!(expansion::PossibleExpansion{ContinuationExpansion}, match)
+function expand_match!(expansion::PossibleExpansion{ContinuationExpansion}, match)::Nothing
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
     @assert isnothing(match.continuation)
     match.continuation = hole
+    return nothing
 end
 
 function expand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, hole, holes, abstraction)
@@ -487,12 +493,13 @@ function expand_abstraction!(expansion::PossibleExpansion{SequenceExpansion}, ho
     push!(holes, hole)
 end
 
-function expand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
+function expand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)::Nothing
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
     push!(match.holes_stack, hole)
     # add a hole representing the remaining sequence
     push!(match.holes, RemainingSequenceHole(hole, 1))
+    return nothing
 end
 
 function expand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansion}, hole, holes, abstraction)
@@ -511,7 +518,7 @@ function expand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansi
     push!(holes, element_hole)
 end
 
-function expand_match!(expansion::PossibleExpansion{SequenceElementExpansion}, match)
+function expand_match!(expansion::PossibleExpansion{SequenceElementExpansion}, match)::Nothing
     last_hole = pop!(match.holes)
     @assert typeof(last_hole) == RemainingSequenceHole
     # push the hole back on the stack
@@ -520,6 +527,7 @@ function expand_match!(expansion::PossibleExpansion{SequenceElementExpansion}, m
     new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1)
     push!(match.holes, new_sequence_hole)
     push!(match.holes, new_sequence_hole.root_node.children[new_sequence_hole.num_consumed])
+    return nothing
 end
 
 function expand_abstraction!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, hole, holes, abstraction)
@@ -527,12 +535,13 @@ function expand_abstraction!(expansion::PossibleExpansion{SequenceTerminatorExpa
     pop!(hole.children)
 end
 
-function expand_match!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, match)
+function expand_match!(expansion::PossibleExpansion{SequenceTerminatorExpansion}, match)::Nothing
     # pop next hole and save it for future backtracking
     last_hole = pop!(match.holes)
     @assert typeof(last_hole) == RemainingSequenceHole
     @assert last_hole.num_consumed == length(last_hole.root_node.children)
     push!(match.holes_stack, last_hole)
+    return nothing
 end
 
 function unexpand!(search_state, expansion, hole)
