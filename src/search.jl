@@ -142,6 +142,7 @@ Base.@kwdef mutable struct SearchConfig
     dfa::Union{Dict{Symbol,Dict{Symbol,Vector{Symbol}}},Nothing} = nothing
 
     # optimizations
+    no_exclude_single_match::Bool = false
     no_opt_arg_capture::Bool = false
     no_opt_redundant_args::Bool = false
     size_by_symbol::Union{Nothing,Dict{Symbol,Float32}} = nothing
