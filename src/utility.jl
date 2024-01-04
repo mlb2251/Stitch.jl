@@ -29,7 +29,7 @@ function upper_bound_sum_subtree_sizes(search_state, expansion=nothing)::Float32
         return 0
     end
 
-    sum(m -> m.expr.metadata.size, matches)
+    sum(m -> expr_of(m).metadata.size, matches)
 end
 
 """

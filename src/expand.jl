@@ -39,6 +39,34 @@ function expansions!(typ, search_state::SearchState{Match})
     end
 end
 
+function expansions!(typ, search_state::SearchState{MatchPossibilities})
+    flattened_matches = Vector{Tuple{Int,Match}}()
+    for (i, match_poss) in enumerate(search_state.matches)
+        for match in match_poss.alternatives
+            push!(flattened_matches, (i, match))
+        end
+    end
+    res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config)
+    for (expansion, tagged_matches) in res
+        out = Dict{Int,Vector{Match}}()
+        ks = Vector{Int}()
+        for (i, match) in tagged_matches
+            if !(i in keys(out))
+                push!(ks, i)
+            end
+            push!(get!(out, i, Match[]), match)
+        end
+        poss = Vector{MatchPossibilities}()
+        for i in ks
+            push!(poss, MatchPossibilities(out[i]))
+        end
+        push!(search_state.expansions, PossibleExpansion(
+            poss,
+            expansion,
+        ))
+    end
+end
+
 
 """
 Adds the set of expansions to whatever terminal or nonterminal is present at the match locations,
@@ -321,10 +349,20 @@ function expand_general!(search_state, expansion)
 end
 
 function expand_utilities!(expansion, search_state::SearchState{Match})
-    for match in expansion.matches
+    for match in search_state.matches
         # save the local utility for backtracking
         push!(match.local_utility_stack, match.local_utility)
         match.local_utility += delta_local_utility(search_state.config, match, expansion.data)
+    end
+end
+
+function expand_utilities!(expansion, search_state::SearchState{MatchPossibilities})
+    for match_poss in search_state.matches
+        for match in match_poss.alternatives
+            # save the local utility for backtracking
+            push!(match.local_utility_stack, match.local_utility)
+            match.local_utility += delta_local_utility(search_state.config, match, expansion.data)
+        end
     end
 end
 
@@ -360,10 +398,25 @@ function unexpand_utilities!(search_state::SearchState{Match})
     end
 end
 
-function check_number_of_holes(search_state::SearchState{Match})
-    all(match -> length(match.holes) == length(search_state.holes), search_state.matches) || error("mismatched number of holes")
+function unexpand_utilities!(search_state::SearchState{MatchPossibilities})
+    for match_poss in search_state.matches
+        for match in match_poss.alternatives
+            match.local_utility = pop!(match.local_utility_stack)
+        end
+    end
 end
 
+function has_number_of_holes(match::Match, num_holes)
+    length(match.holes) == num_holes
+end
+
+function has_number_of_holes(match_poss::MatchPossibilities, num_holes)
+    all(m -> has_number_of_holes(m, num_holes), match_poss.alternatives)
+end
+
+function check_number_of_holes(search_state)
+    all(m -> has_number_of_holes(m, length(search_state.holes)), search_state.matches) || error("mismatched number of holes")
+end
 
 function expand!(search_state::SearchState{Match}, expansion, hole)
     expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
@@ -371,6 +424,44 @@ function expand!(search_state::SearchState{Match}, expansion, hole)
         extras = expand_match!(expansion, match)
         @assert extras === nothing
     end
+end
+
+function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
+
+    expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
+    new_match_poss = MatchPossibilities[]
+    whole_list_update = false
+    for (idx, match_poss) in enumerate(search_state.matches)
+        updated_matches = Match[]
+        match_poss_update = false
+        for (alt_idx, match) in enumerate(match_poss.alternatives)
+            extras = expand_match!(expansion, match)
+            push!(updated_matches, match)
+            if extras === nothing
+                continue
+            else
+                if !match_poss_update
+                    match_poss_update = true
+                    append!(updated_matches, match_poss.alternatives[1:alt_idx-1])
+                end
+                append!(updated_matches, extras)
+            end
+        end
+        if match_poss_update
+            if !whole_list_update
+                whole_list_update = true
+                new_match_poss = MatchPossibilities[]
+                append!(new_match_poss, search_state.matches[1:idx-1])
+            end
+            match_poss = MatchPossibilities(updated_matches)
+            push!(new_match_poss, match_poss)
+        end
+    end
+    if !whole_list_update
+        new_match_poss = search_state.matches
+    end
+    push!(search_state.matches_stack, search_state.matches)
+    search_state.matches = new_match_poss
 end
 
 function expand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abstraction)
@@ -568,6 +659,16 @@ function unexpand!(search_state::SearchState{Match}, expansion, hole)
     end
 end
 
+function unexpand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
+    unexpand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction)
+    search_state.matches = pop!(search_state.matches_stack)
+    for match_poss in search_state.matches
+        for match in match_poss.alternatives
+            unexpand_match!(expansion, match)
+        end
+    end
+end
+
 function unexpand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abstraction)
     hole.leaf = SYM_HOLE
 end
@@ -739,6 +840,10 @@ function redundant_arg_elim(search_state)
     false
 end
 
+function args_match(matches::Vector{MatchPossibilities}, i, j)
+    all(match_poss -> args_match(match_poss.alternatives, i, j), matches)
+end
+
 function args_match(matches::Vector{Match}, i, j)
     all(match -> match.unique_args[i].metadata.struct_hash == match.unique_args[j].metadata.struct_hash, matches)
 end
@@ -759,7 +864,15 @@ function arg_capture(search_state::SearchState{Match}, i)
     if all(match -> match.unique_args[i].metadata.struct_hash == first_match, search_state.matches)
         return true
     end
-    false
+    return false
+end
+
+function arg_capture(search_state::SearchState{MatchPossibilities}, i)
+    first_match = search_state.matches[1].alternatives[1].unique_args[i].metadata.struct_hash
+    if all(match_poss -> all(match -> match.unique_args[i].metadata.struct_hash == first_match, match_poss.alternatives), search_state.matches)
+        return true
+    end
+    return false
 end
 
 function is_single_task(search_state)

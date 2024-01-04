@@ -96,6 +96,14 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
     return util, rcis
 end
 
+function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossibilities) :: Tuple{Float64, Match}
+    (util, i) = findmax(match.alternatives) do m
+        u, _ = compute_best_utility(rcis, m)
+        u
+    end
+    return util, match.alternatives[i]
+end
+
 function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match) :: Tuple{Float64, Match}
     util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, m.unique_args, init=0.0)
     return util, m

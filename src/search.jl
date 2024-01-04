@@ -185,7 +185,14 @@ mutable struct SearchState{M}
 
     function SearchState(corpus, config)
         abstraction = Abstraction(new_hole(nothing), 0, 0, :uninit_state, [], [])
-        matches = init_all_corpus_matches(Match, corpus, config)
+
+        typ = if config.match_sequences
+            MatchPossibilities
+        else
+            Match
+        end
+
+        matches = init_all_corpus_matches(typ, corpus, config)
         if !isnothing(config.dfa)
             for program in corpus.programs
                 run_dfa!(program.expr, config.dfa, :M)
@@ -194,7 +201,7 @@ mutable struct SearchState{M}
         all_nodes = map(expr_of, matches)
         best_util = Float32(0)
         best_abstraction = nothing
-        new{Match}(config, corpus, all_nodes,
+        new{typ}(config, corpus, all_nodes,
             PlotData(), best_util, best_abstraction, Stats(),
             abstraction, [abstraction.body], matches, PossibleExpansion[],
             SExpr[], PossibleExpansion[], Match[], PossibleExpansion[])
