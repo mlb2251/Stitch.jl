@@ -157,4 +157,4 @@ function utility_rewrite(search_state)::Float32
     size(search_state.corpus, size_by_symbol) - size(rewritten, size_by_symbol)
 end
 
-is_identity_abstraction(search_state) = length(search_state.past_expansions) == 1 && isa(search_state.past_expansions[1].match, AbstractionExpansion)
+is_identity_abstraction(search_state) = length(search_state.past_expansions) == 1 && isa(search_state.past_expansions[1].data, AbstractionExpansion)
