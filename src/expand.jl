@@ -332,13 +332,15 @@ function unexpand_general!(search_state::SearchState)
     # pop the expansion to undo
     expansion = pop!(search_state.past_expansions)
 
-    # unexpand - this should be an inverse to expand!()
-    search_state.matches === expansion.matches || error("mismatched matches")
     for match in search_state.matches
         match.local_utility = pop!(match.local_utility_stack)
     end
 
     unexpand!(search_state, expansion, hole)
+
+    # unexpand - this should be an inverse to expand!()
+    search_state.matches === expansion.matches || error("mismatched matches")
+
     # restore other state
     search_state.expansions = pop!(search_state.expansions_stack)
     search_state.matches = pop!(search_state.matches_stack)
