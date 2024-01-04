@@ -502,19 +502,27 @@ function expand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)::
     return nothing
 end
 
-function expand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansion}, hole, holes, abstraction)
-    # take a hole (/seq <things> ...) and make it (/seq <things> ?? ...). Place the ?? above the ... on the stack,
-    # but do *not* remove ... from the stack, since it will be consumed by the next expansion once the ?? is filled in
+function insert_before_sequence_hole!(create_new, hole, holes)
+    # take a hole (/seq <things> ...) and make it (/seq <things> <new> ...). Also manipulate the stack of holes,
+    # so that the ... hole is updated for the fact that it is now one further to the right. It is not
+    # removed because it can still be filled in with more elements.
+
+    # The newly created hole is then returned
 
     i = length(hole.children)
-    element_hole = new_hole((hole, i))
+    new_element = create_new(i)
     # overwrite the old ...
-    hole.children[i] = element_hole
+    hole.children[i] = new_element
 
     new_sequence_hole = new_seq_hole((hole, i + 1))
     push!(hole.children, new_sequence_hole)
 
     push!(holes, hole)
+    new_element
+end
+
+function expand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansion}, hole, holes, abstraction)
+    element_hole = insert_before_sequence_hole!(i -> new_hole((hole, i)), hole, holes)
     push!(holes, element_hole)
 end
 
@@ -658,15 +666,16 @@ function unexpand_match!(expansion::PossibleExpansion{SequenceExpansion}, match)
     @assert sequence_hole.root_node === original_hole
 end
 
-function unexpand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansion}, hole, holes, abstraction)
-    # remove the ?? hole from the list of holes
-    pop!(holes).leaf == SYM_HOLE || error("expected SYM_HOLE")
+function remove_inserted_before_sequence_hole!(check_fn, hole, holes)
+    # undoes the effect of insert_before_sequence_hole!() by removing the hole that was inserted
+    # before the ... hole. The check_fn is called on the hole that was removed, to make sure it is
+    # the right one.
 
     # remove the ... hole from the list of holes
     is_seq_hole_token(pop!(hole.children)) || error("expected sequence hole token")
 
-    # delete the ?? hole from the sequence
-    pop!(hole.children).leaf == SYM_HOLE || error("expected SYM_HOLE")
+    # delete the <new> hole from the sequence
+    check_fn(pop!(hole.children))
 
     # put the ... hole back onto the end
     new_sequence_hole = new_seq_hole((hole, length(hole.children)))
@@ -674,6 +683,15 @@ function unexpand_abstraction!(expansion::PossibleExpansion{SequenceElementExpan
 
     # delete the (/seq <extra> ...) hole
     pop!(holes) === hole || error("expected same sequence")
+end
+
+function unexpand_abstraction!(expansion::PossibleExpansion{SequenceElementExpansion}, hole, holes, abstraction)
+    # remove the ?? hole from the list of holes
+    pop!(holes).leaf === SYM_HOLE || error("expected SYM_HOLE")
+
+    remove_inserted_before_sequence_hole!(hole, holes) do m
+        m.leaf == SYM_HOLE || error("expected SYM_HOLE")
+    end
 end
 
 function unexpand_match!(expansion::PossibleExpansion{SequenceElementExpansion}, match)
