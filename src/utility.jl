@@ -97,11 +97,11 @@ function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
         expansion.matches
     end
 
-    if !search_state.config.no_opt_arg_capture && length(matches) == 1
+    if !search_state.config.no_exclude_single_match && length(matches) == 1
         return 0
     end
 
-    sum(match -> sum_no_variables(match), matches, init=0.0)
+    sum(sum_no_variables, matches, init=0.0)
 end
 
 sum_no_variables(match::Match) = match.local_utility + match.holes_size
