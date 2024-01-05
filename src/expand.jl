@@ -673,9 +673,9 @@ function expand_match!(expansion::SequenceExpansion, match::Match)::Union{Nothin
         match_copy = copy_match(match)
         push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_subseq))
         match_copy.start_items = start_consumes + 1
-        # for i in 2:match_copy.start_items
-        #     match_copy.holes_size -= hole.children[i].metadata.size
-        # end
+        for i in 2:match_copy.start_items
+            match_copy.holes_size -= hole.children[i].metadata.size
+        end
         push!(matches, match_copy)
     end
     matches
@@ -733,9 +733,9 @@ function expand_match!(expansion::SequenceTerminatorExpansion, match::Match)::No
     # this does not affect holes_size since we are just removing a ... that currently matches nothing
     if expansion.is_subseq
         match.end_items = last_hole.num_consumed
-        # for i in last_hole.num_consumed+1:length(last_hole.root_node.children)
-        #     match.holes_size -= last_hole.root_node.children[i].metadata.size
-        # end
+        for i in match.end_items+1:length(last_hole.root_node.children)
+            match.holes_size -= last_hole.root_node.children[i].metadata.size
+        end
     end
     return nothing
 end
@@ -928,9 +928,9 @@ function unexpand_match!(expansion::SequenceExpansion, match::Match)
     @assert sequence_hole.root_node === original_hole
 
     if expansion.is_subseq && match.start_items !== nothing
-        # for i in 2:match.start_items
-        #     match.holes_size += original_hole.children[i].metadata.size
-        # end
+        for i in 2:match.start_items
+            match.holes_size += original_hole.children[i].metadata.size
+        end
         match.start_items = nothing
     end
     # put back the /seq node
@@ -985,10 +985,10 @@ function unexpand_match!(expansion::SequenceTerminatorExpansion, match::Match)
     push!(match.holes, pop!(match.holes_stack))
 
     if expansion.is_subseq
-        # e = expr_of(match)
-        # for i in match.end_items+1:length(e.children)
-        #     match.holes_size += e.children[i].metadata.size
-        # end
+        e = expr_of(match)
+        for i in match.end_items+1:length(e.children)
+            match.holes_size += e.children[i].metadata.size
+        end
 
         match.end_items = nothing
     end
