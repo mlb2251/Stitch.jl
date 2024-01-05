@@ -607,7 +607,7 @@ end
 function expand_match!(expansion::ContinuationExpansion, match::Match)::Nothing
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
-    match.holes_size -= hole.metadata.size
+    match.holes_size -= (hole::TreeNodeHole).metadata.size
     push!(match.holes_stack, hole)
     @assert isnothing(match.continuation)
     match.continuation = hole
@@ -633,7 +633,7 @@ function expand_match!(expansion::SequenceExpansion, match::Match)::Nothing
     push!(match.holes_stack, hole)
     # add a hole representing the remaining sequence
     push!(match.holes, RemainingSequenceHole(hole, 1))
-    match.holes_size -= hole.children[1].metadata.size # remove the /seq node
+    match.holes_size -= (hole::TreeNodeHole).children[1].metadata.size # remove the /seq node
     return nothing
 end
 
@@ -763,7 +763,7 @@ function unexpand_match!(expansion::SyntacticLeafExpansion, match::Match)
     hole = pop!(match.holes_stack)
     push!(match.holes, hole)
 
-    match.holes_size += hole.metadata.size
+    match.holes_size += (hole::TreeNodeHole).metadata.size
 end
 
 function unexpand_abstraction!(expansion::SyntacticNodeExpansion, hole, holes, abstraction)
@@ -794,7 +794,7 @@ function unexpand_match!(expansion::SyntacticNodeExpansion, match::Match)
     push!(match.holes, hole)
 
     if expansion.head !== :no_expand_head
-        match.holes_size += hole.children[1].metadata.size
+        match.holes_size += (hole::TreeNodeHole).children[1].metadata.size
     end
 end
 
@@ -813,7 +813,7 @@ function unexpand_match!(expansion::AbstractionExpansion, match::Match)
         pop!(match.unique_args) === hole || error("expected same hole")
     end
 
-    match.holes_size += hole.metadata.size
+    match.holes_size += (hole::TreeNodeHole).metadata.size
 end
 
 function unexpand_abstraction!(expansion::SymbolExpansion, hole, holes, abstraction)
@@ -834,7 +834,7 @@ function unexpand_match!(expansion::SymbolExpansion, match::Match)
         delete!(match.idx_of_sym, hole.leaf)
     end
 
-    match.holes_size += hole.metadata.size
+    match.holes_size += (hole::TreeNodeHole).metadata.size
 end
 
 function unexpand_abstraction!(expansion::ContinuationExpansion, hole, holes, abstraction)
@@ -847,7 +847,7 @@ function unexpand_match!(expansion::ContinuationExpansion, match::Match)
     @assert match.continuation === hole
     match.continuation = nothing
 
-    match.holes_size += hole.metadata.size
+    match.holes_size += (hole::TreeNodeHole).metadata.size
 end
 
 function unexpand_abstraction!(expansion::SequenceExpansion, hole, holes, abstraction)
@@ -866,7 +866,7 @@ function unexpand_match!(expansion::SequenceExpansion, match::Match)
     # remove the ... hole
     sequence_hole = pop!(match.holes)
     # get the original hole and put it back on the stack
-    original_hole = pop!(match.holes_stack)
+    original_hole::TreeNodeHole = pop!(match.holes_stack)
     push!(match.holes, original_hole)
     # check that the ... hole is the same as the one we just popped
     @assert typeof(sequence_hole) == RemainingSequenceHole
