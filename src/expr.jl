@@ -48,6 +48,8 @@ mutable struct Match
     unique_args::Vector{SExpr}
     # pointer to the place that each hole matches.
     holes::Vector{Hole{SExpr}}
+    # total size of the holes
+    holes_size::Float32
     # history of the holes
     holes_stack::Vector{Hole{SExpr}}
     # history of the local utilities of the match
@@ -95,6 +97,7 @@ fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
     expr,
     SExpr[],
     Hole{SExpr}[expr],
+    expr.metadata.size,
     Hole{SExpr}[],
     Float32[],
     local_utility_init(config),
@@ -110,6 +113,7 @@ copy_match(m::Match) = Match(
     m.expr,
     copy(m.unique_args),
     copy(m.holes),
+    m.holes_size,
     copy(m.holes_stack),
     copy(m.local_utility_stack),
     m.local_utility,
