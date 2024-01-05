@@ -500,7 +500,7 @@ end
 
 function expand_match!(expansion::SyntacticLeafExpansion, match::Match)::Nothing
     hole = pop!(match.holes)
-    match.holes_size -= (hole::SExpr).metadata.size
+    match.holes_size -= (hole::TreeNodeHole).metadata.size
     push!(match.holes_stack, hole)
     @assert is_leaf(hole)
     return nothing
@@ -545,7 +545,7 @@ function expand_match!(expansion::SyntacticNodeExpansion, match::Match)::Nothing
     # add all the children of the hole as new holes (except possibly the head)
     if expansion.head !== :no_expand_head
         append!(match.holes, hole.children[2:end])
-        match.holes_size -= (hole::SExpr).children[1].metadata.size
+        match.holes_size -= (hole::TreeNodeHole).children[1].metadata.size
     else
         append!(match.holes, hole.children)
     end
@@ -564,7 +564,7 @@ end
 
 function expand_match!(expansion::AbstractionExpansion, match::Match)::Nothing
     hole = pop!(match.holes)
-    match.holes_size -= (hole::SExpr).metadata.size
+    match.holes_size -= (hole::TreeNodeHole).metadata.size
     push!(match.holes_stack, hole)
     if expansion.fresh
         push!(match.unique_args, hole) # move the hole to be an argument
@@ -585,7 +585,7 @@ end
 function expand_match!(expansion::SymbolExpansion, match::Match)::Nothing
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)
-    match.holes_size -= (hole::SExpr).metadata.size
+    match.holes_size -= (hole::TreeNodeHole).metadata.size
     push!(match.holes_stack, hole)
 
     @assert string(hole.leaf)[1] == '&'
