@@ -126,7 +126,7 @@ Base.@kwdef mutable struct SearchConfig
     track::Union{SExpr,Nothing} = nothing
     max_arity::Int = 2
     max_choice_arity::Int = 2
-    upper_bound_fn::Function = upper_bound_sum_subtree_sizes
+    upper_bound_fn::Function = upper_bound_sum_no_variables
     expansion_processor::Union{Function,Nothing} = nothing
     verbose::Bool = false
     verbose_best::Bool = true
@@ -284,7 +284,6 @@ function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vect
     id = 1
     for program in corpus.programs
         for expr in subexpressions(program.expr) # child-first traversal (postorder)
-            match = fresh_match_possibilities(t, expr, id, config)
             expr.metadata = Metadata(
                 program,
                 size(expr, config.size_by_symbol),
@@ -294,6 +293,7 @@ function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vect
                 :uninit_state,
                 id
             )
+            match = fresh_match_possibilities(t, expr, id, config)
             push!(matches, match)
             id += 1
         end
