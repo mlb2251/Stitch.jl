@@ -545,7 +545,7 @@ function expand_match!(expansion::SyntacticNodeExpansion, match::Match)::Nothing
     # add all the children of the hole as new holes (except possibly the head)
     if expansion.head !== :no_expand_head
         append!(match.holes, hole.children[2:end])
-        match.holes_size -= hole.children[1].metadata.size
+        match.holes_size -= (hole::SExpr).children[1].metadata.size
     else
         append!(match.holes, hole.children)
     end
