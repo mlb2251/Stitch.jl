@@ -3,7 +3,7 @@ abstract type Hole{S} end
 """
 An expression. See SExpr for the version that's always used - the definition is split into
 SExprGeneric and SExpr because mutually recursive types are supported in julia so we can't
-directly have Expr and Match that point to each other and without using generics.
+directly have SExpr -> Metadata -> ProgramGeneric -> SExpr.
 """
 mutable struct SExprGeneric{M} <: Hole{SExprGeneric{M}}
     leaf::Union{Symbol,Nothing}
@@ -32,8 +32,6 @@ end
 const SExpr = SExprGeneric{Metadata}
 const Program = ProgramGeneric{Metadata}
 
-abstract type Hole{S} end
-
 mutable struct Match
     # represents a match of the current abstraction being constructed
     # match objects are created once at the start of each iteration, which each match
@@ -50,6 +48,8 @@ mutable struct Match
     unique_args::Vector{SExpr}
     # pointer to the place that each hole matches.
     holes::Vector{Hole{SExpr}}
+    # total size of the holes
+    holes_size::Float32
     # history of the holes
     holes_stack::Vector{Hole{SExpr}}
     # history of the local utilities of the match
@@ -70,7 +70,7 @@ mutable struct Match
     continuation::Union{Nothing,SExpr}
 
     # choice vars
-    choice_var_captures::Dict{Int,Union{SExpr,Nothing}}
+    choice_var_captures::Vector{Union{SExpr,Nothing}}
 end
 
 mutable struct MatchPossibilities
@@ -95,6 +95,7 @@ fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
     expr,
     SExpr[],
     Hole{SExpr}[expr],
+    expr.metadata.size,
     Hole{SExpr}[],
     Float32[],
     Int64[],
@@ -102,13 +103,14 @@ fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
     Symbol[],
     Dict{Symbol,Int}(),
     nothing,
-    Dict{Int,Union{SExpr,Nothing}}(),
+    Union{SExpr,Nothing}[],
 )
 
 copy_match(m::Match) = Match(
     m.expr,
     copy(m.unique_args),
     copy(m.holes),
+    m.holes_size,
     copy(m.holes_stack),
     copy(m.local_utility_stack),
     copy(m.group_ids_stack),
@@ -206,7 +208,8 @@ new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
 new_seq_hole(parent_and_argidx) = sexpr_leaf(SYM_SEQ_HOLE; parent=parent_and_argidx)
 
 is_hole(e::SExpr) = e.leaf === SYM_HOLE
-is_seq_hole(e::SExpr) = e.leaf === nothing && e.children[end].leaf === SYM_SEQ_HOLE
+is_seq_hole(e::SExpr) = e.leaf === nothing && is_seq_hole_token(e.children[end])
+is_seq_hole_token(e::SExpr) = e.leaf == SYM_SEQ_HOLE
 
 "child-first traversal"
 function subexpressions(e::SExpr; subexprs=SExpr[])

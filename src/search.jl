@@ -101,6 +101,10 @@ mutable struct Abstraction
     dfa_choicevars::Vector{Symbol}
 end
 
+total_arity(a) = a.arity + a.choice_arity # sym arity is not included
+can_accept_metavar(a, config) = total_arity(a) < config.max_arity
+can_accept_choicevar(a, config) = a.choice_arity < config.max_choice_arity && can_accept_metavar(a, config)
+
 Base.show(io::IO, obj::Abstraction) = pretty_show(io, obj; indent=false)
 
 Base.copy(abstraction::Abstraction) = Abstraction(
@@ -122,7 +126,7 @@ Base.@kwdef mutable struct SearchConfig
     track::Union{SExpr,Nothing} = nothing
     max_arity::Int = 2
     max_choice_arity::Int = 2
-    upper_bound_fn::Function = upper_bound_with_conflicts
+    upper_bound_fn::Function = upper_bound_sum_no_variables
     expansion_processor::Union{Function,Nothing} = nothing
     verbose::Bool = false
     verbose_best::Bool = true
@@ -136,6 +140,7 @@ Base.@kwdef mutable struct SearchConfig
     dfa::Union{Dict{Symbol,Dict{Symbol,Vector{Symbol}}},Nothing} = nothing
 
     # optimizations
+    no_exclude_single_match::Bool = false
     no_opt_arg_capture::Bool = false
     no_opt_redundant_args::Bool = false
     size_by_symbol::Union{Nothing,Dict{Symbol,Float32}} = nothing
@@ -152,6 +157,7 @@ Base.@kwdef mutable struct SearchConfig
 
     # testing
     strict = false
+    shuffle_expansions_seed:: Union{Nothing, Int64} = nothing
 end
 
 
@@ -278,7 +284,6 @@ function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vect
     id = 1
     for program in corpus.programs
         for expr in subexpressions(program.expr) # child-first traversal (postorder)
-            match = fresh_match_possibilities(t, expr, id, config)
             expr.metadata = Metadata(
                 program,
                 size(expr, config.size_by_symbol),
@@ -288,6 +293,7 @@ function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vect
                 :uninit_state,
                 id
             )
+            match = fresh_match_possibilities(t, expr, id, config)
             push!(matches, match)
             id += 1
         end

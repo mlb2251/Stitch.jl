@@ -24,7 +24,12 @@ function upper_bound_sum_subtree_sizes(search_state, expansion=nothing)::Float32
     else
         expansion.matches
     end
-    sum(m -> m.expr.metadata.size, matches)
+
+    if !search_state.config.no_exclude_single_match && length(matches) == 1
+        return 0
+    end
+
+    sum(m -> expr_of(m).metadata.size, matches)
 end
 
 """
@@ -36,6 +41,11 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
     else
         expansion.matches
     end
+
+    if !search_state.config.no_exclude_single_match && length(matches) == 1
+        return 0
+    end
+
     @assert length(matches) > 0
 
     issorted(matches, by=m -> expr_of(m).metadata.id) || error("matches is not sorted")
@@ -58,6 +68,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         offset -= 1
         offset == 0 && break
         expr_of(matches[offset]).metadata.id <= next_id && continue
+        
 
         # rarer case: run binary search to find the rightmost non-child of the previous match
         offset = searchsortedlast(
@@ -73,6 +84,28 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
     end
     bound
 end
+
+"""
+compute a bound based on an upper bound that takes into account the fact that variables
+    aren't counted. Specifically, for each one, it is a sum of the size of the abstraction
+    and the size of the remaining holes.
+"""
+function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
+    matches = if isnothing(expansion)
+        search_state.matches
+    else
+        expansion.matches
+    end
+
+    if !search_state.config.no_exclude_single_match && length(matches) == 1
+        return 0
+    end
+
+    sum(sum_no_variables, matches, init=0.0)
+end
+
+sum_no_variables(match::Match) = match.local_utility + match.holes_size
+sum_no_variables(match::MatchPossibilities) = maximum([sum_no_variables(x) for x in match.alternatives])
 
 function delta_local_utility(config, match, expansion::SymbolExpansion)
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
@@ -129,7 +162,7 @@ function delta_local_utility(config, match, expansion::SequenceTerminatorExpansi
 end
 
 function delta_local_utility(config, match, expansion::SequenceChoiceVarExpansion)
-    if match.choice_var_captures[expansion.idx] === nothing
+    if match.choice_var_captures[expansion.idx + 1] === nothing
         return -symbol_size(SYM_CHOICE_VAR_NOTHING, config.size_by_symbol) + config.application_utility_choicevar
     else
         config.application_utility_choicevar
@@ -157,4 +190,4 @@ function utility_rewrite(search_state)::Float32
     size(search_state.corpus, size_by_symbol) - size(rewritten, size_by_symbol)
 end
 
-is_identity_abstraction(search_state) = length(search_state.past_expansions) == 1 && isa(search_state.past_expansions[1].match, AbstractionExpansion)
+is_identity_abstraction(search_state) = length(search_state.past_expansions) == 1 && isa(search_state.past_expansions[1].data, AbstractionExpansion)

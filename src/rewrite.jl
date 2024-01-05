@@ -107,7 +107,8 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossib
 end
 
 function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match) :: Tuple{Float64, Match}
-    util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, m.unique_args, init=0.0)
+    args = vcat(m.unique_args, [v for v in m.choice_var_captures if !isnothing(v)])
+    util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, args, init=0.0)
     return util, m
 end
 
@@ -134,8 +135,7 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
         for sym in m.sym_of_idx
             push!(children, sexpr_leaf(sym))
         end
-        for idx in range(0, length(m.choice_var_captures) - 1)
-            capture = m.choice_var_captures[idx]
+        for capture in m.choice_var_captures
             if isnothing(capture)
                 push!(children, sexpr_leaf(SYM_CHOICE_VAR_NOTHING))
             else
