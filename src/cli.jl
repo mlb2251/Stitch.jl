@@ -73,7 +73,7 @@ function cli()
         size_by_symbol=size_by_symbol,
         application_utility_fixed=args["application-utility-fixed"],
         application_utility_metavar=args["application-utility-metavar"],
-        application_utility_symvar=args["application-utility-symvar"]
+        application_utility_symvar=args["application-utility-symvar"],
     )
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     println(JSON.json([

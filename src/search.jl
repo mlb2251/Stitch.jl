@@ -439,6 +439,8 @@ function stitch_search(corpus, config)
 
             plot && push!(plot_data.completed_util, (search_state.stats.expansions, util))
 
+            # printstyled("COMPLETED: ", search_state.abstraction.body, "\n", color=:magenta, bold=false)
+
             # check for new best
             if util > search_state.best_util
                 search_state.best_util = util
@@ -564,7 +566,7 @@ function compress_imperative(original_corpus, dfa_path; kwargs...)
         autoexpand_head=true,
         # only_match_semi = true,
         allow_single_task=false,
-        verbose_best=false,
+        verbose_best=true,
         dfa=load_dfa(dfa_path),
         kwargs...
     )
