@@ -291,6 +291,7 @@ function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vect
                 size(expr, config.size_by_symbol),
                 num_nodes(expr),
                 struct_hash(expr),
+                struct_hash(expr; no_symbols=true),
                 :uninit_state,
                 :uninit_state,
                 id

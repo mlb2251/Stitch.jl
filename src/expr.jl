@@ -23,6 +23,7 @@ mutable struct Metadata
     size::Float32
     num_nodes::Int
     struct_hash::Int
+    struct_hash_no_symbol::Int
     dfa_state::Symbol
     seq_element_dfa_state::Symbol
     # postorder location of the underlying node in the corpus.
@@ -163,20 +164,29 @@ end
 end
 
 const global_struct_hash = Dict{HashNode,Int}()
+const global_struct_hash_no_symbol = Dict{HashNode,Int}()
 
 """
 sets structural hash value, possibly with side effects of updating the structural hash, and
 sets e.metadata.struct_hash. Requires .metadata to be set so we know this will be used immutably
 """
-function struct_hash(e::SExpr)::Int
-    isnothing(e.metadata) || isnothing(e.metadata.struct_hash) || return e.metadata.struct_hash
+function struct_hash(e::SExpr; no_symbols=false)::Int
+    isnothing(e.metadata) || isnothing(e.metadata.struct_hash) || return no_symbols ? e.metadata.struct_hash_no_symbol : e.metadata.struct_hash
 
-    node = HashNode(e.leaf, map(struct_hash, e.children))
-    if !haskey(global_struct_hash, node)
-        global_struct_hash[node] = length(global_struct_hash) + 1
+    struct_hashtable = no_symbols ? global_struct_hash_no_symbol : global_struct_hash
+
+    leaf = e.leaf
+
+    if no_symbols && string(leaf)[1] == '&'
+        leaf = Symbol("&symbol")
     end
-    isnothing(e.metadata) || (e.metadata.struct_hash = global_struct_hash[node])
-    return global_struct_hash[node]
+
+    node = HashNode(leaf, map(x -> struct_hash(x; no_symbols=no_symbols), e.children))
+    if !haskey(struct_hashtable, node)
+        struct_hashtable[node] = length(struct_hashtable) + 1
+    end
+    isnothing(e.metadata) || (e.metadata.struct_hash = struct_hashtable[node])
+    return struct_hashtable[node]
 end
 
 
