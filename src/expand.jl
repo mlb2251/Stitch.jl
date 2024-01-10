@@ -1071,7 +1071,31 @@ end
 
 function same_in_context(m1::Match, m2::Match, e1::SExpr, e2::SExpr)
     # returns true iff e1 and e2 are the same in the context of m1 and m2
-    return e1.metadata.struct_hash == e2.metadata.struct_hash
+    if e1.metadata.struct_hash == e2.metadata.struct_hash
+        return true
+    end
+    if e1.metadata.struct_hash_no_symbol != e2.metadata.struct_hash_no_symbol
+        return false
+    end
+    if e1.leaf !== nothing
+        if e2.leaf === nothing
+            return false
+        end
+        @assert typeof(e1.leaf) == Symbol && string(e1.leaf)[1] == '&'
+        if !(e1.leaf in m1.sym_of_idx) || !(e2.leaf in m2.sym_of_idx)
+            return false
+        end
+        return m1.idx_of_sym[e1.leaf] == m2.idx_of_sym[e2.leaf]
+    end
+    if length(e1.children) != length(e2.children)
+        return false
+    end
+    for (c1, c2) in zip(e1.children, e2.children)
+        if !same_in_context(m1, m2, c1, c2)
+            return false
+        end
+    end
+    return true
 end
 
 function choice_var_always_used_or_not(search_state)
