@@ -171,24 +171,22 @@ sets structural hash value, possibly with side effects of updating the structura
 sets e.metadata.struct_hash. Requires .metadata to be set so we know this will be used immutably
 """
 function struct_hash(e::SExpr)::Tuple{Int,Int}
-    isnothing(e.metadata) || return (e.metadata.struct_hash_no_symbol, e.metadata.struct_hash)
+    # @assert isnothing(e.metadata)
+    # isnothing(e.metadata) || return (e.metadata.struct_hash_no_symbol, e.metadata.struct_hash)
 
     leaf = e.leaf
 
-    children = map(struct_hash, e.children)
+    children = e.children
 
-    node_w_symbol = HashNode(leaf, map(x -> x[2], children))
+    node_w_symbol = HashNode(leaf, map(x -> x.metadata.struct_hash, children))
     if string(leaf)[1] == '&'
         leaf = Symbol("&symbol")
     end
-    node_wo_symbol = HashNode(leaf, map(x -> x[1], children))
-    if !haskey(global_struct_hash, node_w_symbol)
-        global_struct_hash[node_w_symbol] = length(global_struct_hash) + 1
-    end
-    if !haskey(global_struct_hash_no_symbol, node_wo_symbol)
-        global_struct_hash_no_symbol[node_wo_symbol] = length(global_struct_hash_no_symbol) + 1
-    end
-    return (global_struct_hash_no_symbol[node_wo_symbol], global_struct_hash[node_w_symbol])
+    node_wo_symbol = HashNode(leaf, map(x -> x.metadata.struct_hash_no_symbol, children))
+
+    hash_w_symbol = get!(global_struct_hash, node_w_symbol, length(global_struct_hash) + 1)
+    hash_wo_symbol = get!(global_struct_hash_no_symbol, node_wo_symbol, length(global_struct_hash_no_symbol) + 1)
+    return (hash_wo_symbol, hash_w_symbol)
 end
 
 
