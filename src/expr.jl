@@ -164,6 +164,7 @@ end
 end
 
 const global_struct_hash = Dict{HashNode,Int}()
+const global_struct_hash_no_symbol = Dict{HashNode,Int}()
 
 """
 sets structural hash value, possibly with side effects of updating the structural hash, and
@@ -180,7 +181,7 @@ function struct_hash(e::SExpr)::Tuple{Int,Int}
     node_wo_symbol = HashNode(leaf, map(x -> x.metadata.struct_hash_no_symbol, children))
 
     hash_w_symbol = get!(global_struct_hash, node_w_symbol, length(global_struct_hash) + 1)
-    hash_wo_symbol = get!(global_struct_hash, node_wo_symbol, length(global_struct_hash) + 1)
+    hash_wo_symbol = get!(global_struct_hash_no_symbol, node_wo_symbol, length(global_struct_hash_no_symbol) + 1)
     return (hash_wo_symbol, hash_w_symbol)
 end
 
