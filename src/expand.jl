@@ -277,9 +277,11 @@ function collect_expansions(
         return []
     end
 
+    # currently only executed when abstraction is ??. Means this is effectively the first expansion
     is_root = is_leaf(abstraction.body)
 
     if is_root
+        # in this context, we expand to a subsequence node as well as a sequence node.
         return [(SequenceExpansion(true), matches), (SequenceExpansion(false), matches)]
     else
         return [(SequenceExpansion(false), matches)]
@@ -321,8 +323,10 @@ function collect_expansions(
             continue
         end
         if hole.is_subseq
+            # if the hole is a subseq we can terminate whenever
             push!(matches_by_subseq[2], (tag, match))
         else
+            # if the whole is a full sequence, we need to make sure we've consumed all the elements first
             if hole.num_consumed == length(hole.root_node.children)
                 push!(matches_by_subseq[1], (tag, match))
             end
