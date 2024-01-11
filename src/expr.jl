@@ -66,6 +66,9 @@ mutable struct Match
 
     # metavariable for continuation
     continuation::Union{Nothing,SExpr}
+    # metavariable for beginning and end
+    start_items:: Union{Nothing,Int}
+    end_items:: Union{Nothing,Int}
 
     # choice vars
     choice_var_captures::Vector{Union{SExpr,Nothing}}
@@ -81,6 +84,7 @@ const TreeNodeHole = SExpr
 struct RemainingSequenceHole <: Hole{SExpr}
     root_node::SExpr
     num_consumed::Int
+    is_subseq::Bool
 end
 
 fresh_match_possibilities(::Type{MatchPossibilities}, expr, id, config) = MatchPossibilities(
@@ -100,6 +104,8 @@ fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
     Symbol[],
     Dict{Symbol,Int}(),
     nothing,
+    nothing,
+    nothing,
     Union{SExpr,Nothing}[],
 )
 
@@ -114,6 +120,8 @@ copy_match(m::Match) = Match(
     copy(m.sym_of_idx),
     copy(m.idx_of_sym),
     m.continuation,
+    m.start_items,
+    m.end_items,
     copy(m.choice_var_captures),
 )
 
@@ -199,7 +207,10 @@ end
 const SYM_HOLE = Symbol("??")
 const SYM_SEQ_HOLE = Symbol("...")
 const SYM_SEQ_HEAD = Symbol("/seq")
+const SYM_SUBSEQ_HEAD = Symbol("/subseq")
 const SYM_CHOICE_VAR_NOTHING = Symbol("/nothing")
+const SYM_SPLICE = Symbol("/splice")
+const SYM_END = Symbol("\$end")
 new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
 new_seq_hole(parent_and_argidx) = sexpr_leaf(SYM_SEQ_HOLE; parent=parent_and_argidx)
 

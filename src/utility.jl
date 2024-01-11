@@ -3,11 +3,14 @@ function symbol_size(sym::Symbol, size_by_symbol::Dict{Symbol,Float32})
     if sym in keys(size_by_symbol)
         return size_by_symbol[sym]
     else
-        return 1.0
+        return symbol_size(sym, nothing)
     end
 end
 
 function symbol_size(sym::Symbol, size_by_symbol::Nothing)
+    if sym === SYM_SPLICE
+        return 0
+    end
     1.0
 end
 
@@ -150,6 +153,10 @@ function delta_local_utility(config, match, expansion::ContinuationExpansion)
 end
 
 function delta_local_utility(config, match, expansion::SequenceExpansion)
+    if expansion.is_subseq
+        # don't count the root /seq node
+        return 0
+    end
     symbol_size(SYM_SEQ_HEAD, config.size_by_symbol)
 end
 

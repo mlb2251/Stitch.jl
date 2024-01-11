@@ -276,7 +276,16 @@ function collect_expansions(
     if length(matches) == 0
         return []
     end
-    return [(SequenceExpansion(), matches)]
+
+    # currently only executed when abstraction is ??. Means this is effectively the first expansion
+    is_root = is_leaf(abstraction.body)
+
+    if is_root
+        # in this context, we expand to a subsequence node as well as a sequence node.
+        return [(SequenceExpansion(true), matches), (SequenceExpansion(false), matches)]
+    else
+        return [(SequenceExpansion(false), matches)]
+    end
 end
 
 function collect_expansions(
@@ -306,17 +315,31 @@ function collect_expansions(
     config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
-    matches = filter(matches) do (_, match)
+    matches_by_subseq = [Vector{Tuple{Int,Match}}(), Vector{Tuple{Int,Match}}()]
+
+    for (tag, match) in matches
         hole = match.holes[end]
         if typeof(hole) != RemainingSequenceHole
-            return false
+            continue
         end
-        hole.num_consumed == length(hole.root_node.children)
+        if hole.is_subseq
+            # if the hole is a subseq we can terminate whenever
+            push!(matches_by_subseq[2], (tag, match))
+        else
+            # if the whole is a full sequence, we need to make sure we've consumed all the elements first
+            if hole.num_consumed == length(hole.root_node.children)
+                push!(matches_by_subseq[1], (tag, match))
+            end
+        end
     end
-    if length(matches) == 0
-        return []
+    result = Tuple{Expansion,Vector{Tuple{Int,Match}}}[]
+    if length(matches_by_subseq[1]) > 0
+        push!(result, (SequenceTerminatorExpansion(false), matches_by_subseq[1]))
     end
-    return [(SequenceTerminatorExpansion(), matches)]
+    if length(matches_by_subseq[2]) > 0
+        push!(result, (SequenceTerminatorExpansion(true), matches_by_subseq[2]))
+    end
+    return result
 end
 
 function collect_expansions(
@@ -618,7 +641,11 @@ function expand_abstraction!(expansion::SequenceExpansion, hole, holes, abstract
     # take a hole ?? and make it (/seq ...). The hole is then pushed to the stack
     hole.leaf = nothing
     head = new_hole((hole, 1))
-    head.leaf = SYM_SEQ_HEAD
+    head.leaf = if expansion.is_subseq
+        SYM_SUBSEQ_HEAD
+    else
+        SYM_SEQ_HEAD
+    end
     nh = new_seq_hole((hole, 2))
 
     push!(hole.children, head)
@@ -627,14 +654,35 @@ function expand_abstraction!(expansion::SequenceExpansion, hole, holes, abstract
     push!(holes, hole)
 end
 
-function expand_match!(expansion::SequenceExpansion, match::Match)::Nothing
+function expand_match!(expansion::SequenceExpansion, match::Match)::Union{Nothing,Vector{Match}}
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)::TreeNodeHole
     push!(match.holes_stack, hole)
+    if expansion.is_subseq
+        match_main = match
+        match = copy_match(match)
+    else
+        match_main = match
+    end
     # add a hole representing the remaining sequence
-    push!(match.holes, RemainingSequenceHole(hole, 1))
-    match.holes_size -= hole.children[1].metadata.size # remove the /seq node
-    return nothing
+    push!(match_main.holes, RemainingSequenceHole(hole, 1, expansion.is_subseq))
+    match_main.holes_size -= hole.children[1].metadata.size # remove the /seq node
+    if !expansion.is_subseq
+        return nothing
+    end
+    matches = Match[]
+    # start can consume any number of elements. We've already added the case where it consumes 0 elements
+    for start_consumes in 1:length(hole.children)-1
+        # add a hole representing the remaining sequence
+        match_copy = copy_match(match)
+        push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_subseq))
+        match_copy.start_items = start_consumes + 1
+        for i in 2:match_copy.start_items
+            match_copy.holes_size -= hole.children[i].metadata.size
+        end
+        push!(matches, match_copy)
+    end
+    matches
 end
 
 function insert_before_sequence_hole!(create_new, hole, holes)
@@ -667,7 +715,7 @@ function expand_match!(expansion::SequenceElementExpansion, match::Match)::Nothi
     # push the hole back on the stack
     push!(match.holes_stack, last_hole)
 
-    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1)
+    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1, last_hole.is_subseq)
     push!(match.holes, new_sequence_hole)
     push!(match.holes, new_sequence_hole.root_node.children[new_sequence_hole.num_consumed])
 
@@ -684,10 +732,15 @@ function expand_match!(expansion::SequenceTerminatorExpansion, match::Match)::No
     # pop next hole and save it for future backtracking
     last_hole = pop!(match.holes)
     @assert typeof(last_hole) == RemainingSequenceHole
-    @assert last_hole.num_consumed == length(last_hole.root_node.children)
+    @assert expansion.is_subseq || last_hole.num_consumed == length(last_hole.root_node.children)
     push!(match.holes_stack, last_hole)
-
     # this does not affect holes_size since we are just removing a ... that currently matches nothing
+    if expansion.is_subseq
+        match.end_items = last_hole.num_consumed
+        for i in match.end_items+1:length(last_hole.root_node.children)
+            match.holes_size -= last_hole.root_node.children[i].metadata.size
+        end
+    end
     return nothing
 end
 
@@ -727,7 +780,7 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match::Match)::Vec
     # push the hole back on the stack
     push!(consuming_hole.holes_stack, last_hole)
 
-    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1)
+    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1, last_hole.is_subseq)
     push!(consuming_hole.holes, new_sequence_hole)
 
     captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]
@@ -855,7 +908,12 @@ function unexpand_abstraction!(expansion::SequenceExpansion, hole, holes, abstra
 
     # remove the ... and /seq from the sequence
     is_seq_hole_token(pop!(hole.children)) || error("expected sequence hole token")
-    pop!(hole.children).leaf === SYM_SEQ_HEAD || error("expected SYM_SEQ_HEAD")
+    head = pop!(hole.children).leaf
+    if expansion.is_subseq
+        head === SYM_SUBSEQ_HEAD || error("expected SYM_SUBSEQ_HEAD")
+    else
+        head === SYM_SEQ_HEAD || error("expected SYM_SEQ_HEAD")
+    end
 
     # set the head symbol of the hole, to make it a ?? hole
     hole.leaf = SYM_HOLE
@@ -873,6 +931,12 @@ function unexpand_match!(expansion::SequenceExpansion, match::Match)
     @assert sequence_hole.num_consumed == 1
     @assert sequence_hole.root_node === original_hole
 
+    if expansion.is_subseq && match.start_items !== nothing
+        for i in 2:match.start_items
+            match.holes_size += original_hole.children[i].metadata.size
+        end
+        match.start_items = nothing
+    end
     # put back the /seq node
     match.holes_size += original_hole.children[1].metadata.size
 end
@@ -924,6 +988,14 @@ end
 function unexpand_match!(expansion::SequenceTerminatorExpansion, match::Match)
     push!(match.holes, pop!(match.holes_stack))
 
+    if expansion.is_subseq
+        e = expr_of(match)
+        for i in match.end_items+1:length(e.children)
+            match.holes_size += e.children[i].metadata.size
+        end
+
+        match.end_items = nothing
+    end
     # doesn't affect holes_size since we are just adding a ... that currently matches nothing
 end
 

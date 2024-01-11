@@ -3,10 +3,19 @@
         "args": {
             "match_sequences": true
         },
-        "abstractions": [],
+        "abstractions": [
+            [
+                0,
+                0,
+                "(/subseq d e f g h i)",
+                "uninit_state",
+                [],
+                []
+            ]
+        ],
         "programs": [
-            "(/seq a b c d e f g h i 1 2 3)",
-            "(/seq x y z d e f g h i 4 5 6)"
+            "(/seq a b c (/splice (fn_1)) 1 2 3)",
+            "(/seq x y z (/splice (fn_1)) 4 5 6)"
         ]
     }
 ]
