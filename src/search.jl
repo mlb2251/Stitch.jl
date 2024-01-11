@@ -282,6 +282,7 @@ Note any filtering to the initial match set should NOT be done here because
 downstream we need this for SearchState.all_nodes
 """
 function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vector{M} where M
+    clear_struct_hash_dictionaries()
     matches = M[]
     id = 1
     for program in corpus.programs
