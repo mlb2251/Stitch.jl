@@ -164,18 +164,13 @@ end
 end
 
 const global_struct_hash = Dict{HashNode,Int}()
-const global_struct_hash_no_symbol = Dict{HashNode,Int}()
 
 """
 sets structural hash value, possibly with side effects of updating the structural hash, and
 sets e.metadata.struct_hash. Requires .metadata to be set so we know this will be used immutably
 """
 function struct_hash(e::SExpr)::Tuple{Int,Int}
-    # @assert isnothing(e.metadata)
-    # isnothing(e.metadata) || return (e.metadata.struct_hash_no_symbol, e.metadata.struct_hash)
-
     leaf = e.leaf
-
     children = e.children
 
     node_w_symbol = HashNode(leaf, map(x -> x.metadata.struct_hash, children))
@@ -185,7 +180,7 @@ function struct_hash(e::SExpr)::Tuple{Int,Int}
     node_wo_symbol = HashNode(leaf, map(x -> x.metadata.struct_hash_no_symbol, children))
 
     hash_w_symbol = get!(global_struct_hash, node_w_symbol, length(global_struct_hash) + 1)
-    hash_wo_symbol = get!(global_struct_hash_no_symbol, node_wo_symbol, length(global_struct_hash_no_symbol) + 1)
+    hash_wo_symbol = get!(global_struct_hash, node_wo_symbol, length(global_struct_hash) + 1)
     return (hash_wo_symbol, hash_w_symbol)
 end
 
