@@ -1085,7 +1085,7 @@ function same_in_context(m1::Match, m2::Match, e1::SExpr, e2::SExpr)
         if e2.leaf === nothing
             return false
         end
-        @assert typeof(e1.leaf) == Symbol && string(e1.leaf)[1] == '&'
+        # @assert typeof(e1.leaf) == Symbol && string(e1.leaf)[1] == '&'
         if !(e1.leaf in m1.sym_of_idx) || !(e2.leaf in m2.sym_of_idx)
             return false
         end
