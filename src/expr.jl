@@ -185,11 +185,6 @@ function struct_hash(e::SExpr)::Tuple{Int,Int}
     return (hash_wo_symbol, hash_w_symbol)
 end
 
-function clear_struct_hash_dictionaries()
-    empty!(global_struct_hash)
-    empty!(global_struct_hash_no_symbol)
-end
-
 
 """
 Checks if one expression could be expanded to obtain another expression
