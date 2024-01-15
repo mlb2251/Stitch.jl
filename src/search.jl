@@ -390,12 +390,8 @@ function stitch_search(corpus, config)
             continue # skip - worse than best so far
         end
 
-        # check_holes_size(expansion.matches)
-
         # do the expansion
         expand_general!(search_state, expansion)
-
-        # check_holes_size(search_state.matches)
 
         # for when we are tracking a specific abstraction
         tracked = is_tracked(search_state)
