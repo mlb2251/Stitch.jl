@@ -129,8 +129,8 @@ function check_holes_size(match::MatchPossibilities)
     end
 end
 
-function check_holes_size(search_state)
-    for m in search_state.matches
+function check_holes_size(matches)
+    for m in matches
         check_holes_size(m)
     end
 end
