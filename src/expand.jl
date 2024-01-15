@@ -776,6 +776,7 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match::Match)::Vec
     consuming_hole = copy_match(match)
 
     pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
+    consuming_hole.holes_size -= last_hole.root_node.children[last_hole.num_consumed + 1].metadata.size
     # push the hole back on the stack
     push!(consuming_hole.holes_stack, last_hole)
 
