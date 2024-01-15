@@ -677,7 +677,7 @@ function expand_match!(expansion::SequenceExpansion, match::Match)::Union{Nothin
         match_copy = copy_match(match)
         push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_subseq))
         match_copy.start_items = start_consumes + 1
-        for i in 2:match_copy.start_items
+        for i in 1:match_copy.start_items
             match_copy.holes_size -= hole.children[i].metadata.size
         end
         push!(matches, match_copy)
@@ -930,7 +930,7 @@ function unexpand_match!(expansion::SequenceExpansion, match::Match)
     @assert sequence_hole.root_node === original_hole
 
     if expansion.is_subseq && match.start_items !== nothing
-        for i in 2:match.start_items
+        for i in 1:match.start_items
             match.holes_size += original_hole.children[i].metadata.size
         end
         match.start_items = nothing
