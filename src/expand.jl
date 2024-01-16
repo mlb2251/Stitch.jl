@@ -360,9 +360,9 @@ function collect_expansions(
         if typeof(hole) != RemainingSequenceHole
             continue
         end
-        # choice variable cannot be at start of sequence
-        # println(hole.num_consumed)
-        if hole.num_consumed == 1 && hole.is_root
+        # choice variable cannot be at start or end of root sequence
+        # this should be /subseq instead
+        if hole.is_root && (hole.num_consumed == 1 || hole.num_consumed == length(hole.root_node.children))
             continue
         end
         sym = hole.root_node.metadata.seq_element_dfa_state
