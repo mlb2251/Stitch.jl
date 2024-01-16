@@ -201,7 +201,7 @@
     "MatMult": [],
     "Mod": [],
     "Module": [
-      "S",
+      "seqS",
       "X"
     ],
     "Mult": [],
@@ -376,21 +376,21 @@
     "AsyncFor": [
       "L",
       "E",
-      "S",
-      "S",
+      "seqS",
+      "seqS",
       "X"
     ],
     "AsyncFunctionDef": [
       "X",
       "As",
-      "S",
+      "seqS",
       "E",
       "E",
       "X"
     ],
     "AsyncWith": [
       "W",
-      "S",
+      "seqS",
       "X"
     ],
     "Attribute": [
@@ -433,7 +433,7 @@
       "X",
       "E",
       "K",
-      "S",
+      "seqS",
       "E"
     ],
     "Compare": [
@@ -478,8 +478,8 @@
     "For": [
       "L",
       "E",
-      "S",
-      "S",
+      "seqS",
+      "seqS",
       "X"
     ],
     "FormattedValue": [
@@ -490,7 +490,7 @@
     "FunctionDef": [
       "X",
       "As",
-      "S",
+      "seqS",
       "E",
       "E",
       "X"
@@ -510,8 +510,8 @@
     "GtE": [],
     "If": [
       "E",
-      "S",
-      "S"
+      "seqS",
+      "seqS"
     ],
     "IfExp": [
       "X",
@@ -621,10 +621,10 @@
     ],
     "Suite": [],
     "Try": [
-      "S",
+      "seqS",
       "EH",
-      "S",
-      "S"
+      "seqS",
+      "seqS"
     ],
     "Tuple": [
       "X",
@@ -642,12 +642,12 @@
     ],
     "While": [
       "E",
-      "S",
-      "S"
+      "seqS",
+      "seqS"
     ],
     "With": [
       "W",
-      "S",
+      "seqS",
       "X"
     ],
     "Yield": [
@@ -703,10 +703,10 @@
       "S"
     ],
     "/seq": [
-      "S"
+      "X"
     ],
     "/splice": [
-      "S"
+      "seqS"
     ]
   },
   "E": {
@@ -3305,7 +3305,7 @@
     "ExceptHandler": [
       "E",
       "X",
-      "S"
+      "seqS"
     ],
     "Expr": [
       "X"
@@ -4254,6 +4254,361 @@
     ],
     "/seq": [
       "X"
+    ],
+    "/splice": [
+      "X"
+    ]
+  },
+  "seqS": {
+    "AST": [],
+    "Add": [],
+    "And": [],
+    "AnnAssign": [
+      "X",
+      "X",
+      "X",
+      "X"
+    ],
+    "Assert": [
+      "X",
+      "X"
+    ],
+    "Assign": [
+      "X",
+      "X",
+      "X"
+    ],
+    "AsyncFor": [
+      "X",
+      "X",
+      "X",
+      "X",
+      "X"
+    ],
+    "AsyncFunctionDef": [
+      "X",
+      "X",
+      "X",
+      "X",
+      "X",
+      "X"
+    ],
+    "AsyncWith": [
+      "X",
+      "X",
+      "X"
+    ],
+    "Attribute": [
+      "X",
+      "X",
+      "X"
+    ],
+    "AugAssign": [
+      "X",
+      "X",
+      "X"
+    ],
+    "AugLoad": [],
+    "AugStore": [],
+    "Await": [
+      "X"
+    ],
+    "BinOp": [
+      "X",
+      "X",
+      "X"
+    ],
+    "BitAnd": [],
+    "BitOr": [],
+    "BitXor": [],
+    "BoolOp": [
+      "X",
+      "X"
+    ],
+    "Break": [],
+    "Bytes": [
+      "X"
+    ],
+    "Call": [
+      "X",
+      "X",
+      "X"
+    ],
+    "ClassDef": [
+      "X",
+      "X",
+      "X",
+      "X",
+      "X"
+    ],
+    "Compare": [
+      "X",
+      "X",
+      "X"
+    ],
+    "Constant": [
+      "X",
+      "X"
+    ],
+    "Continue": [],
+    "Del": [],
+    "Delete": [
+      "X"
+    ],
+    "Dict": [
+      "X",
+      "X"
+    ],
+    "DictComp": [
+      "X",
+      "X",
+      "X"
+    ],
+    "Div": [],
+    "Ellipsis": [],
+    "Eq": [],
+    "ExceptHandler": [
+      "X",
+      "X",
+      "X"
+    ],
+    "Expr": [
+      "X"
+    ],
+    "Expression": [
+      "X"
+    ],
+    "ExtSlice": [],
+    "FloorDiv": [],
+    "For": [
+      "X",
+      "X",
+      "X",
+      "X",
+      "X"
+    ],
+    "FormattedValue": [
+      "X",
+      "X",
+      "X"
+    ],
+    "FunctionDef": [
+      "X",
+      "X",
+      "X",
+      "X",
+      "X",
+      "X"
+    ],
+    "FunctionType": [
+      "X",
+      "X"
+    ],
+    "GeneratorExp": [
+      "X",
+      "X"
+    ],
+    "Global": [
+      "X"
+    ],
+    "Gt": [],
+    "GtE": [],
+    "If": [
+      "X",
+      "X",
+      "X"
+    ],
+    "IfExp": [
+      "X",
+      "X",
+      "X"
+    ],
+    "Import": [
+      "X"
+    ],
+    "ImportFrom": [
+      "X",
+      "X",
+      "X"
+    ],
+    "In": [],
+    "Index": [],
+    "Interactive": [
+      "X"
+    ],
+    "Invert": [],
+    "Is": [],
+    "IsNot": [],
+    "JoinedStr": [
+      "X"
+    ],
+    "LShift": [],
+    "Lambda": [
+      "X",
+      "X"
+    ],
+    "List": [
+      "X",
+      "X"
+    ],
+    "ListComp": [
+      "X",
+      "X"
+    ],
+    "Load": [],
+    "Lt": [],
+    "LtE": [],
+    "MatMult": [],
+    "Mod": [],
+    "Module": [
+      "X",
+      "X"
+    ],
+    "Mult": [],
+    "Name": [
+      "X",
+      "X"
+    ],
+    "NameConstant": [
+      "X",
+      "X"
+    ],
+    "NamedExpr": [
+      "X",
+      "X"
+    ],
+    "Nonlocal": [
+      "X"
+    ],
+    "Not": [],
+    "NotEq": [],
+    "NotIn": [],
+    "Num": [
+      "X"
+    ],
+    "Or": [],
+    "Param": [],
+    "Pass": [],
+    "Pow": [],
+    "RShift": [],
+    "Raise": [
+      "X",
+      "X"
+    ],
+    "Return": [
+      "X"
+    ],
+    "Set": [
+      "X"
+    ],
+    "SetComp": [
+      "X",
+      "X"
+    ],
+    "Slice": [
+      "X",
+      "X",
+      "X"
+    ],
+    "Starred": [
+      "X",
+      "X"
+    ],
+    "Store": [],
+    "Str": [
+      "X"
+    ],
+    "Sub": [],
+    "Subscript": [
+      "X",
+      "X",
+      "X"
+    ],
+    "Suite": [],
+    "Try": [
+      "X",
+      "X",
+      "X",
+      "X"
+    ],
+    "Tuple": [
+      "X",
+      "X"
+    ],
+    "TypeIgnore": [
+      "X",
+      "X"
+    ],
+    "UAdd": [],
+    "USub": [],
+    "UnaryOp": [
+      "X",
+      "X"
+    ],
+    "While": [
+      "X",
+      "X",
+      "X"
+    ],
+    "With": [
+      "X",
+      "X",
+      "X"
+    ],
+    "Yield": [
+      "X"
+    ],
+    "YieldFrom": [
+      "X"
+    ],
+    "alias": [
+      "X",
+      "X"
+    ],
+    "arg": [
+      "X",
+      "X",
+      "X"
+    ],
+    "arguments": [
+      "X",
+      "X",
+      "X",
+      "X",
+      "X",
+      "X",
+      "X"
+    ],
+    "boolop": [],
+    "cmpop": [],
+    "comprehension": [
+      "X",
+      "X",
+      "X",
+      "X"
+    ],
+    "excepthandler": [],
+    "expr": [],
+    "expr_context": [],
+    "keyword": [
+      "X",
+      "X"
+    ],
+    "mod": [],
+    "operator": [],
+    "slice": [],
+    "stmt": [],
+    "type_ignore": [],
+    "unaryop": [],
+    "withitem": [
+      "X",
+      "X"
+    ],
+    "list": [
+      "seqS"
+    ],
+    "/seq": [
+      "S"
     ],
     "/splice": [
       "X"

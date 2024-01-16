@@ -14,7 +14,7 @@
                 0,
                 6,
                 "(/subseq (Assign (list (Tuple (list (Name %2 Store) (Name %1 Store)) Store)) (Call (Name g_map Load) (list (Name g_int Load) (Call (Attribute (Call (Name g_input Load) nil nil) s_split Load) nil nil)) nil) None) (Assign (list (Tuple (list (Name %4 Store) (Name %3 Store)) Store)) (Call (Name g_map Load) (list (Name g_int Load) (Call (Attribute (Call (Name g_input Load) nil nil) s_split Load) nil nil)) nil) None) (Assign (list (Tuple (list (Name %6 Store) (Name %5 Store)) Store)) (Call (Name g_map Load) (list (Name g_int Load) (Call (Attribute (Call (Name g_input Load) nil nil) s_split Load) nil nil)) nil) None))",
-                "S",
+                "seqS",
                 [],
                 [
                     "X",
@@ -39,7 +39,7 @@
                 0,
                 0,
                 "(/seq (Expr (Call (Name g_print Load) (list (UnaryOp USub (Constant i1 None))) nil)))",
-                "S",
+                "seqS",
                 [],
                 []
             ]
