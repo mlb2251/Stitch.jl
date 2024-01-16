@@ -5,18 +5,21 @@
         },
         "abstractions": [
             [
+                2,
                 0,
-                0,
-                "(/subseq 2 3 a b)",
+                "(/seq #0 2 3 a b #1)",
                 "uninit_state",
-                [],
+                [
+                    "uninit_state",
+                    "uninit_state"
+                ],
                 []
             ]
         ],
         "programs": [
-            "(/seq (+ 1 2 3) (/splice (fn_1)) b)",
-            "(/seq 1 (/splice (fn_1)) d)",
-            "(/seq 1 (/splice (fn_1)) c)"
+            "(fn_1 (+ 1 2 3) b)",
+            "(fn_1 1 d)",
+            "(fn_1 1 c)"
         ]
     }
 ]

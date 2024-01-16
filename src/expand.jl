@@ -1147,10 +1147,10 @@ function variables_at_front_of_root_sequence(search_state)
     if second_child.leaf === nothing
         return false
     end
-    return is_variable(second_child)
+    return is_variable(second_child; no_metavar=first_child.leaf == SYM_SEQ_HEAD)
 end
 
-function is_variable(expr)
+function is_variable(expr; no_metavar)
     if expr.leaf === nothing
         return false
     end
@@ -1158,7 +1158,10 @@ function is_variable(expr)
         return false
     end
     l = string(expr.leaf)
-    return l[1] == '#' || l[1] == '?'
+    if l[1] == '?'
+        return true
+    end
+    return !no_metavar && l[1] == '#'
 end
 
 function is_single_task(search_state)
