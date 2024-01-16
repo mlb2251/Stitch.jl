@@ -361,7 +361,8 @@ function collect_expansions(
             continue
         end
         # choice variable cannot be at start of sequence
-        if hole.num_consumed == 0
+        println(hole.num_consumed)
+        if hole.num_consumed == 1
             continue
         end
         sym = hole.root_node.metadata.seq_element_dfa_state
