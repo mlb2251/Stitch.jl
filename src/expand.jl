@@ -361,7 +361,7 @@ function collect_expansions(
             continue
         end
         # choice variable cannot be at start of sequence
-        println(hole.num_consumed)
+        # println(hole.num_consumed)
         if hole.num_consumed == 1
             continue
         end
