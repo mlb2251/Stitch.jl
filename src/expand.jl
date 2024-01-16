@@ -776,7 +776,7 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match::Match)::Vec
     consuming_hole = copy_match(match)
 
     pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
-    consuming_hole.holes_size -= last_hole.root_node.children[last_hole.num_consumed + 1].metadata.size
+    consuming_hole.holes_size -= last_hole.root_node.children[last_hole.num_consumed+1].metadata.size
     # push the hole back on the stack
     push!(consuming_hole.holes_stack, last_hole)
 
@@ -1131,7 +1131,11 @@ function choice_var_always_used_or_not(search_state::SearchState{MatchPossibilit
 end
 
 function variables_at_front_of_root_sequence(search_state)
-    # returns true iff the root sequence starts with a variables
+    # returns true in one of the following child_states
+    # 1. the root sequence is a /seq and the first element is a choice variable
+    #       this is always worse than the case where you just use a subsequence
+    # 2. the root sequence is a /subseq and the first element is a metavariable or a choice variable
+    #       this is always worse than just having a shorter subsequence
     ab = search_state.abstraction.body
     if ab.leaf !== nothing
         return false
