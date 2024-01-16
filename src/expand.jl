@@ -360,6 +360,10 @@ function collect_expansions(
         if typeof(hole) != RemainingSequenceHole
             continue
         end
+        # choice variable cannot be at start of sequence
+        if hole.num_consumed == 0
+            continue
+        end
         sym = hole.root_node.metadata.seq_element_dfa_state
         if hole.num_consumed <= length(hole.root_node.children)
             v = get!(matches_by_sym, sym, Tuple{Int,Match}[])
