@@ -282,9 +282,9 @@ function collect_expansions(
 
     if is_root
         # in this context, we expand to a subsequence node as well as a sequence node.
-        return [(SequenceExpansion(true, true), matches), (SequenceExpansion(true, false), matches)]
+        return [(SequenceExpansion(true), matches), (SequenceExpansion(false), matches)]
     else
-        return [(SequenceExpansion(false, false), matches)]
+        return [(SequenceExpansion(false), matches)]
     end
 end
 
@@ -358,11 +358,6 @@ function collect_expansions(
     for (tag, match) in matches
         hole = match.holes[end]
         if typeof(hole) != RemainingSequenceHole
-            continue
-        end
-        # choice variable cannot be at start or end of root sequence
-        # this should be /subseq instead
-        if hole.is_root && (hole.num_consumed == 1 || hole.num_consumed == length(hole.root_node.children))
             continue
         end
         sym = hole.root_node.metadata.seq_element_dfa_state
@@ -670,7 +665,7 @@ function expand_match!(expansion::SequenceExpansion, match::Match)::Union{Nothin
         match_main = match
     end
     # add a hole representing the remaining sequence
-    push!(match_main.holes, RemainingSequenceHole(hole, 1, expansion.is_root, expansion.is_subseq))
+    push!(match_main.holes, RemainingSequenceHole(hole, 1, expansion.is_subseq))
     match_main.holes_size -= hole.children[1].metadata.size # remove the /seq node
     if !expansion.is_subseq
         return nothing
@@ -680,7 +675,7 @@ function expand_match!(expansion::SequenceExpansion, match::Match)::Union{Nothin
     for start_consumes in 1:length(hole.children)-1
         # add a hole representing the remaining sequence
         match_copy = copy_match(match)
-        push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_root, expansion.is_subseq))
+        push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_subseq))
         match_copy.start_items = start_consumes + 1
         for i in 1:match_copy.start_items
             match_copy.holes_size -= hole.children[i].metadata.size
@@ -720,7 +715,7 @@ function expand_match!(expansion::SequenceElementExpansion, match::Match)::Nothi
     # push the hole back on the stack
     push!(match.holes_stack, last_hole)
 
-    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1, last_hole.is_root, last_hole.is_subseq)
+    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1, last_hole.is_subseq)
     push!(match.holes, new_sequence_hole)
     push!(match.holes, new_sequence_hole.root_node.children[new_sequence_hole.num_consumed])
 
@@ -785,7 +780,7 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match::Match)::Vec
     # push the hole back on the stack
     push!(consuming_hole.holes_stack, last_hole)
 
-    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1, last_hole.is_root, last_hole.is_subseq)
+    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1, last_hole.is_subseq)
     push!(consuming_hole.holes, new_sequence_hole)
 
     captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]::SExpr

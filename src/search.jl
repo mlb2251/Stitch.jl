@@ -60,7 +60,6 @@ end
 Base.show(io::IO, obj::ContinuationExpansion) = pretty_show(io, obj; indent=false)
 
 struct SequenceExpansion <: Expansion
-    is_root::Bool
     is_subseq::Bool
 end
 
