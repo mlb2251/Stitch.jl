@@ -1015,7 +1015,7 @@ end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
 function strictly_dominated(search_state)
-    redundant_arg_elim(search_state) || arg_capture(search_state) || choice_var_always_used_or_not(search_state)
+    redundant_arg_elim(search_state) || arg_capture(search_state) || choice_var_always_used_or_not(search_state) || variables_at_front_of_root_sequence(search_state)
 end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
@@ -1128,6 +1128,37 @@ function choice_var_always_used_or_not(search_state::SearchState{MatchPossibilit
         return true
     end
     return false
+end
+
+function variables_at_front_of_root_sequence(search_state)
+    # returns true iff the root sequence starts with a variables
+    ab = search_state.abstraction.body
+    if ab.leaf !== nothing
+        return false
+    end
+    first_child = ab.children[1]
+    if !(first_child.leaf == SYM_SEQ_HEAD || first_child.leaf == SYM_SUBSEQ_HEAD)
+        return false
+    end
+    if length(ab.children) < 2
+        return false
+    end
+    second_child = ab.children[2]
+    if second_child.leaf === nothing
+        return false
+    end
+    return is_variable(second_child)
+end
+
+function is_variable(expr)
+    if expr.leaf === nothing
+        return false
+    end
+    if expr.leaf == SYM_HOLE
+        return false
+    end
+    l = string(expr.leaf)
+    return l[1] == '#' || l[1] == '?'
 end
 
 function is_single_task(search_state)
