@@ -85,6 +85,7 @@ const TreeNodeHole = SExpr
 struct RemainingSequenceHole <: Hole{SExpr}
     root_node::SExpr
     num_consumed::Int
+    is_root::Bool
     is_subseq::Bool
 end
 
