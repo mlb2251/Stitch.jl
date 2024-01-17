@@ -515,6 +515,11 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
                 updated_matches = new_matches
             end
         end
+        new_matches = delete_suboptimals(updated_matches)
+        if !isnothing(new_matches)
+            match_poss_update = true
+            updated_matches = new_matches
+        end
         if match_poss_update
             if !whole_list_update
                 whole_list_update = true
@@ -557,6 +562,27 @@ function collapse_by_group_id(updated_matches)
         end
     end
     return nothing
+end
+
+function delete_suboptimals(updated_matches)
+    if length(updated_matches) == 1
+        return nothing
+    end
+    optimal_utility = maximum([m.local_utility for m in updated_matches])
+    # delete all matches whose .local_utility + .holes_size is less than the optimal
+    new_matches = nothing
+    for (i, m) in enumerate(updated_matches)
+        if m.local_utility + m.holes_size < optimal_utility
+            if isnothing(new_matches)
+                new_matches = updated_matches[1:i-1]
+            end
+            continue
+        end
+        if !isnothing(new_matches)
+            push!(new_matches, m)
+        end
+    end
+    return new_matches
 end
 
 function expand_match!(expansion::SyntacticLeafExpansion, match::Match)::Nothing
