@@ -507,11 +507,11 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
             updated_matches = match_poss.alternatives
         end
         if typeof(expansion) === SequenceTerminatorExpansion
-            new_matches = collapse_by_group_id(updated_matches)
-            if !isnothing(new_matches)
-                match_poss_update = true
-                updated_matches = new_matches
-            end
+            # new_matches = collapse_by_group_id(updated_matches)
+            # if !isnothing(new_matches)
+            #     match_poss_update = true
+            #     updated_matches = new_matches
+            # end
         end
         if match_poss_update
             if !whole_list_update
