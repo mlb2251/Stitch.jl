@@ -3,11 +3,14 @@ function symbol_size(sym::Symbol, size_by_symbol::Dict{Symbol,Float32})
     if sym in keys(size_by_symbol)
         return size_by_symbol[sym]
     else
-        return 1.0
+        return symbol_size(sym, nothing)
     end
 end
 
 function symbol_size(sym::Symbol, size_by_symbol::Nothing)
+    if sym === SYM_SPLICE
+        return 0
+    end
     1.0
 end
 
@@ -107,6 +110,31 @@ end
 sum_no_variables(match::Match) = match.local_utility + match.holes_size
 sum_no_variables(match::MatchPossibilities) = maximum([sum_no_variables(x) for x in match.alternatives])
 
+hole_size(hole::TreeNodeHole) = hole.metadata.size
+hole_size(hole::RemainingSequenceHole) = sum(hole_size, hole.root_node.children[hole.num_consumed+1:end]; init=0.0)
+
+function check_holes_size(match::Match)
+    holes_size_direct = sum(hole_size, match.holes; init=0.0)
+    if abs(holes_size_direct - match.holes_size) > 1e-6
+        println(match.holes)
+        println("holes_size_direct: ", holes_size_direct)
+        println("match.holes_size: ", match.holes_size)
+        error("holes_size_direct != match.holes_size")
+    end
+end
+
+function check_holes_size(match::MatchPossibilities)
+    for m in match.alternatives
+        check_holes_size(m)
+    end
+end
+
+function check_holes_size(matches)
+    for m in matches
+        check_holes_size(m)
+    end
+end
+
 function delta_local_utility(config, match, expansion::SymbolExpansion)
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
     # node from the corpus.
@@ -150,6 +178,10 @@ function delta_local_utility(config, match, expansion::ContinuationExpansion)
 end
 
 function delta_local_utility(config, match, expansion::SequenceExpansion)
+    if expansion.is_subseq
+        # don't count the root /seq node
+        return 0
+    end
     symbol_size(SYM_SEQ_HEAD, config.size_by_symbol)
 end
 

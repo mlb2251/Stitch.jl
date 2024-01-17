@@ -60,6 +60,7 @@ end
 Base.show(io::IO, obj::ContinuationExpansion) = pretty_show(io, obj; indent=false)
 
 struct SequenceExpansion <: Expansion
+    is_subseq::Bool
 end
 
 Base.show(io::IO, obj::SequenceExpansion) = pretty_show(io, obj; indent=false)
@@ -77,6 +78,7 @@ end
 Base.show(io::IO, obj::SequenceChoiceVarExpansion) = pretty_show(io, obj; indent=false)
 
 struct SequenceTerminatorExpansion <: Expansion
+    is_subseq::Bool
 end
 
 Base.show(io::IO, obj::SequenceTerminatorExpansion) = pretty_show(io, obj; indent=false)
@@ -284,11 +286,13 @@ function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vect
     id = 1
     for program in corpus.programs
         for expr in subexpressions(program.expr) # child-first traversal (postorder)
+            (sh_no_symbols, sh_symbols) = struct_hash(expr)
             expr.metadata = Metadata(
                 program,
                 size(expr, config.size_by_symbol),
                 num_nodes(expr),
-                struct_hash(expr),
+                sh_symbols,
+                sh_no_symbols,
                 :uninit_state,
                 :uninit_state,
                 id
@@ -386,8 +390,12 @@ function stitch_search(corpus, config)
             continue # skip - worse than best so far
         end
 
+        # check_holes_size(expansion.matches)
+
         # do the expansion
         expand_general!(search_state, expansion)
+
+        # check_holes_size(search_state.matches)
 
         # for when we are tracking a specific abstraction
         tracked = is_tracked(search_state)
@@ -438,6 +446,8 @@ function stitch_search(corpus, config)
             # upper_bound_fn(search_state) >= util || error("upper bound is not valid")
 
             plot && push!(plot_data.completed_util, (search_state.stats.expansions, util))
+
+            # printstyled("COMPLETED: ", search_state.abstraction.body, "\n", color=:magenta, bold=false)
 
             # check for new best
             if util > search_state.best_util
@@ -564,7 +574,7 @@ function compress_imperative(original_corpus, dfa_path; kwargs...)
         autoexpand_head=true,
         # only_match_semi = true,
         allow_single_task=false,
-        verbose_best=false,
+        verbose_best=true,
         dfa=load_dfa(dfa_path),
         kwargs...
     )

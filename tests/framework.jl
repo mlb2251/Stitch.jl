@@ -80,6 +80,22 @@ function integrate(in_file, out_file)
     end
 end
 
+function folder_tests(folder)
+    @testset "$folder" begin
+        for file in readdir("data/$folder")
+            if !endswith(file, ".json")
+                continue
+            end
+            if endswith(file, "-out.json") || endswith(file, "-args.json")
+                continue
+            end
+            in_file = "data/$folder/$file"
+            out_file = "data/$folder/$file-out.json"
+            integrate(in_file, out_file)
+        end
+    end
+end
+
 function full_tests()
     @testset "integration" begin
         # one test set for each folder in data/
@@ -87,19 +103,7 @@ function full_tests()
             if !isdir("data/$folder")
                 continue
             end
-            @testset "$folder" begin
-                for file in readdir("data/$folder")
-                    if !endswith(file, ".json")
-                        continue
-                    end
-                    if endswith(file, "-out.json") || endswith(file, "-args.json")
-                        continue
-                    end
-                    in_file = "data/$folder/$file"
-                    out_file = "data/$folder/$file-out.json"
-                    integrate(in_file, out_file)
-                end
-            end
+            folder_tests(folder)
         end
     end
 end

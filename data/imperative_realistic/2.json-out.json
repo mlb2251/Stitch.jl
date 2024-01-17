@@ -31,7 +31,7 @@
                 2,
                 0,
                 "(/seq (If (Compare #1 (list Eq) (list (Constant i2 None))) (/seq (Expr (Call (Name g_print Load) (list (Constant s_NO None)) nil)) #0) nil))",
-                "S",
+                "seqS",
                 [
                     "S",
                     "E"
@@ -42,7 +42,7 @@
                 0,
                 0,
                 "(/seq (Expr (Call (Name g_print Load) (list (Constant s_YES None)) nil)))",
-                "S",
+                "seqS",
                 [],
                 []
             ]

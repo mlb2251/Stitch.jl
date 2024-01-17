@@ -23,6 +23,7 @@ mutable struct Metadata
     size::Float32
     num_nodes::Int
     struct_hash::Int
+    struct_hash_no_symbol::Int
     dfa_state::Symbol
     seq_element_dfa_state::Symbol
     # postorder location of the underlying node in the corpus.
@@ -68,6 +69,9 @@ mutable struct Match
 
     # metavariable for continuation
     continuation::Union{Nothing,SExpr}
+    # metavariable for beginning and end
+    start_items:: Union{Nothing,Int}
+    end_items:: Union{Nothing,Int}
 
     # choice vars
     choice_var_captures::Vector{Union{SExpr,Nothing}}
@@ -83,6 +87,7 @@ const TreeNodeHole = SExpr
 struct RemainingSequenceHole <: Hole{SExpr}
     root_node::SExpr
     num_consumed::Int
+    is_subseq::Bool
 end
 
 fresh_match_possibilities(::Type{MatchPossibilities}, expr, id, config) = MatchPossibilities(
@@ -103,6 +108,8 @@ fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
     Symbol[],
     Dict{Symbol,Int}(),
     nothing,
+    nothing,
+    nothing,
     Union{SExpr,Nothing}[],
 )
 
@@ -118,6 +125,8 @@ copy_match(m::Match) = Match(
     copy(m.sym_of_idx),
     copy(m.idx_of_sym),
     m.continuation,
+    m.start_items,
+    m.end_items,
     copy(m.choice_var_captures),
 )
 
@@ -159,20 +168,25 @@ end
 end
 
 const global_struct_hash = Dict{HashNode,Int}()
+const global_struct_hash_no_symbol = Dict{HashNode,Int}()
 
 """
 sets structural hash value, possibly with side effects of updating the structural hash, and
 sets e.metadata.struct_hash. Requires .metadata to be set so we know this will be used immutably
 """
-function struct_hash(e::SExpr)::Int
-    isnothing(e.metadata) || isnothing(e.metadata.struct_hash) || return e.metadata.struct_hash
+function struct_hash(e::SExpr)::Tuple{Int,Int}
+    leaf = e.leaf
+    children = e.children
 
-    node = HashNode(e.leaf, map(struct_hash, e.children))
-    if !haskey(global_struct_hash, node)
-        global_struct_hash[node] = length(global_struct_hash) + 1
+    node_w_symbol = HashNode(leaf, map(x -> x.metadata.struct_hash, children))
+    if string(leaf)[1] == '&'
+        leaf = Symbol("&symbol")
     end
-    isnothing(e.metadata) || (e.metadata.struct_hash = global_struct_hash[node])
-    return global_struct_hash[node]
+    node_wo_symbol = HashNode(leaf, map(x -> x.metadata.struct_hash_no_symbol, children))
+
+    hash_w_symbol = get!(global_struct_hash, node_w_symbol, length(global_struct_hash) + 1)
+    hash_wo_symbol = get!(global_struct_hash_no_symbol, node_wo_symbol, length(global_struct_hash_no_symbol) + 1)
+    return (hash_wo_symbol, hash_w_symbol)
 end
 
 
@@ -203,7 +217,10 @@ end
 const SYM_HOLE = Symbol("??")
 const SYM_SEQ_HOLE = Symbol("...")
 const SYM_SEQ_HEAD = Symbol("/seq")
+const SYM_SUBSEQ_HEAD = Symbol("/subseq")
 const SYM_CHOICE_VAR_NOTHING = Symbol("/nothing")
+const SYM_SPLICE = Symbol("/splice")
+const SYM_END = Symbol("\$end")
 new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
 new_seq_hole(parent_and_argidx) = sexpr_leaf(SYM_SEQ_HOLE; parent=parent_and_argidx)
 

@@ -14,7 +14,7 @@
                 1,
                 0,
                 "(/seq (Expr (Call (Name g_print Load) (list (Constant i2 None) (Call (Name g_min Load) #0 nil) (Call (Name g_max Load) #0 nil)) (list (keyword s_sep (Constant s-WzEwXQ== None))))))",
-                "S",
+                "seqS",
                 [
                     "E"
                 ],
@@ -39,7 +39,7 @@
                 "(If (Compare (Name %2 Load) (list Eq) (list (Constant i0 None))) (/seq (If (Compare (Name %3 Load) (list Eq) (list (Constant i0 None))) (/seq (If (Compare (Name %1 Load) (list Eq) (list (Constant i0 None))) (/seq (Expr (Call (Name g_print Load) (list (UnaryOp USub (Constant i1 None))) nil))) (/seq (Expr (Call (Name g_print Load) (list (Constant i0 None)) nil))))) (/seq (Expr (Call (Name g_print Load) (list (Constant i1 None)) nil)) (Expr (Call (Name g_print Load) (list (BinOp (UnaryOp USub (Name %1 Load)) Div (Name %3 Load))) nil))))) (/seq ?0 (Assign (list (Name %4 Store)) (BinOp (BinOp (Name %3 Load) Pow (Constant i2 None)) Sub (BinOp (BinOp (Constant i4 None) Mult (Name %2 Load)) Mult (Name %1 Load))) None) (If (Compare (Name %4 Load) (list Gt) (list (Constant i0 None))) #0 (/seq (If (Compare (Name %4 Load) (list Eq) (list (Constant i0 None))) (/seq (Expr (Call (Name g_print Load) (list (Constant i1 None)) nil)) (Expr (Call (Name g_print Load) (list (BinOp (UnaryOp USub (Name %3 Load)) Div (BinOp (Constant i2 None) Mult (Name %2 Load)))) nil))) (/seq (Expr (Call (Name g_print Load) (list (Constant i0 None)) nil))))))))",
                 "S",
                 [
-                    "S"
+                    "seqS"
                 ],
                 [
                     "X",

@@ -32,7 +32,7 @@
                 1,
                 5,
                 "(/seq (Assign (list (Name %4 Store)) (Call (Attribute (Name %3 Load) s_read Load) (list (Attribute (Name %2 Load) s__fd Load) (Call (Name g_max Load) (list (Attribute (Call (Attribute (Name %3 Load) s_fstat Load) (list (Attribute (Name %2 Load) s__fd Load)) nil) s_st_size Load) (Name %1 Load)) nil)) nil) None) #0 (Assign (list (Name %5 Store)) (Call (Attribute (Attribute (Name %2 Load) s_buffer Load) s_tell Load) nil nil) None) (Expr (Tuple (list (Call (Attribute (Attribute (Name %2 Load) s_buffer Load) s_seek Load) (list (Constant i0 None) (Constant i2 None)) nil) (Call (Attribute (Attribute (Name %2 Load) s_buffer Load) s_write Load) (list (Name %4 Load)) nil) (Call (Attribute (Attribute (Name %2 Load) s_buffer Load) s_seek Load) (list (Name %5 Load)) nil)) Load)))",
-                "S",
+                "seqS",
                 [
                     "S"
                 ],
