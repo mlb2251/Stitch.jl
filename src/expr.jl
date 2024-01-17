@@ -55,7 +55,10 @@ mutable struct Match
     holes_stack::Vector{Hole{SExpr}}
     # history of the local utilities of the match
     local_utility_stack::Vector{Float32}
-    # group identifiers
+    # group identifiers for each opened sequence. Should be for every sequence we are within, with
+    # [end] being the most recent sequence opened.
+    group_ids::Vector{Int64}
+    # group identifiers for each closed sequence.
     group_ids_stack::Vector{Int64}
 
 
@@ -104,6 +107,7 @@ fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
     Hole{SExpr}[],
     Float32[],
     Int64[],
+    Int64[],
     local_utility_init(config),
     Symbol[],
     Dict{Symbol,Int}(),
@@ -120,6 +124,7 @@ copy_match(m::Match) = Match(
     m.holes_size,
     copy(m.holes_stack),
     copy(m.local_utility_stack),
+    copy(m.group_ids),
     copy(m.group_ids_stack),
     m.local_utility,
     copy(m.sym_of_idx),
