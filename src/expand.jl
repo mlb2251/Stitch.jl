@@ -503,6 +503,9 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
                 append!(updated_matches, extras)
             end
         end
+        if !match_poss_update
+            updated_matches = match_poss.alternatives
+        end
         if typeof(expansion) === SequenceTerminatorExpansion
             if length(updated_matches) > 1
                 was_updated = false
