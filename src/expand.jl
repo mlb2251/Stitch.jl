@@ -31,6 +31,7 @@ end
 
 function expansions!(typ, search_state::SearchState{Match})
     flattened_matches = [(i, m) for (i, m) in enumerate(search_state.matches)]
+    search_state.stats.matches_considered += length(flattened_matches)
     res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config)
     for (expansion, tagged_matches) in res
         push!(search_state.expansions, PossibleExpansion(
@@ -47,6 +48,7 @@ function expansions!(typ, search_state::SearchState{MatchPossibilities})
             push!(flattened_matches, (i, match))
         end
     end
+    search_state.stats.matches_considered += length(flattened_matches)
     res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config)
     for (expansion, tagged_matches) in res
         out = Dict{Int,Vector{Match}}()

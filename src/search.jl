@@ -115,6 +115,7 @@ Base.copy(abstraction::Abstraction) = Abstraction(
 
 Base.@kwdef mutable struct Stats
     expansions::Int = 0
+    matches_considered::Int = 0
     completed::Int = 0
 
     comparable_worklist_steps::Int = 0
