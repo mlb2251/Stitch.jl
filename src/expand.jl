@@ -507,24 +507,10 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
             updated_matches = match_poss.alternatives
         end
         if typeof(expansion) === SequenceTerminatorExpansion
-            if length(updated_matches) > 1
-                was_updated = false
-                best_match_per_id = Dict{Int64,Match}()
-                for m in updated_matches
-                    id = m.group_ids_stack[end]
-                    if haskey(best_match_per_id, id)
-                        was_updated = true
-                        if best_match_per_id[id].local_utility < m.local_utility
-                            best_match_per_id[id] = m
-                        end
-                    else
-                        best_match_per_id[id] = m
-                    end
-                end
-                if was_updated
-                    match_poss_update = true
-                    updated_matches = [v for (_, v) in best_match_per_id]
-                end
+            new_matches = collapse_by_group_id(updated_matches)
+            if !isnothing(new_matches)
+                match_poss_update = true
+                updated_matches = new_matches
             end
         end
         if match_poss_update
@@ -547,6 +533,28 @@ end
 function expand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abstraction)
     # set the head symbol of the hole
     hole.leaf = expansion.leaf
+end
+
+function collapse_by_group_id(updated_matches)
+    if length(updated_matches) > 1
+        was_updated = false
+        best_match_per_id = Dict{Int64,Match}()
+        for m in updated_matches
+            id = m.group_ids_stack[end]
+            if haskey(best_match_per_id, id)
+                was_updated = true
+                if best_match_per_id[id].local_utility < m.local_utility
+                    best_match_per_id[id] = m
+                end
+            else
+                best_match_per_id[id] = m
+            end
+        end
+        if was_updated
+            return [v for (_, v) in best_match_per_id]
+        end
+    end
+    return nothing
 end
 
 function expand_match!(expansion::SyntacticLeafExpansion, match::Match)::Nothing
