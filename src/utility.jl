@@ -107,7 +107,7 @@ function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
     sum(sum_no_variables, matches, init=0.0)
 end
 
-sum_no_variables(match::Match) = match.local_utility + match.holes_size
+sum_no_variables(match::Match) = max(match.local_utility + match.holes_size, 0)
 sum_no_variables(match::MatchPossibilities) = maximum([sum_no_variables(x) for x in match.alternatives])
 
 function delta_local_utility(config, match, expansion::SymbolExpansion)
