@@ -140,6 +140,8 @@ Base.@kwdef mutable struct SearchConfig
     # only_match_semi::Bool = false
     autoexpand_head::Bool = false # auto expand head of list
     dfa::Union{Dict{Symbol,Dict{Symbol,Vector{Symbol}}},Nothing} = nothing
+    dfa_valid_root_states = Set([:S, :seqS, :E])
+    dfa_start_state = :M
 
     # optimizations
     no_exclude_single_match::Bool = false
@@ -213,7 +215,7 @@ mutable struct SearchState{M}
         matches = init_all_corpus_matches(typ, corpus, config)
         if !isnothing(config.dfa)
             for program in corpus.programs
-                run_dfa!(program.expr, config.dfa, :M)
+                run_dfa!(program.expr, config.dfa, config.dfa_start_state)
             end
         end
         all_nodes = map(expr_of, matches)
@@ -262,7 +264,8 @@ function filter_matches(matches, config)
     end
     filter!(matches) do m
         dfa_state = expr_of(m).metadata.dfa_state
-        dfa_state == :S || dfa_state == :seqS
+        # check if dfa_state is in config.dfa_valid_root_states
+        dfa_state in config.dfa_valid_root_states
     end
 end
 

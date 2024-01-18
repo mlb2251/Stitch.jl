@@ -8,6 +8,7 @@
         "application_utility_symvar": -0.5,
         "match_sequences": true,
         "max_arity": 3,
-        "iterations": 1
+        "iterations": 1,
+        "dfa_start_state": "seqS"
     }
 ]
