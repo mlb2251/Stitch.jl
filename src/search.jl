@@ -219,6 +219,7 @@ mutable struct SearchState{M}
         all_nodes = map(expr_of, matches)
         best_util = Float32(0)
         best_abstraction = nothing
+        matches = filter_matches(matches, config)
         new{typ}(config, corpus, all_nodes,
             PlotData(), best_util, best_abstraction, Stats(),
             abstraction, [abstraction.body], matches, PossibleExpansion[],
@@ -252,6 +253,16 @@ function run_dfa!(expr, dfa, state)
             i += 1
         end
         run_dfa!(child, dfa, child_states[i])
+    end
+end
+
+function filter_matches(matches, config)
+    if config.dfa === nothing
+        return matches
+    end
+    filter!(matches) do m
+        dfa_state = expr_of(m).metadata.dfa_state
+        dfa_state == :S || dfa_state == :seqS
     end
 end
 
