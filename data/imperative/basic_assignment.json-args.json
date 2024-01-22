@@ -1,14 +1,32 @@
 [
     {},
     {
-        "dfa": "data_for_testing/dfa.json"
+        "dfa": "data_for_testing/dfa.json",
+        "dfa_valid_root_states": [
+            "S",
+            "seqS",
+            "E",
+            "M"
+        ]
     },
     {
         "dfa": "data_for_testing/dfa.json",
+        "dfa_valid_root_states": [
+            "S",
+            "seqS",
+            "E",
+            "M"
+        ],
         "size_by_symbol": "data_for_testing/size_by_symbol.json"
     },
     {
         "dfa": "data_for_testing/dfa.json",
+        "dfa_valid_root_states": [
+            "S",
+            "seqS",
+            "E",
+            "M"
+        ],
         "size_by_symbol": "data_for_testing/size_by_symbol.json",
         "application_utility_fixed": -3,
         "application_utility_metavar": -1,
