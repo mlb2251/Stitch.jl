@@ -1053,19 +1053,29 @@ function arg_capture(search_state)
 end
 
 function arg_capture(search_state::SearchState{Match}, i)
-    first_match = search_state.matches[1].unique_args[i].metadata.struct_hash
-    if all(match -> match.unique_args[i].metadata.struct_hash == first_match, search_state.matches)
+    first_match = search_state.matches[1]
+    first_match_expr = first_match.unique_args[i]
+    if all(match -> same_in_context(first_match, match, first_match_expr, match.unique_args[i]), search_state.matches)
         return true
     end
     return false
 end
 
 function arg_capture(search_state::SearchState{MatchPossibilities}, i)
-    first_match = search_state.matches[1].alternatives[1].unique_args[i].metadata.struct_hash
-    if all(match_poss -> all(match -> match.unique_args[i].metadata.struct_hash == first_match, match_poss.alternatives), search_state.matches)
+    first_match = search_state.matches[1].alternatives[1]
+    first_match_expr = first_match.unique_args[i]
+    if all(
+        match_poss -> all(match -> same_in_context(match, first_match, match.unique_args[i], first_match_expr), match_poss.alternatives),
+        search_state.matches
+    )
         return true
     end
     return false
+end
+
+function same_in_context(m1::Match, m2::Match, e1::SExpr, e2::SExpr)
+    # returns true iff e1 and e2 are the same in the context of m1 and m2
+    return e1.metadata.struct_hash == e2.metadata.struct_hash
 end
 
 function choice_var_always_used_or_not(search_state)
