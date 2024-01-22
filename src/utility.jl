@@ -110,6 +110,31 @@ end
 sum_no_variables(match::Match) = match.local_utility + match.holes_size
 sum_no_variables(match::MatchPossibilities) = maximum([sum_no_variables(x) for x in match.alternatives])
 
+hole_size(hole::TreeNodeHole) = hole.metadata.size
+hole_size(hole::RemainingSequenceHole) = sum(hole_size, hole.root_node.children[hole.num_consumed+1:end]; init=0.0)
+
+function check_holes_size(match::Match)
+    holes_size_direct = sum(hole_size, match.holes; init=0.0)
+    if abs(holes_size_direct - match.holes_size) > 1e-6
+        println(match.holes)
+        println("holes_size_direct: ", holes_size_direct)
+        println("match.holes_size: ", match.holes_size)
+        error("holes_size_direct != match.holes_size")
+    end
+end
+
+function check_holes_size(match::MatchPossibilities)
+    for m in match.alternatives
+        check_holes_size(m)
+    end
+end
+
+function check_holes_size(matches)
+    for m in matches
+        check_holes_size(m)
+    end
+end
+
 function delta_local_utility(config, match, expansion::SymbolExpansion)
     # future direction: here we think of symbols as being zero cost to pass in ie 1.0 utility (as if we deleted their)
     # node from the corpus.
