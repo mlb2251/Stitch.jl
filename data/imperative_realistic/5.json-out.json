@@ -14,7 +14,7 @@
                 0,
                 2,
                 "(/subseq (Assign (list (Name %1 Store)) (Call (Name g_int Load) (list (Call (Name g_input Load) nil nil)) nil) None) (Assign (list (Name %2 Store)) (Call (Name g_list Load) (list (Call (Name g_map Load) (list (Name g_int Load) (Call (Attribute (Call (Name g_input Load) nil nil) s_split Load) nil nil)) nil)) nil) None))",
-                "S",
+                "seqS",
                 [],
                 [
                     "X",
@@ -38,7 +38,7 @@
                 0,
                 0,
                 "(/seq (Expr (Call (Name g_print Load) (list (UnaryOp USub (Constant i1 None))) nil)))",
-                "S",
+                "seqS",
                 [],
                 []
             ]
