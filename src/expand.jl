@@ -776,7 +776,7 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match::Match)::Vec
     consuming_hole = copy_match(match)
 
     pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
-    consuming_hole.holes_size -= last_hole.root_node.children[last_hole.num_consumed + 1].metadata.size
+    consuming_hole.holes_size -= last_hole.root_node.children[last_hole.num_consumed+1].metadata.size
     # push the hole back on the stack
     push!(consuming_hole.holes_stack, last_hole)
 
@@ -1015,7 +1015,7 @@ end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
 function strictly_dominated(search_state)
-    redundant_arg_elim(search_state) || arg_capture(search_state) || choice_var_always_used_or_not(search_state)
+    redundant_arg_elim(search_state) || arg_capture(search_state) || choice_var_always_used_or_not(search_state) || variables_at_front_of_root_sequence(search_state)
 end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
@@ -1128,6 +1128,44 @@ function choice_var_always_used_or_not(search_state::SearchState{MatchPossibilit
         return true
     end
     return false
+end
+
+function variables_at_front_of_root_sequence(search_state)
+    # returns true in one of the following child_states
+    # 1. the root sequence is a /seq and the first element is a choice variable
+    #       this is always worse than the case where you just use a subsequence
+    # 2. the root sequence is a /subseq and the first element is a metavariable or a choice variable
+    #       this is always worse than just having a shorter subsequence
+    ab = search_state.abstraction.body
+    if ab.leaf !== nothing
+        return false
+    end
+    first_child = ab.children[1]
+    if !(first_child.leaf == SYM_SEQ_HEAD || first_child.leaf == SYM_SUBSEQ_HEAD)
+        return false
+    end
+    if length(ab.children) < 2
+        return false
+    end
+    second_child = ab.children[2]
+    if second_child.leaf === nothing
+        return false
+    end
+    return is_variable(second_child; no_metavar=first_child.leaf == SYM_SEQ_HEAD)
+end
+
+function is_variable(expr; no_metavar)
+    if expr.leaf === nothing
+        return false
+    end
+    if expr.leaf == SYM_HOLE
+        return false
+    end
+    l = string(expr.leaf)
+    if l[1] == '?'
+        return true
+    end
+    return !no_metavar && l[1] == '#'
 end
 
 function is_single_task(search_state)
