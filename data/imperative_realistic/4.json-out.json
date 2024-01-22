@@ -14,7 +14,7 @@
                 1,
                 1,
                 "(/seq (Expr (Call (Attribute (Name %1 Load) s_append Load) (list #0) nil)) (Expr (Call (Attribute (Name %1 Load) s_append Load) (list (UnaryOp USub #0)) nil)))",
-                "S",
+                "seqS",
                 [
                     "E"
                 ],

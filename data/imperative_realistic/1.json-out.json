@@ -14,7 +14,7 @@
                 0,
                 2,
                 "(/seq (Expr (Call (Name g_print Load) (list (BinOp (BinOp (BinOp (Name %2 Load) FloorDiv (Name %1 Load)) Add (Constant i1 None)) Mult (Name %1 Load))) nil)))",
-                "S",
+                "seqS",
                 [],
                 [
                     "X",
@@ -25,7 +25,7 @@
                 2,
                 3,
                 "(/seq (Assign (list (Tuple (list (Name %3 Store) (Name %2 Store) (Name %1 Store)) Store)) (Call (Name g_map Load) (list (Name g_int Load) (Call (Attribute (Call (Name g_input Load) nil nil) s_split Load) nil nil)) nil) None) (If #1 (/seq (Expr (Call (Name g_print Load) (list (Name %1 Load)) nil))) (/seq #0)))",
-                "S",
+                "seqS",
                 [
                     "S",
                     "E"
@@ -40,9 +40,9 @@
                 1,
                 2,
                 "(/seq (Assign (list (Name %1 Store)) (Call (Name g_int Load) (list (Call (Name g_input Load) nil nil)) nil) None) (For (Name %2 Store) (Call (Name g_range Load) (list (Name %1 Load)) nil) #0 nil None))",
-                "S",
+                "seqS",
                 [
-                    "S"
+                    "seqS"
                 ],
                 [
                     "X",
