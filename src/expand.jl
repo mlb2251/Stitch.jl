@@ -677,7 +677,7 @@ function expand_match!(expansion::SequenceExpansion, match::Match)::Union{Nothin
         match_copy = copy_match(match)
         push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_subseq))
         match_copy.start_items = start_consumes + 1
-        for i in 2:match_copy.start_items
+        for i in 1:match_copy.start_items
             match_copy.holes_size -= hole.children[i].metadata.size
         end
         push!(matches, match_copy)
@@ -776,6 +776,7 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match::Match)::Vec
     consuming_hole = copy_match(match)
 
     pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
+    consuming_hole.holes_size -= last_hole.root_node.children[last_hole.num_consumed + 1].metadata.size
     # push the hole back on the stack
     push!(consuming_hole.holes_stack, last_hole)
 
@@ -929,7 +930,7 @@ function unexpand_match!(expansion::SequenceExpansion, match::Match)
     @assert sequence_hole.root_node === original_hole
 
     if expansion.is_subseq && match.start_items !== nothing
-        for i in 2:match.start_items
+        for i in 1:match.start_items
             match.holes_size += original_hole.children[i].metadata.size
         end
         match.start_items = nothing
