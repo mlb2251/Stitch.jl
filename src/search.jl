@@ -286,11 +286,13 @@ function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vect
     id = 1
     for program in corpus.programs
         for expr in subexpressions(program.expr) # child-first traversal (postorder)
+            (sh_no_symbols, sh_symbols) = struct_hash(expr)
             expr.metadata = Metadata(
                 program,
                 size(expr, config.size_by_symbol),
                 num_nodes(expr),
-                struct_hash(expr),
+                sh_symbols,
+                sh_no_symbols,
                 :uninit_state,
                 :uninit_state,
                 id
