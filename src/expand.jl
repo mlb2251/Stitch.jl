@@ -768,8 +768,7 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match::Match)::Vec
 
     # consume the hole
     # first check if there's more space in the sequence
-    last_hole = match.holes[end]
-    @assert typeof(last_hole) == RemainingSequenceHole
+    last_hole = match.holes[end]::RemainingSequenceHole
     if last_hole.num_consumed == length(last_hole.root_node.children)
         # no more space in the sequence, so we can't consume the hole
         return []
@@ -783,8 +782,7 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match::Match)::Vec
     new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1, last_hole.is_subseq)
     push!(consuming_hole.holes, new_sequence_hole)
 
-    captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]
-    @assert typeof(captured) == SExpr
+    captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]::SExpr
 
     consuming_hole.choice_var_captures[end] = captured
 
@@ -922,12 +920,11 @@ end
 
 function unexpand_match!(expansion::SequenceExpansion, match::Match)
     # remove the ... hole
-    sequence_hole = pop!(match.holes)
+    sequence_hole = pop!(match.holes)::RemainingSequenceHole
     # get the original hole and put it back on the stack
     original_hole = pop!(match.holes_stack)::TreeNodeHole
     push!(match.holes, original_hole)
     # check that the ... hole is the same as the one we just popped
-    @assert typeof(sequence_hole) == RemainingSequenceHole
     @assert sequence_hole.num_consumed == 1
     @assert sequence_hole.root_node === original_hole
 
