@@ -25,6 +25,12 @@ function proc_args(args)
         sbs = Dict{Symbol,Float32}(Symbol(k) => v for (k, v) in sbs)
         args[:size_by_symbol] = sbs
     end
+    if :dfa_valid_root_states in keys(args)
+        args[:dfa_valid_root_states] = Set([Symbol(x) for x in args[:dfa_valid_root_states]])
+    end
+    if :dfa_start_state in keys(args)
+        args[:dfa_start_state] = Symbol(args[:dfa_start_state])
+    end
     if :shuf in keys(args)
         # delete the shuf key so it doesn't get passed to the search
         shuf = args[:shuf]
