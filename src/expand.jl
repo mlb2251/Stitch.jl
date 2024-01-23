@@ -490,7 +490,7 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
     new_match_poss = MatchPossibilities[]
     whole_list_update = false
     for (idx, match_poss) in enumerate(search_state.matches)
-        updated_matches = Match[]
+        updated_matches::Union{Match,Vector{Match}}[] = nothing
         match_poss_update = false
         for (alt_idx, match) in enumerate(match_poss.alternatives)
             extras = expand_match!(expansion, match)
