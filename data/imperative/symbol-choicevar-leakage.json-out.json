@@ -26,9 +26,9 @@
             ]
         ],
         "programs": [
-            "(fn_2 (/seq &a &b &c &d &e (/splice (fn_1))) &b)",
-            "(fn_2 (/seq &f &g &h &i (/splice (fn_1))) &g)",
-            "(fn_2 (/seq &j &k &l (/splice (fn_1))) &j)"
+            "(fn_2 (/seq &a &b &c (/splice (fn_1))) &b)",
+            "(fn_2 (/seq &f &g (/splice (fn_1))) &g)",
+            "(fn_2 (/seq &j (/splice (fn_1))) &j)"
         ]
     }
 ]
