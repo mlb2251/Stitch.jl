@@ -6,29 +6,19 @@
         "abstractions": [
             [
                 0,
-                0,
-                "(/subseq 1 2 3 4 5 6 7)",
+                1,
+                "(+ %1 1 2 3 4 5 (/seq ?0 %1 ?1 1 2 3 4 5 6 7))",
                 "uninit_state",
                 [],
-                []
-            ],
-            [
-                1,
-                1,
-                "(+ %1 1 2 3 4 5 #0)",
-                "uninit_state",
-                [
-                    "uninit_state"
-                ],
                 [
                     "uninit_state"
                 ]
             ]
         ],
         "programs": [
-            "(fn_2 (/seq &a &b &c (/splice (fn_1))) &b)",
-            "(fn_2 (/seq &f &g (/splice (fn_1))) &g)",
-            "(fn_2 (/seq &j (/splice (fn_1))) &j)"
+            "(fn_1 &b &a &c)",
+            "(fn_1 &g &f /nothing)",
+            "(fn_1 &j /nothing /nothing)"
         ]
     }
 ]

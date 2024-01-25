@@ -545,22 +545,40 @@ function collapse_by_group_id(updated_matches)
     if length(updated_matches) > 1
         was_updated = false
         best_match_per_id = Dict{Int64,Match}()
+        other_matches = Match[]
         for m in updated_matches
             id = m.group_ids_stack[end]
             if haskey(best_match_per_id, id)
-                was_updated = true
-                if best_match_per_id[id].local_utility < m.local_utility
-                    best_match_per_id[id] = m
+                if compatible_matches(m, best_match_per_id[id])
+                    was_updated = true
+                    if best_match_per_id[id].local_utility < m.local_utility
+                        best_match_per_id[id] = m
+                    end
+                else
+                    push!(other_matches, m)
                 end
             else
                 best_match_per_id[id] = m
             end
         end
         if was_updated
-            return [v for (_, v) in best_match_per_id]
+            for (_, v) in best_match_per_id
+                push!(other_matches, v)
+            end
+            return other_matches
         end
     end
     return nothing
+end
+
+function compatible_matches(match_a, match_b)
+    if match_a.unique_args != match_b.unique_args
+        return false
+    end
+    if match_a.sym_of_idx != match_b.sym_of_idx
+        return false
+    end
+    return true
 end
 
 function expand_match!(expansion::SyntacticLeafExpansion, match::Match)::Nothing
