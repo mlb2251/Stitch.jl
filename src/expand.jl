@@ -513,6 +513,10 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
             end
             match_poss = MatchPossibilities(updated_matches)
             push!(new_match_poss, match_poss)
+        else
+            if whole_list_update
+                push!(new_match_poss, match_poss)
+            end
         end
     end
     if !whole_list_update
