@@ -505,6 +505,16 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
                 append!(updated_matches, extras)
             end
         end
+        if !match_poss_update
+            updated_matches = match_poss.alternatives
+        end
+        if typeof(expansion) === SequenceTerminatorExpansion
+            new_matches = collapse_by_group_id(updated_matches)
+            if !isnothing(new_matches)
+                match_poss_update = true
+                updated_matches = new_matches
+            end
+        end
         if match_poss_update
             if !whole_list_update
                 whole_list_update = true
@@ -530,6 +540,41 @@ function expand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abs
     # set the head symbol of the hole
     hole.leaf = expansion.leaf
 end
+
+function collapse_by_group_id(updated_matches)
+    if length(updated_matches) > 1
+        was_updated = false
+        best_match_per_id = Dict{Tuple{Vector{Int64}, Vector{Symbol}, Vector{Int64}},Match}()
+        other_matches = Match[]
+        for m in updated_matches
+            id = match_key(m)
+            if haskey(best_match_per_id, id)
+                was_updated = true
+                if best_match_per_id[id].local_utility < m.local_utility
+                    best_match_per_id[id] = m
+                end
+            else
+                best_match_per_id[id] = m
+            end
+        end
+        if was_updated
+            for (_, v) in best_match_per_id
+                push!(other_matches, v)
+            end
+            return other_matches
+        end
+    end
+    return nothing
+end
+
+function match_key(m)
+    unique_args = [x.metadata.struct_hash for x in m.unique_args]
+    holes = [hole_struct_hash(x) for x in m.holes]
+    return (unique_args, m.sym_of_idx, holes)
+end
+
+hole_struct_hash(x::TreeNodeHole) = x.metadata.struct_hash
+hole_struct_hash(x::RemainingSequenceHole) = -hole_struct_hash(x.root_node)
 
 function expand_match!(expansion::SyntacticLeafExpansion, match::Match)::Nothing
     hole = pop!(match.holes)::TreeNodeHole
