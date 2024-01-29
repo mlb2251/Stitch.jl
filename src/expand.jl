@@ -509,7 +509,7 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
             updated_matches = match_poss.alternatives
         end
         if typeof(expansion) === SequenceTerminatorExpansion
-            new_matches = collapse_by_group_id(updated_matches)
+            new_matches = collapse_equivalent_matches(updated_matches)
             if !isnothing(new_matches)
                 match_poss_update = true
                 updated_matches = new_matches
@@ -541,7 +541,7 @@ function expand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abs
     hole.leaf = expansion.leaf
 end
 
-function collapse_by_group_id(updated_matches)
+function collapse_equivalent_matches(updated_matches)
     if length(updated_matches) > 1
         was_updated = false
         best_match_per_id = Dict{Tuple{Vector{Int64}, Vector{Symbol}, Vector{Int64}},Match}()
