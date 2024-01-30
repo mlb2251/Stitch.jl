@@ -545,7 +545,6 @@ function collapse_equivalent_matches(updated_matches)
     if length(updated_matches) > 1
         was_updated = false
         best_match_per_id = Dict{Tuple{Vector{Int64}, Vector{Symbol}, Vector{Int64}},Match}()
-        other_matches = Match[]
         for m in updated_matches
             id = match_key(m)
             if haskey(best_match_per_id, id)
@@ -558,10 +557,7 @@ function collapse_equivalent_matches(updated_matches)
             end
         end
         if was_updated
-            for (_, v) in best_match_per_id
-                push!(other_matches, v)
-            end
-            return other_matches
+            return [v for (_, v) in best_match_per_id]
         end
     end
     return nothing
