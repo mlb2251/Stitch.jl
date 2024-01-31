@@ -1,0 +1,7 @@
+[
+    {
+        "match_sequences": true,
+        "iterations": 1,
+        "max_arity": 3
+    }
+]

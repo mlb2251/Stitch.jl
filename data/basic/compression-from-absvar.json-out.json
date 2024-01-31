@@ -1,0 +1,48 @@
+[
+    {
+        "args": {},
+        "abstractions": [
+            [
+                0,
+                0,
+                "(+ 4 5 6)",
+                "uninit_state",
+                [],
+                []
+            ],
+            [
+                0,
+                0,
+                "(+ 1 2 3)",
+                "uninit_state",
+                [],
+                []
+            ]
+        ],
+        "programs": [
+            "(+ (fn_2) (fn_2) (fn_2) (fn_2) (fn_1) (fn_1) (fn_1) (fn_1) (fn_1))"
+        ]
+    },
+    {
+        "args": {
+            "no_opt_arg_capture": true,
+            "no_exclude_single_match": true
+        },
+        "abstractions": [
+            [
+                2,
+                0,
+                "(+ #1 #1 #1 #1 #0 #0 #0 #0 #0)",
+                "uninit_state",
+                [
+                    "uninit_state",
+                    "uninit_state"
+                ],
+                []
+            ]
+        ],
+        "programs": [
+            "(fn_1 (+ 4 5 6) (+ 1 2 3))"
+        ]
+    }
+]
