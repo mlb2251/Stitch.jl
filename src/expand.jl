@@ -542,25 +542,26 @@ function expand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abs
 end
 
 function collapse_equivalent_matches(updated_matches)
-    if length(updated_matches) > 1
-        was_updated = false
-        best_match_per_id = Dict{Tuple{Vector{Int64}, Vector{Symbol}, Vector{Int64}},Match}()
-        for m in updated_matches
-            id = match_key(m)
-            if haskey(best_match_per_id, id)
-                was_updated = true
-                if best_match_per_id[id].local_utility < m.local_utility
-                    best_match_per_id[id] = m
-                end
-            else
+    if length(updated_matches) <= 1
+        return nothing
+    end
+    was_updated = false
+    best_match_per_id = Dict{Tuple{Vector{Int64}, Vector{Symbol}, Vector{Int64}},Match}()
+    for m in updated_matches
+        id = match_key(m)
+        if haskey(best_match_per_id, id)
+            was_updated = true
+            if best_match_per_id[id].local_utility < m.local_utility
                 best_match_per_id[id] = m
             end
-        end
-        if was_updated
-            return [v for (_, v) in best_match_per_id]
+        else
+            best_match_per_id[id] = m
         end
     end
-    return nothing
+    if !was_updated
+        return nothing
+    end
+    return [v for (_, v) in best_match_per_id]
 end
 
 function match_key(m)
@@ -569,8 +570,10 @@ function match_key(m)
     return (unique_args, m.sym_of_idx, holes)
 end
 
-hole_struct_hash(x::TreeNodeHole) = x.metadata.struct_hash
-hole_struct_hash(x::RemainingSequenceHole) = -hole_struct_hash(x.root_node)
+# ensure that the struct hash is unique for each hole
+# since these are positive integers, we can dove-tail them
+hole_struct_hash(x::TreeNodeHole) = 2 * x.metadata.struct_hash
+hole_struct_hash(x::RemainingSequenceHole) = 2 * hole_struct_hash(x.root_node) + 1
 
 function expand_match!(expansion::SyntacticLeafExpansion, match::Match)::Nothing
     hole = pop!(match.holes)::TreeNodeHole
