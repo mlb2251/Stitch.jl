@@ -101,13 +101,15 @@ mutable struct Abstraction
     dfa_metavars::Vector{Symbol}
     dfa_symvars::Vector{Symbol}
     dfa_choicevars::Vector{Symbol}
+    holes_stack::Vector{SExpr}
 end
 
 Base.show(io::IO, obj::Abstraction) = pretty_show(io, obj; indent=false)
 
 Base.copy(abstraction::Abstraction) = Abstraction(
     copy(abstraction.body), abstraction.arity, abstraction.sym_arity, abstraction.choice_arity,
-    abstraction.dfa_root, copy(abstraction.dfa_metavars), copy(abstraction.dfa_symvars), copy(abstraction.dfa_choicevars))
+    abstraction.dfa_root, copy(abstraction.dfa_metavars), copy(abstraction.dfa_symvars), copy(abstraction.dfa_choicevars),
+    copy(abstraction.holes_stack))
 
 Base.@kwdef mutable struct Stats
     expansions::Int = 0
@@ -196,7 +198,7 @@ mutable struct SearchState{M}
     past_expansions::Vector{PossibleExpansion}
 
     function SearchState(corpus, config)
-        abstraction = Abstraction(new_hole(nothing), 0, 0, 0, :uninit_state, [], [], [])
+        abstraction = Abstraction(new_hole(nothing), 0, 0, 0, :uninit_state, [], [], [], [])
 
         typ = if config.match_sequences
             MatchPossibilities

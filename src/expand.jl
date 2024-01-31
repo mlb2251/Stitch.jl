@@ -657,7 +657,7 @@ function insert_before_sequence_hole!(create_new, hole, holes; reduce_low)
     new_element = create_new(i)
     # overwrite the old ...
     old_hole = hole.children[i]
-    sym_to_int = s -> parse(Int, string(s)[2:end])
+    sym_to_int = s -> parse(Int, string(s))
     low = sym_to_int(old_hole.children[2].leaf)
     high = sym_to_int(old_hole.children[3].leaf)
     if reduce_low
@@ -692,7 +692,7 @@ end
 
 function expand_abstraction!(expansion::SequenceTerminatorExpansion, hole, holes, abstraction)
     # just remove the last hole, and implicitly close off the sequence
-    pop!(hole.children)
+    push!(abstraction.holes_stack, pop!(hole.children))
 end
 
 function expand_match!(expansion::SequenceTerminatorExpansion, match)::Nothing
@@ -708,7 +708,7 @@ function expand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes,
     # take a hole (/seq <things> ...) and make it (/seq <things> ?? ...). Place the ?? above the ... on the stack,
     # but do *not* remove ... from the stack, since it will be consumed by the next expansion once the ?? is filled in
 
-    insert_before_sequence_hole!(hole, holes) do i
+    insert_before_sequence_hole!(hole, holes; reduce_low=false) do i
         x = new_hole((hole, i))
         x.leaf = Symbol("?$(expansion.idx)")
         x
@@ -882,7 +882,7 @@ function remove_inserted_before_sequence_hole!(check_fn, hole, holes; reduce_low
 
     # remove the ... hole from the list of holes
     old_hole = pop!(hole.children)
-    sym_to_int = s -> parse(Int, string(s)[2:end])
+    sym_to_int = s -> parse(Int, string(s))
     low = sym_to_int(old_hole.children[2].leaf)
     high = sym_to_int(old_hole.children[3].leaf)
     if reduce_low
@@ -906,7 +906,7 @@ function unexpand_abstraction!(expansion::SequenceElementExpansion, hole, holes,
     # remove the ?? hole from the list of holes
     pop!(holes).leaf === SYM_HOLE || error("expected SYM_HOLE")
 
-    remove_inserted_before_sequence_hole!(hole, holes) do m
+    remove_inserted_before_sequence_hole!(hole, holes; reduce_low=true) do m
         m.leaf == SYM_HOLE || error("expected SYM_HOLE")
     end
 end
@@ -921,8 +921,7 @@ end
 
 function unexpand_abstraction!(expansion::SequenceTerminatorExpansion, hole, holes, abstraction)
     # just put a ... on the stack and at the end of the sequence
-    new_hole = new_seq_hole((hole, length(hole.children) + 1))
-    push!(hole.children, new_hole)
+    push!(hole.children, pop!(abstraction.holes_stack))
 end
 
 function unexpand_match!(expansion::SequenceTerminatorExpansion, match)
@@ -930,7 +929,7 @@ function unexpand_match!(expansion::SequenceTerminatorExpansion, match)
 end
 
 function unexpand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes, abstraction)
-    remove_inserted_before_sequence_hole!(hole, holes) do m
+    remove_inserted_before_sequence_hole!(hole, holes; reduce_low=false) do m
         m.leaf == Symbol("?$(expansion.idx)") || error("expected Symbol(?$(expansion.idx)), got $m")
     end
     abstraction.choice_arity -= 1
