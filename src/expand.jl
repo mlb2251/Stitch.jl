@@ -674,7 +674,6 @@ function expand_match!(expansion::SequenceExpansion, match::Match)::Union{Nothin
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)::TreeNodeHole
     push!(match.holes_stack, hole)
-    push!(match.group_ids, rand(0:(1<<63)-1))
     if expansion.is_subseq
         match_main = match
         match = copy_match(match)
@@ -751,7 +750,6 @@ function expand_match!(expansion::SequenceTerminatorExpansion, match::Match)::No
     @assert typeof(last_hole) == RemainingSequenceHole
     @assert expansion.is_subseq || last_hole.num_consumed == length(last_hole.root_node.children)
     push!(match.holes_stack, last_hole)
-    push!(match.group_ids_stack, pop!(match.group_ids))
     # this does not affect holes_size since we are just removing a ... that currently matches nothing
     if expansion.is_subseq
         match.end_items = last_hole.num_consumed
@@ -942,7 +940,6 @@ function unexpand_match!(expansion::SequenceExpansion, match::Match)
     end
     # put back the /seq node
     match.holes_size += original_hole.children[1].metadata.size
-    pop!(match.group_ids)
 end
 
 function remove_inserted_before_sequence_hole!(check_fn, hole, holes)
@@ -1000,7 +997,6 @@ function unexpand_match!(expansion::SequenceTerminatorExpansion, match::Match)
 
         match.end_items = nothing
     end
-    push!(match.group_ids, pop!(match.group_ids_stack))
     # doesn't affect holes_size since we are just adding a ... that currently matches nothing
 end
 
