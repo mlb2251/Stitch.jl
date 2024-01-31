@@ -477,7 +477,7 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
             updated_matches = match_poss.alternatives
         end
         if typeof(expansion) === SequenceTerminatorExpansion
-            new_matches = collapse_by_group_id(updated_matches)
+            new_matches = collapse_equivalent_matches(updated_matches)
             if !isnothing(new_matches)
                 match_poss_update = true
                 updated_matches = new_matches
@@ -491,6 +491,10 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
             end
             match_poss = MatchPossibilities(updated_matches)
             push!(new_match_poss, match_poss)
+        else
+            if whole_list_update
+                push!(new_match_poss, match_poss)
+            end
         end
     end
     if !whole_list_update
@@ -505,27 +509,48 @@ function expand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abs
     hole.leaf = expansion.leaf
 end
 
-function collapse_by_group_id(updated_matches)
-    if length(updated_matches) > 1
-        was_updated = false
-        best_match_per_id = Dict{Int64,Match}()
-        for m in updated_matches
-            id = m.group_ids_stack[end]
-            if haskey(best_match_per_id, id)
-                was_updated = true
-                if best_match_per_id[id].local_utility < m.local_utility
-                    best_match_per_id[id] = m
-                end
-            else
+const MatchKey = Tuple{Vector{Int64},Vector{Symbol},Vector{Int64}}
+
+function collapse_equivalent_matches(updated_matches)
+    if length(updated_matches) <= 1
+        return nothing
+    end
+    was_updated = false
+    best_match_per_id = Dict{MatchKey,Match}()
+    for m in updated_matches
+        id = match_key(m)
+        if haskey(best_match_per_id, id)
+            was_updated = true
+            if best_match_per_id[id].local_utility < m.local_utility
                 best_match_per_id[id] = m
             end
-        end
-        if was_updated
-            return [v for (_, v) in best_match_per_id]
+        else
+            best_match_per_id[id] = m
         end
     end
-    return nothing
+    if !was_updated
+        return nothing
+    end
+    return [v for (_, v) in best_match_per_id]
 end
+
+function match_key(m::Match)::MatchKey
+    # we consider matches equivalent if from now on they will be
+    # identical in what expansions can be applied to them, and how
+    # those expansions will affect the local utility.
+
+    # the only state that matters for this is the holes as well as
+    # arguments that can potentially be used for variable reuse
+    # (i.e. the unique_args and symbolic arguments)
+    unique_args = [x.metadata.struct_hash for x in m.unique_args]
+    holes = [hole_struct_hash(x) for x in m.holes]
+    return (unique_args, m.sym_of_idx, holes)
+end
+
+# ensure that the struct hash is unique for each hole
+# since these are positive integers, we can dove-tail them
+hole_struct_hash(x::TreeNodeHole) = 2 * x.metadata.struct_hash
+hole_struct_hash(x::RemainingSequenceHole) = 2 * hole_struct_hash(x.root_node) + 1
 
 function expand_match!(expansion::SyntacticLeafExpansion, match::Match)::Nothing
     hole = pop!(match.holes)::TreeNodeHole

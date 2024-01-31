@@ -77,8 +77,8 @@ def main():
             output[" ".join(arg)] = result
         branches.append(branch)
         outputs.append(output)
-    if len(branches) > 1:
-        print_comparison(branches[-2], branches[-1], outputs[-2], outputs[-1])
+        if len(branches) > 1:
+            print_comparison(branches[-2], branches[-1], outputs[-2], outputs[-1])
 
 
 if __name__ == "__main__":
