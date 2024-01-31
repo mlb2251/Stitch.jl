@@ -541,12 +541,14 @@ function expand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abs
     hole.leaf = expansion.leaf
 end
 
+const MatchKey = Tuple{Vector{Int64},Vector{Symbol},Vector{Int64}}
+
 function collapse_equivalent_matches(updated_matches)
     if length(updated_matches) <= 1
         return nothing
     end
     was_updated = false
-    best_match_per_id = Dict{Tuple{Vector{Int64}, Vector{Symbol}, Vector{Int64}},Match}()
+    best_match_per_id = Dict{MatchKey,Match}()
     for m in updated_matches
         id = match_key(m)
         if haskey(best_match_per_id, id)
@@ -564,7 +566,14 @@ function collapse_equivalent_matches(updated_matches)
     return [v for (_, v) in best_match_per_id]
 end
 
-function match_key(m)
+function match_key(m::Match)::MatchKey
+    # we consider matches equivalent if from now on they will be
+    # identical in what expansions can be applied to them, and how
+    # those expansions will affect the local utility.
+
+    # the only state that matters for this is the holes as well as
+    # arguments that can potentially be used for variable reuse
+    # (i.e. the unique_args and symbolic arguments)
     unique_args = [x.metadata.struct_hash for x in m.unique_args]
     holes = [hole_struct_hash(x) for x in m.holes]
     return (unique_args, m.sym_of_idx, holes)
