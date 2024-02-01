@@ -137,6 +137,7 @@ Base.@kwdef mutable struct SearchConfig
     autoexpand_head::Bool = false # auto expand head of list
     dfa::Union{Dict{Symbol,Dict{Symbol,Vector{Symbol}}},Nothing} = nothing
     dfa_valid_root_states = Set([:S, :seqS, :E])
+    dfa_valid_metavariable_states = [:E, :S, :seqS]
     dfa_start_state = :M
 
     # optimizations

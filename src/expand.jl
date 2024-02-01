@@ -210,26 +210,23 @@ function collect_expansions(
     if isnothing(config.dfa)
         collect_abstraction_expansions_for_dfa_state!(matches, :uninit_state)
     else
-        matches_e = Vector{Tuple{Int,Match}}()
-        matches_s = Vector{Tuple{Int,Match}}()
-        matches_seqS = Vector{Tuple{Int,Match}}()
+        matches_by_dfa_state = Dict(
+            sym => Vector{Tuple{Int,Match}}() for sym in config.dfa_valid_metavariable_states
+        )
         for (i, match) in matches
             hole = match.holes[end]
             if typeof(hole) != TreeNodeHole
                 continue
             end
             dfa_state = hole.metadata.dfa_state
-            if dfa_state === :E
-                push!(matches_e, (i, match))
-            elseif dfa_state === :S
-                push!(matches_s, (i, match))
-            elseif dfa_state === :seqS
-                push!(matches_seqS, (i, match))
+            if !haskey(matches_by_dfa_state, dfa_state)
+                continue
             end
+            push!(matches_by_dfa_state[dfa_state], (i, match))
         end
-        collect_abstraction_expansions_for_dfa_state!(matches_e, :E)
-        collect_abstraction_expansions_for_dfa_state!(matches_s, :S)
-        collect_abstraction_expansions_for_dfa_state!(matches_seqS, :seqS)
+        for (sym, matches) in matches_by_dfa_state
+            collect_abstraction_expansions_for_dfa_state!(matches, sym)
+        end
     end
     result
 end
