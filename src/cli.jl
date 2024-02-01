@@ -62,6 +62,18 @@ function cli()
         default = "[S, seqS, E]"
     end
 
+    @add_arg_table s begin
+        "--dfa-metavariable-disallow-S"
+        help = "Disallow metavariables from being S"
+        action = :store_true
+    end
+
+    @add_arg_table s begin
+        "--dfa-metavariable-disallow-seqS"
+        help = "Disallow metavariables from being seqS"
+        action = :store_true
+    end
+
     args = parse_args(s)
 
     size_by_symbol_json = JSON.parse(args["size-by-symbol"])
@@ -82,7 +94,9 @@ function cli()
         application_utility_fixed=args["application-utility-fixed"],
         application_utility_metavar=args["application-utility-metavar"],
         application_utility_symvar=args["application-utility-symvar"],
-        dfa_valid_root_states=dfa_valid_root_states
+        dfa_valid_root_states=dfa_valid_root_states,
+        dfa_metavariable_allow_S=!args["dfa-metavariable-disallow-S"],
+        dfa_metavariable_allow_seqS=!args["dfa-metavariable-disallow-seqS"],
     )
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     println(JSON.json([
