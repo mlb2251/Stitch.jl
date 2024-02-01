@@ -505,6 +505,14 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
                 append!(updated_matches, extras)
             end
         end
+        if !match_poss_update
+            updated_matches = match_poss.alternatives
+        end
+        new_matches = collapse_equivalent_matches(expansion, updated_matches)
+        if !isnothing(new_matches)
+            match_poss_update = true
+            updated_matches = new_matches
+        end
         if match_poss_update
             if !whole_list_update
                 whole_list_update = true
@@ -1022,6 +1030,54 @@ function unexpand_match!(expansion::SequenceChoiceVarExpansion, match::Match)
 
     @assert expansion.idx == length(match.choice_var_captures)
 end
+
+const MatchKey = Tuple{Vector{Int64},Vector{Symbol},Vector{Tuple{Symbol, Int64}}}
+
+function collapse_equivalent_matches(expansion::Expansion, updated_matches)
+    return nothing
+end
+
+function collapse_equivalent_matches(expansion::SequenceTerminatorExpansion, updated_matches)
+    if length(updated_matches) <= 1
+        return nothing
+    end
+    was_updated = false
+    best_match_per_id = Dict{MatchKey,Match}()
+    for m in updated_matches
+        id = match_key(m)
+        if haskey(best_match_per_id, id)
+            was_updated = true
+            if best_match_per_id[id].local_utility < m.local_utility
+                best_match_per_id[id] = m
+            end
+        else
+            best_match_per_id[id] = m
+        end
+    end
+    if !was_updated
+        return nothing
+    end
+    return [v for (_, v) in best_match_per_id]
+end
+
+function match_key(m::Match)::MatchKey
+    # we consider matches equivalent if from now on they will be
+    # identical in what expansions can be applied to them, and how
+    # those expansions will affect the local utility.
+
+    # the only state that matters for this is the holes as well as
+    # arguments that can potentially be used for variable reuse
+    # (i.e. the unique_args and symbolic arguments)
+    unique_args = [x.metadata.struct_hash for x in m.unique_args]
+    holes = [hole_struct_hash(x) for x in m.holes]
+    return (unique_args, m.sym_of_idx, holes)
+end
+
+# ensure that the struct hash is unique for each hole
+# since these are positive integers, we can dove-tail them
+hole_struct_hash(x::TreeNodeHole) = (:TreeNodeHole, x.metadata.struct_hash)
+hole_struct_hash(x::RemainingSequenceHole) = (:RemainingSequenceHole, (x.root_node.metadata.struct_hash << 32) + x.num_consumed)
+
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
 function strictly_dominated(search_state)
