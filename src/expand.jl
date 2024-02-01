@@ -1031,7 +1031,7 @@ function unexpand_match!(expansion::SequenceChoiceVarExpansion, match::Match)
     @assert expansion.idx == length(match.choice_var_captures)
 end
 
-const MatchKey = Tuple{Vector{Int64},Vector{Symbol},Vector{Int64}}
+const MatchKey = Tuple{Vector{Int64},Vector{Symbol},Vector{Tuple{Symbol, Int64}}}
 
 function collapse_equivalent_matches(expansion::Expansion, updated_matches)
     return nothing
@@ -1075,8 +1075,8 @@ end
 
 # ensure that the struct hash is unique for each hole
 # since these are positive integers, we can dove-tail them
-hole_struct_hash(x::TreeNodeHole) = 2 * x.metadata.struct_hash
-hole_struct_hash(x::RemainingSequenceHole) = 2 * hole_struct_hash(x.root_node) + 1
+hole_struct_hash(x::TreeNodeHole) = (:TreeNodeHole, x.metadata.struct_hash)
+hole_struct_hash(x::RemainingSequenceHole) = (:RemainingSequenceHole, (x.root_node.metadata.struct_hash << 32) + x.num_consumed)
 
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
