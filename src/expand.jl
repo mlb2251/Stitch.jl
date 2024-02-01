@@ -6,7 +6,6 @@ function possible_expansions!(search_state)
     expansions!(SyntacticLeafExpansion, search_state)
     expansions!(AbstractionExpansion, search_state)
     expansions!(SymbolExpansion, search_state)
-    expansions!(ContinuationExpansion, search_state)
     if search_state.config.match_sequences
         expansions!(SequenceExpansion, search_state)
         expansions!(SequenceElementExpansion, search_state)
@@ -233,37 +232,6 @@ function collect_expansions(
         collect_abstraction_expansions_for_dfa_state!(matches_seqS, :seqS)
     end
     result
-end
-
-function collect_expansions(
-    ::Type{ContinuationExpansion},
-    abstraction::Abstraction,
-    matches::Vector{Tuple{Int,Match}},
-    config
-)::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
-
-    if length(matches) == 0
-        return []
-    end
-
-    node = matches[1][2].holes[end]
-    if typeof(node) != TreeNodeHole
-        return []
-    end
-    isnothing(node.parent) && return [] # no identity abstraction allowed
-
-    while !isnothing(node.parent)
-        (parent, i) = node.parent
-        # check that our parent is a semicolon and we are the righthand child
-        # so in particular parent == (semi _ node)
-        i == 3 || return []
-        parent.children[1] === :semi || return []
-        node = parent
-    end
-
-    isnothing(matches[1][2].continuation) || error("shouldn't be possible to have two continuation expansions!")
-
-    return [(ContinuationExpansion(), matches)]
 end
 
 function collect_expansions(
@@ -640,21 +608,6 @@ function expand_match!(expansion::SymbolExpansion, match::Match)::Nothing
 end
 
 
-function expand_abstraction!(expansion::ContinuationExpansion, hole, holes, abstraction)
-    # set the head symbol of the hole
-    hole.leaf = Symbol("#continuation")
-end
-
-function expand_match!(expansion::ContinuationExpansion, match::Match)::Nothing
-    # pop next hole and save it for future backtracking
-    hole = pop!(match.holes)::TreeNodeHole
-    match.holes_size -= hole.metadata.size
-    push!(match.holes_stack, hole)
-    @assert isnothing(match.continuation)
-    match.continuation = hole
-    return nothing
-end
-
 function expand_abstraction!(expansion::SequenceExpansion, hole, holes, abstraction)
     # take a hole ?? and make it (/seq ...). The hole is then pushed to the stack
     hole.leaf = nothing
@@ -903,19 +856,6 @@ function unexpand_match!(expansion::SymbolExpansion, match::Match)
         pop!(match.sym_of_idx)
         delete!(match.idx_of_sym, hole.leaf)
     end
-
-    match.holes_size += hole.metadata.size
-end
-
-function unexpand_abstraction!(expansion::ContinuationExpansion, hole, holes, abstraction)
-    hole.leaf = SYM_HOLE
-end
-
-function unexpand_match!(expansion::ContinuationExpansion, match::Match)
-    hole = pop!(match.holes_stack)::TreeNodeHole
-    push!(match.holes, hole)
-    @assert match.continuation === hole
-    match.continuation = nothing
 
     match.holes_size += hole.metadata.size
 end
