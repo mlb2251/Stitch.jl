@@ -55,6 +55,25 @@ function cli()
         arg_type = Float32
     end
 
+    @add_arg_table s begin
+        "--dfa-valid-root-states"
+        help = "Valid root states for the DFA"
+        arg_type = String
+        default = "[S, seqS, E]"
+    end
+
+    @add_arg_table s begin
+        "--dfa-metavariable-disallow-S"
+        help = "Disallow metavariables from being S"
+        action = :store_true
+    end
+
+    @add_arg_table s begin
+        "--dfa-metavariable-disallow-seqS"
+        help = "Disallow metavariables from being seqS"
+        action = :store_true
+    end
+
     args = parse_args(s)
 
     size_by_symbol_json = JSON.parse(args["size-by-symbol"])
@@ -64,6 +83,7 @@ function cli()
     corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(json)])
 
     size_by_symbol = Dict(Symbol(k) => Float32(v) for (k, v) in size_by_symbol_json)
+    dfa_valid_root_states = Set([Symbol(s) for s in JSON.parse(args["dfa-valid-root-states"])])
     abstractions, corpus = compress_imperative(
         corpus,
         args["dfa"],
@@ -74,6 +94,9 @@ function cli()
         application_utility_fixed=args["application-utility-fixed"],
         application_utility_metavar=args["application-utility-metavar"],
         application_utility_symvar=args["application-utility-symvar"],
+        dfa_valid_root_states=dfa_valid_root_states,
+        dfa_metavariable_allow_S=!args["dfa-metavariable-disallow-S"],
+        dfa_metavariable_allow_seqS=!args["dfa-metavariable-disallow-seqS"],
     )
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     println(JSON.json([

@@ -138,6 +138,8 @@ Base.@kwdef mutable struct SearchConfig
     dfa::Union{Dict{Symbol,Dict{Symbol,Vector{Symbol}}},Nothing} = nothing
     dfa_valid_root_states = Set([:S, :seqS, :E])
     dfa_start_state = :M
+    dfa_metavariable_allow_seqS = true
+    dfa_metavariable_allow_S = true
 
     # optimizations
     no_exclude_single_match::Bool = false

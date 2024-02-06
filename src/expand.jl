@@ -221,15 +221,15 @@ function collect_expansions(
             dfa_state = hole.metadata.dfa_state
             if dfa_state === :E
                 push!(matches_e, (i, match))
-            elseif dfa_state === :S
+            elseif config.dfa_metavariable_allow_S && dfa_state === :S
                 push!(matches_s, (i, match))
-            elseif dfa_state === :seqS
+            elseif config.dfa_metavariable_allow_seqS && dfa_state === :seqS
                 push!(matches_seqS, (i, match))
             end
         end
         collect_abstraction_expansions_for_dfa_state!(matches_e, :E)
-        collect_abstraction_expansions_for_dfa_state!(matches_s, :S)
-        collect_abstraction_expansions_for_dfa_state!(matches_seqS, :seqS)
+        config.dfa_metavariable_allow_S && collect_abstraction_expansions_for_dfa_state!(matches_s, :S)
+        config.dfa_metavariable_allow_seqS && collect_abstraction_expansions_for_dfa_state!(matches_seqS, :seqS)
     end
     result
 end
