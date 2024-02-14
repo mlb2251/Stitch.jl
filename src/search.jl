@@ -577,7 +577,7 @@ function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
         push!(abstractions, search_res.abstraction)
     end
     println("Total compression: ", size(original_corpus, config.size_by_symbol) / size(corpus, config.size_by_symbol), "x")
-    return abstractions, corpus
+    return abstractions, corpus, dfa
 end
 
 function compress_imperative(original_corpus, dfa_path; kwargs...)

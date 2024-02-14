@@ -84,7 +84,7 @@ function cli()
 
     size_by_symbol = Dict(Symbol(k) => Float32(v) for (k, v) in size_by_symbol_json)
     dfa_valid_root_states = Set([Symbol(s) for s in JSON.parse(args["dfa-valid-root-states"])])
-    abstractions, corpus = compress_imperative(
+    abstractions, corpus, _ = compress_imperative(
         corpus,
         args["dfa"],
         iterations=args["iterations"],
