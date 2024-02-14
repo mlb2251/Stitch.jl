@@ -121,6 +121,7 @@ Base.show(io::IO, obj::Stats) = pretty_show(io, obj; indent=true)
 
 Base.@kwdef mutable struct SearchConfig
     new_abstraction_name::Symbol = :placeholder
+    abstraction_name_function::Function = i -> "fn_$i"
     track::Union{SExpr,Nothing} = nothing
     max_arity::Int = 2
     max_choice_arity::Int = 2
@@ -145,6 +146,8 @@ Base.@kwdef mutable struct SearchConfig
     no_exclude_single_match::Bool = false
     no_opt_arg_capture::Bool = false
     no_opt_redundant_args::Bool = false
+    no_opt_rooted_sequence::Bool = false
+    return_first_abstraction::Bool = false
     size_by_symbol::Union{Nothing,Dict{Symbol,Float32}} = nothing
 
     # utility
@@ -441,6 +444,10 @@ function stitch_search(corpus, config)
         if isempty(search_state.holes)
             search_state.stats.completed += 1
 
+            if search_state.config.return_first_abstraction
+                return search_state
+            end
+
             !verbose || println("completed: ", search_state.abstraction.body, " with utility ", bottom_up_utility(search_state), " used in $(length(search_state.matches)) places")
 
             # cheaply upper bounded version of util that uses no conflict resolution
@@ -563,7 +570,7 @@ function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
     config = SearchConfig(; dfa=dfa, kwargs...)
     for i in 1:iterations
         println("===Iteration $i===")
-        config.new_abstraction_name = Symbol("fn_$i")
+        config.new_abstraction_name = Symbol(config.abstraction_name_function(i))
         search_res = stitch_search(corpus, config)
         if isnothing(search_res)
             println("No more abstractions")
