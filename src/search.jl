@@ -587,18 +587,6 @@ function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
     return abstractions, corpus, dfa
 end
 
-function compress_imperative(original_corpus, dfa_path; kwargs...)
-    compress(
-        original_corpus;
-        autoexpand_head=true,
-        # only_match_semi = true,
-        allow_single_task=false,
-        verbose_best=true,
-        dfa=load_dfa(dfa_path),
-        kwargs...
-    )
-end
-
 function rewrite_novel(programs, abstraction::SExpr; kwargs...)
     _, rewritten, dfa = compress(
         programs;
