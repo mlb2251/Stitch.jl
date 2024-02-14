@@ -414,14 +414,12 @@ function stitch_search(corpus, config)
 
         # for when we are tracking a specific abstraction
         tracked = is_tracked(search_state)
-        # printstyled("TRACK: ", search_state.abstraction.body, "\n", color=:green, bold=true)
         if tracked
             silent || printstyled("TRACK: ", search_state.abstraction.body, "\n", color=:green, bold=true)
         elseif config.follow && !tracked
             unexpand_general!(search_state)
             continue
         end
-        # println("KEEP GOING")
 
         search_state.stats.expansions += 1
 
@@ -442,16 +440,11 @@ function stitch_search(corpus, config)
             continue
         end
 
-        # println("STILL HERE")
-        # println(search_state.abstraction.body)
-        # println(search_state.holes)
-
         # are we done?
         if isempty(search_state.holes)
             search_state.stats.completed += 1
 
             if search_state.config.return_first_abstraction
-                # println("DONE")
                 return search_state
             end
 
@@ -579,14 +572,12 @@ function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
         println("===Iteration $i===")
         config.new_abstraction_name = Symbol(config.abstraction_name_function(i))
         search_res = stitch_search(corpus, config)
-        # println(search_res)
         if isnothing(search_res)
             println("No more abstractions")
             break
         end
         search_res.abstraction.dfa_root = root_dfa_state(search_res)
         (rewritten, compressive, cumulative) = rewrite(search_res)
-        # println(rewritten)
         corpus = rewritten
         dfa = add_abstraction_to_dfa(dfa, config.new_abstraction_name, search_res.abstraction)
         config = SearchConfig(; dfa=dfa, kwargs...)
