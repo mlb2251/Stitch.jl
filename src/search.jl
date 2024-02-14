@@ -121,6 +121,7 @@ Base.show(io::IO, obj::Stats) = pretty_show(io, obj; indent=true)
 
 Base.@kwdef mutable struct SearchConfig
     new_abstraction_name::Symbol = :placeholder
+    abstraction_name_function::Function = i -> "fn_$i"
     track::Union{SExpr,Nothing} = nothing
     max_arity::Int = 2
     max_choice_arity::Int = 2
@@ -145,6 +146,8 @@ Base.@kwdef mutable struct SearchConfig
     no_exclude_single_match::Bool = false
     no_opt_arg_capture::Bool = false
     no_opt_redundant_args::Bool = false
+    no_opt_rooted_sequence::Bool = false
+    return_first_abstraction::Bool = false
     size_by_symbol::Union{Nothing,Dict{Symbol,Float32}} = nothing
 
     # utility
@@ -411,12 +414,14 @@ function stitch_search(corpus, config)
 
         # for when we are tracking a specific abstraction
         tracked = is_tracked(search_state)
+        # printstyled("TRACK: ", search_state.abstraction.body, "\n", color=:green, bold=true)
         if tracked
             silent || printstyled("TRACK: ", search_state.abstraction.body, "\n", color=:green, bold=true)
         elseif config.follow && !tracked
             unexpand_general!(search_state)
             continue
         end
+        # println("KEEP GOING")
 
         search_state.stats.expansions += 1
 
@@ -437,9 +442,18 @@ function stitch_search(corpus, config)
             continue
         end
 
+        # println("STILL HERE")
+        # println(search_state.abstraction.body)
+        # println(search_state.holes)
+
         # are we done?
         if isempty(search_state.holes)
             search_state.stats.completed += 1
+
+            if search_state.config.return_first_abstraction
+                # println("DONE")
+                return search_state
+            end
 
             !verbose || println("completed: ", search_state.abstraction.body, " with utility ", bottom_up_utility(search_state), " used in $(length(search_state.matches)) places")
 
@@ -563,21 +577,23 @@ function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
     config = SearchConfig(; dfa=dfa, kwargs...)
     for i in 1:iterations
         println("===Iteration $i===")
-        config.new_abstraction_name = Symbol("fn_$i")
+        config.new_abstraction_name = Symbol(config.abstraction_name_function(i))
         search_res = stitch_search(corpus, config)
+        # println(search_res)
         if isnothing(search_res)
             println("No more abstractions")
             break
         end
         search_res.abstraction.dfa_root = root_dfa_state(search_res)
         (rewritten, compressive, cumulative) = rewrite(search_res)
+        # println(rewritten)
         corpus = rewritten
         dfa = add_abstraction_to_dfa(dfa, config.new_abstraction_name, search_res.abstraction)
         config = SearchConfig(; dfa=dfa, kwargs...)
         push!(abstractions, search_res.abstraction)
     end
     println("Total compression: ", size(original_corpus, config.size_by_symbol) / size(corpus, config.size_by_symbol), "x")
-    return abstractions, corpus
+    return abstractions, corpus, dfa
 end
 
 function compress_imperative(original_corpus, dfa_path; kwargs...)
@@ -590,6 +606,43 @@ function compress_imperative(original_corpus, dfa_path; kwargs...)
         dfa=load_dfa(dfa_path),
         kwargs...
     )
+end
+
+function rewrite_novel(programs, abstraction::SExpr; kwargs...)
+    _, rewritten, dfa = compress(
+        programs;
+        follow=true,
+        track=abstraction,
+        max_arity=10000,
+        max_choice_arity=10000,
+        allow_single_task=true,
+        upper_bound_fn=upper_bound_inf,
+        no_opt_redundant_args=true,
+        no_opt_arg_capture=true,
+        iterations=1,
+        return_first_abstraction=true,
+        # silent=true,
+        kwargs...
+    )
+    rewritten, dfa
+end
+
+function rewrite_novel(programs, abstractions::Vector{SExpr}; kwargs...)
+    dfa = nothing
+    if "dfa" in keys(kwargs)
+        dfa = kwargs["dfa"]
+    end
+    for (i, abstraction) in enumerate(abstractions)
+        kwargs = (;kwargs..., dfa=dfa)
+        programs, dfa = rewrite_novel(
+            programs,
+            abstraction;
+            abstraction_name_function=j -> "fn_$i",
+            kwargs...
+        )
+        println(programs)
+    end
+    programs, dfa
 end
 
 function load_corpus(file; truncate=nothing, kwargs...)

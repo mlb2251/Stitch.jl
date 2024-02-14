@@ -17,6 +17,8 @@ function rewrite(search_state::SearchState)::Tuple{Corpus,Float32,Float32}
 
     cumulative_utility, rci = collect_rci(search_state)
 
+    # println(rci)
+
     rewritten_programs = [rewrite_program(program, search_state, rci) for program in search_state.corpus.programs]
     rewritten = Corpus(rewritten_programs)
 
