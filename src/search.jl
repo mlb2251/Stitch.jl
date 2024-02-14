@@ -631,7 +631,6 @@ function rewrite_novel(programs, abstractions::Vector{SExpr}; kwargs...)
             abstraction_name_function=j -> "fn_$i",
             kwargs...
         )
-        println(programs)
     end
     programs, dfa
 end
