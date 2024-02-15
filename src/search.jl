@@ -611,6 +611,7 @@ function rewrite_novel(programs, abstraction::SExpr; kwargs...)
         no_opt_redundant_args=true,
         no_opt_arg_capture=true,
         iterations=1,
+        silent=true,
         return_first_abstraction=true,
         kwargs...
     )
