@@ -599,9 +599,15 @@ function compress_imperative(original_corpus, dfa_path; kwargs...)
     )
 end
 
+"""
+Rewrite a corpus of programs using an abstraction. kwargs... should
+    contain the same values of :dfa, :match_sequences, and the
+    cost parameters originally used to create the abstraction.
+"""
 function rewrite_novel(programs, abstraction::SExpr; kwargs...)
     _, rewritten, dfa = compress(
         programs;
+        kwargs...,
         follow=true,
         track=abstraction,
         max_arity=10000,
@@ -613,11 +619,15 @@ function rewrite_novel(programs, abstraction::SExpr; kwargs...)
         iterations=1,
         silent=true,
         return_first_abstraction=true,
-        kwargs...
     )
     rewritten, dfa
 end
 
+"""
+Rewrite a corpus of programs using an abstraction. kwargs... should
+    contain the same values of :dfa, :match_sequences, and the
+    cost parameters originally used to create the abstraction.
+"""
 function rewrite_novel(programs, abstractions::Vector{SExpr}; kwargs...)
     dfa = nothing
     if "dfa" in keys(kwargs)
