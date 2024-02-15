@@ -619,6 +619,7 @@ function rewrite_novel(programs, abstraction::SExpr; kwargs...)
         iterations=1,
         silent=true,
         return_first_abstraction=true,
+        no_exclude_single_match=true,
     )
     rewritten, dfa
 end
