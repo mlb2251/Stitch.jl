@@ -1142,6 +1142,7 @@ function variables_at_front_of_root_sequence(search_state)
     #       this is always worse than the case where you just use a subsequence
     # 2. the root sequence is a /subseq and the first element is a metavariable or a choice variable
     #       this is always worse than just having a shorter subsequence
+    search_state.config.no_opt_rooted_sequence && return false
     ab = search_state.abstraction.body
     if ab.leaf !== nothing
         return false
