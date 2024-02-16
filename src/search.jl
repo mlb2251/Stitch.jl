@@ -563,11 +563,26 @@ function add_abstraction_to_dfa(dfa, symbol, abstraction)
     dfa
 end
 
+function check_abstraction_names_not_present(corpus, names)
+    names_set = Set(names)
+    for program in corpus.programs
+        for node in subexpressions(program.expr)
+            if node.leaf !== nothing
+                continue
+            end
+            head = node.children[1].leaf
+            if head in names_set
+                error("abstraction name $head is already present in the corpus")
+            end
+        end
+    end
+end
 
 function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
     corpus = original_corpus
-    abstractions = Abstraction[]
     config = SearchConfig(; dfa=dfa, kwargs...)
+    check_abstraction_names_not_present(corpus, [config.abstraction_name_function(i) for i in 1:iterations])
+    abstractions = Abstraction[]
     for i in 1:iterations
         println("===Iteration $i===")
         config.new_abstraction_name = Symbol(config.abstraction_name_function(i))
