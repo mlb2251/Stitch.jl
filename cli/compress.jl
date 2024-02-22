@@ -20,27 +20,8 @@ function cli()
 
     args = parse_args(s)
 
-    size_by_symbol_json = JSON.parse(args["size-by-symbol"])
+    corpus, kwargs = gather_common_arguments(args)
 
-    corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(JSON.parse(args["corpus"]))])
-
-    size_by_symbol = Dict(Symbol(k) => Float32(v) for (k, v) in size_by_symbol_json)
-    dfa_valid_root_states = Set([Symbol(s) for s in JSON.parse(args["dfa-valid-root-states"])])
-    kwargs = (;
-        dfa=load_dfa(args["dfa"]),
-        autoexpand_head=true,
-        verbose_best=true,
-        allow_single_task=false,
-        max_arity=args["max-arity"],
-        match_sequences=true,
-        size_by_symbol=size_by_symbol,
-        application_utility_fixed=args["application-utility-fixed"],
-        application_utility_metavar=args["application-utility-metavar"],
-        application_utility_symvar=args["application-utility-symvar"],
-        dfa_valid_root_states=dfa_valid_root_states,
-        dfa_metavariable_allow_S=!args["dfa-metavariable-disallow-S"],
-        dfa_metavariable_allow_seqS=!args["dfa-metavariable-disallow-seqS"],
-    )
     abstractions, corpus, _ = compress(
         corpus;
         iterations=args["iterations"],
