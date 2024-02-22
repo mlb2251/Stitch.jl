@@ -61,6 +61,8 @@ function compute(corpus, kwargs, kwargs_specific; seed=nothing)
 end
 
 function integrate(in_file, out_file)
+
+    printstyled("Testing $in_file\n", color=:blue, bold=true)
     # read in the corpus
     corpus = load_corpus(in_file)
 
