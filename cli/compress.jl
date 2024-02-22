@@ -4,6 +4,7 @@ using ArgParse
 import Stitch as S
 import JSON
 
+include("./utils.jl")
 
 function cli()
     # parse argument --iterations
@@ -15,82 +16,21 @@ function cli()
         arg_type = Int
     end
 
-    @add_arg_table s begin
-        "--max-arity"
-        help = "Maximum arity of abstractions"
-        default = 2
-        arg_type = Int
-    end
-
-    @add_arg_table s begin
-        "--dfa"
-        help = "DFA to use for parsing"
-        arg_type = String
-    end
-
-    @add_arg_table s begin
-        "--size-by-symbol"
-        help = "Size of each symbol"
-        arg_type = String
-    end
-
-    @add_arg_table s begin
-        "--application-utility-fixed"
-        help = "Application utility fixed"
-        default = Float32(-1.0)
-        arg_type = Float32
-    end
-
-    @add_arg_table s begin
-        "--application-utility-metavar"
-        help = "Application utility metavar"
-        default = Float32(0)
-        arg_type = Float32
-    end
-
-    @add_arg_table s begin
-        "--application-utility-symvar"
-        help = "Application utility symvar"
-        default = Float32(0)
-        arg_type = Float32
-    end
-
-    @add_arg_table s begin
-        "--dfa-valid-root-states"
-        help = "Valid root states for the DFA"
-        arg_type = String
-        default = "[S, seqS, E]"
-    end
-
-    @add_arg_table s begin
-        "--dfa-metavariable-disallow-S"
-        help = "Disallow metavariables from being S"
-        action = :store_true
-    end
-
-    @add_arg_table s begin
-        "--dfa-metavariable-disallow-seqS"
-        help = "Disallow metavariables from being seqS"
-        action = :store_true
-    end
+    common_args(s)
 
     args = parse_args(s)
 
     size_by_symbol_json = JSON.parse(args["size-by-symbol"])
 
-    line = readline()
-    json = JSON.parse(line)
-    corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(json)])
+    corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(JSON.parse(args["corpus"]))])
 
     size_by_symbol = Dict(Symbol(k) => Float32(v) for (k, v) in size_by_symbol_json)
     dfa_valid_root_states = Set([Symbol(s) for s in JSON.parse(args["dfa-valid-root-states"])])
-    abstractions, corpus, _ = compress(
-        corpus,
+    kwargs = (;
         dfa=load_dfa(args["dfa"]),
         autoexpand_head=true,
         verbose_best=true,
         allow_single_task=false,
-        iterations=args["iterations"],
         max_arity=args["max-arity"],
         match_sequences=true,
         size_by_symbol=size_by_symbol,
@@ -100,6 +40,11 @@ function cli()
         dfa_valid_root_states=dfa_valid_root_states,
         dfa_metavariable_allow_S=!args["dfa-metavariable-disallow-S"],
         dfa_metavariable_allow_seqS=!args["dfa-metavariable-disallow-seqS"],
+    )
+    abstractions, corpus, _ = compress(
+        corpus;
+        iterations=args["iterations"],
+        kwargs...
     )
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     println(JSON.json([
