@@ -39,8 +39,19 @@ function proc_args(args)
     args, shuf
 end
 
+function check_rewrite(corpus, compressed_corpus, abstractions; kwargs...)
+    abstractions = [abs.body for abs in abstractions]
+    for i in 1:length(corpus.programs)
+        limited_corpus = Corpus([corpus.programs[i]])
+        result = rewrite_novel(limited_corpus, abstractions; kwargs...)[1].programs[1]
+        expected = compressed_corpus.programs[i]
+        @test string(result) == string(expected)
+    end
+end
+
 function compute(corpus, kwargs, kwargs_specific; seed=nothing)
     abstractions, compressed_corpus, _ = compress(corpus; strict=strict, shuffle_expansions_seed=seed, kwargs_specific...)
+    check_rewrite(corpus, compressed_corpus, abstractions; kwargs_specific...)
     abstractions = [abstraction_to_list(x) for x in abstractions]
     return Dict(
         "args" => kwargs,

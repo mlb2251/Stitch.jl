@@ -614,6 +614,53 @@ function compress_imperative(original_corpus, dfa_path; kwargs...)
     )
 end
 
+"""
+Rewrite a corpus of programs using an abstraction. kwargs... should
+    contain the same values of :dfa, :match_sequences, and the
+    cost parameters originally used to create the abstraction.
+"""
+function rewrite_novel(programs, abstraction::SExpr; kwargs...)
+    _, rewritten, dfa = compress(
+        programs;
+        kwargs...,
+        follow=true,
+        track=abstraction,
+        max_arity=10000,
+        max_choice_arity=10000,
+        allow_single_task=true,
+        upper_bound_fn=upper_bound_inf,
+        no_opt_redundant_args=true,
+        no_opt_arg_capture=true,
+        iterations=1,
+        silent=true,
+        return_first_abstraction=true,
+        no_exclude_single_match=true,
+    )
+    rewritten, dfa
+end
+
+"""
+Rewrite a corpus of programs using an abstraction. kwargs... should
+    contain the same values of :dfa, :match_sequences, and the
+    cost parameters originally used to create the abstraction.
+"""
+function rewrite_novel(programs, abstractions::Vector{SExpr}; kwargs...)
+    dfa = nothing
+    if "dfa" in keys(kwargs)
+        dfa = kwargs["dfa"]
+    end
+    for (i, abstraction) in enumerate(abstractions)
+        kwargs = (;kwargs..., dfa=dfa)
+        programs, dfa = rewrite_novel(
+            programs,
+            abstraction;
+            abstraction_name_function=j -> "fn_$i",
+            kwargs...
+        )
+    end
+    programs, dfa
+end
+
 function load_corpus(file; truncate=nothing, kwargs...)
     json = JSON.parsefile(file)
     if !isnothing(truncate)
