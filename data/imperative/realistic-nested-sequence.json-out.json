@@ -16,7 +16,7 @@
             [
                 2,
                 5,
-                "(/seq (Assign (list (Name %1 Store)) (Call (Name g_int Load) (list (Call (Name g_input Load) nil nil)) nil) None) (For (Name %5 Store) (Call (Name g_range Load) (list (Name %1 Load)) nil) (/seq (Assign (list (Tuple (list (Name %4 Store) (Name %3 Store) (Name %2 Store)) Store)) (Call (Name g_map Load) (list (Name g_int Load) (Call (Attribute (Call (Name g_input Load) nil nil) s_split Load) nil nil)) nil) None) (If #1 (/seq (Expr (Call (Name g_print Load) (list (Name %2 Load)) nil))) (/seq #0))) nil None))",
+                "(/seq (Assign (list (Name %1 Store)) (Call (Name g_int Load) (list (_starred_content (Call (Name g_input Load) nil nil))) nil) None) (For (Name %5 Store) (Call (Name g_range Load) (list (_starred_content (Name %1 Load))) nil) (/seq (Assign (list (Tuple (list (_starred_content (Name %4 Store)) (_starred_content (Name %3 Store)) (_starred_content (Name %2 Store))) Store)) (Call (Name g_map Load) (list (_starred_content (Name g_int Load)) (_starred_content (Call (Attribute (Call (Name g_input Load) nil nil) s_split Load) nil nil))) nil) None) (If #1 (/seq (Expr (Call (Name g_print Load) (list (_starred_content (Name %2 Load))) nil))) (/seq #0))) (/seq) None))",
                 "seqS",
                 [
                     "S",
@@ -32,8 +32,8 @@
             ]
         ],
         "programs": [
-            "(fn_1 (Expr (Call (Name g_print Load) (list (BinOp (BinOp (BinOp (Name &r:0 Load) Add (Name &d:0 Load)) FloorDiv (Name &d:0 Load)) Mult (Name &d:0 Load))) nil)) (Compare (Name &l:0 Load) (list Gt) (list (Name &d:0 Load))) &t:0 &d:0 &r:0 &l:0 &i:0)",
-            "(fn_1 (If (Compare (Name &c:0 Load) (list Lt) (list (Name &a:0 Load))) (/seq (Expr (Call (Name g_print Load) (list (Name &c:0 Load)) nil))) (/seq)) (Compare (Name &c:0 Load) (list Gt) (list (Name &b:0 Load))) &n:0 &c:0 &b:0 &a:0 &i:0)"
+            "(fn_1 (Expr (Call (Name g_print Load) (list (_starred_content (BinOp (BinOp (BinOp (Name &r:0 Load) Add (Name &d:0 Load)) FloorDiv (Name &d:0 Load)) Mult (Name &d:0 Load)))) nil)) (Compare (Name &l:0 Load) (list Gt) (list (Name &d:0 Load))) &t:0 &d:0 &r:0 &l:0 &i:0)",
+            "(fn_1 (If (Compare (Name &c:0 Load) (list Lt) (list (Name &a:0 Load))) (/seq (Expr (Call (Name g_print Load) (list (_starred_content (Name &c:0 Load))) nil))) (/seq)) (Compare (Name &c:0 Load) (list Gt) (list (Name &b:0 Load))) &n:0 &c:0 &b:0 &a:0 &i:0)"
         ]
     }
 ]
