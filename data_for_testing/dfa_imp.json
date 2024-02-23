@@ -584,40 +584,6 @@
     "Lt": [],
     "LtE": [],
     "MatMult": [],
-    "Match": [
-      "X",
-      "X"
-    ],
-    "MatchAs": [
-      "X",
-      "X"
-    ],
-    "MatchClass": [
-      "X",
-      "X",
-      "X",
-      "X"
-    ],
-    "MatchMapping": [
-      "X",
-      "X",
-      "X"
-    ],
-    "MatchOr": [
-      "X"
-    ],
-    "MatchSequence": [
-      "X"
-    ],
-    "MatchSingleton": [
-      "X"
-    ],
-    "MatchStar": [
-      "X"
-    ],
-    "MatchValue": [
-      "X"
-    ],
     "Mod": [],
     "Module": [
       "X",
@@ -690,12 +656,6 @@
       "X",
       "X"
     ],
-    "TryStar": [
-      "X",
-      "X",
-      "X",
-      "X"
-    ],
     "Tuple": [
       "X",
       "X"
@@ -759,14 +719,8 @@
       "X",
       "X"
     ],
-    "match_case": [
-      "X",
-      "X",
-      "X"
-    ],
     "mod": [],
     "operator": [],
-    "pattern": [],
     "slice": [],
     "stmt": [],
     "type_ignore": [],
