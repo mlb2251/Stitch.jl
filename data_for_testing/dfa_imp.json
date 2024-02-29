@@ -2,10 +2,7 @@
   "M": {
     "Module": [
       "seqS",
-      "TI"
-    ],
-    "list": [
-      "M"
+      "[TI]"
     ]
   },
   "S": {
@@ -20,7 +17,7 @@
       "E"
     ],
     "Assign": [
-      "L",
+      "[L]",
       "E",
       "TC"
     ],
@@ -35,12 +32,12 @@
       "Name",
       "As",
       "seqS",
-      "listE",
+      "[E]",
       "TA",
       "TC"
     ],
     "AsyncWith": [
-      "W",
+      "[W]",
       "seqS",
       "TC"
     ],
@@ -51,13 +48,13 @@
     ],
     "ClassDef": [
       "Name",
-      "listE",
-      "K",
+      "[E]",
+      "[K]",
       "seqS",
-      "listE"
+      "[E]"
     ],
     "Delete": [
-      "L"
+      "[L]"
     ],
     "Expr": [
       "E"
@@ -73,12 +70,12 @@
       "Name",
       "As",
       "seqS",
-      "listE",
+      "[E]",
       "TA",
       "TC"
     ],
     "Global": [
-      "names"
+      "[NameStr]"
     ],
     "If": [
       "E",
@@ -86,15 +83,15 @@
       "seqS"
     ],
     "Import": [
-      "alias"
+      "[alias]"
     ],
     "ImportFrom": [
       "NullableNameStr",
-      "alias",
+      "[alias]",
       "int"
     ],
     "Nonlocal": [
-      "names"
+      "[NameStr]"
     ],
     "Raise": [
       "E",
@@ -105,7 +102,7 @@
     ],
     "Try": [
       "seqS",
-      "EH",
+      "[EH]",
       "seqS",
       "seqS"
     ],
@@ -115,12 +112,9 @@
       "seqS"
     ],
     "With": [
-      "W",
+      "[W]",
       "seqS",
       "TC"
-    ],
-    "list": [
-      "S"
     ],
     "/splice": [
       "seqS"
@@ -142,34 +136,34 @@
     ],
     "BoolOp": [
       "O",
-      "listE"
+      "[E]"
     ],
     "Call": [
       "E",
-      "listE_starrable",
-      "K"
+      "[StarredRoot]",
+      "[K]"
     ],
     "Compare": [
       "E",
-      "O",
-      "listE"
+      "[O]",
+      "[E]"
     ],
     "Constant": [
       "Const",
       "ConstKind"
     ],
     "Dict": [
-      "listE",
-      "listE"
+      "[E]",
+      "[E]"
     ],
     "DictComp": [
       "E",
       "E",
-      "C"
+      "[C]"
     ],
     "GeneratorExp": [
       "E",
-      "C"
+      "[C]"
     ],
     "IfExp": [
       "E",
@@ -177,19 +171,19 @@
       "E"
     ],
     "JoinedStr": [
-      "listF"
+      "[F]"
     ],
     "Lambda": [
       "As",
       "E"
     ],
     "List": [
-      "listE_starrable",
+      "[StarredRoot]",
       "Ctx"
     ],
     "ListComp": [
       "E",
-      "C"
+      "[C]"
     ],
     "Name": [
       "Name",
@@ -200,11 +194,11 @@
       "E"
     ],
     "Set": [
-      "listE_starrable"
+      "[StarredRoot]"
     ],
     "SetComp": [
       "E",
-      "C"
+      "[C]"
     ],
     "Starred": [
       "E",
@@ -216,7 +210,7 @@
       "Ctx"
     ],
     "Tuple": [
-      "listE_starrable",
+      "[StarredRoot]",
       "Ctx"
     ],
     "UnaryOp": [
@@ -227,9 +221,6 @@
       "E"
     ],
     "YieldFrom": [
-      "E"
-    ],
-    "list": [
       "E"
     ]
   },
@@ -242,21 +233,15 @@
     ],
     "_slice_tuple": [
       "SliceTuple"
-    ],
-    "list": [
-      "SliceRoot"
     ]
   },
   "SliceTuple": {
     "Tuple": [
-      "listSliceRoot",
+      "[SliceRoot]",
       "Ctx"
-    ],
-    "list": [
-      "SliceTuple"
     ]
   },
-  "listSliceRoot": {
+  "[SliceRoot]": {
     "list": [
       "SliceRoot"
     ]
@@ -267,18 +252,12 @@
     ],
     "_starred_starred": [
       "Starred"
-    ],
-    "list": [
-      "StarredRoot"
     ]
   },
   "Starred": {
     "Starred": [
       "E",
       "Ctx"
-    ],
-    "list": [
-      "Starred"
     ]
   },
   "Slice": {
@@ -286,23 +265,17 @@
       "E",
       "E",
       "E"
-    ],
-    "list": [
-      "Slice"
     ]
   },
   "As": {
     "arguments": [
+      "[A]",
+      "[A]",
       "A",
+      "[A]",
+      "[E]",
       "A",
-      "A",
-      "A",
-      "listE",
-      "A",
-      "listE"
-    ],
-    "list": [
-      "As"
+      "[E]"
     ]
   },
   "A": {
@@ -310,9 +283,6 @@
       "Name",
       "TA",
       "TC"
-    ],
-    "list": [
-      "A"
     ]
   },
   "F": {
@@ -326,30 +296,21 @@
       "F"
     ],
     "JoinedStr": [
-      "listF"
-    ],
-    "list": [
-      "F"
+      "[F]"
     ]
   },
   "C": {
     "comprehension": [
       "L",
       "E",
-      "listE",
+      "[E]",
       "bool"
-    ],
-    "list": [
-      "C"
     ]
   },
   "K": {
     "keyword": [
       "NullableNameStr",
       "E"
-    ],
-    "list": [
-      "K"
     ]
   },
   "EH": {
@@ -357,18 +318,12 @@
       "E",
       "NullableName",
       "seqS"
-    ],
-    "list": [
-      "EH"
     ]
   },
   "W": {
     "withitem": [
       "E",
       "L"
-    ],
-    "list": [
-      "W"
     ]
   },
   "L": {
@@ -378,7 +333,7 @@
       "Ctx"
     ],
     "List": [
-      "L",
+      "[L]",
       "Ctx"
     ],
     "Name": [
@@ -395,7 +350,7 @@
       "Ctx"
     ],
     "Tuple": [
-      "L",
+      "[L]",
       "Ctx"
     ],
     "_starred_content": [
@@ -409,45 +364,29 @@
     ]
   },
   "seqS": {
-    "list": [
-      "seqS"
-    ],
     "/seq": [
       "S"
     ]
   },
-  "listE": {
+  "[E]": {
     "list": [
       "E"
     ]
   },
-  "listE_starrable": {
+  "[StarredRoot]": {
     "list": [
       "StarredRoot"
-    ]
-  },
-  "O": {
-    "list": [
-      "O"
     ]
   },
   "alias": {
     "alias": [
       "NameStr",
       "NullableNameStr"
-    ],
-    "list": [
-      "alias"
     ]
   },
-  "names": {
+  "[NameStr]": {
     "list": [
       "NameStr"
-    ]
-  },
-  "listF": {
-    "list": [
-      "F"
     ]
   },
   "TA": {
@@ -812,6 +751,56 @@
     ],
     "list": [
       "TA"
+    ]
+  },
+  "[F]": {
+    "list": [
+      "F"
+    ]
+  },
+  "[A]": {
+    "list": [
+      "A"
+    ]
+  },
+  "[C]": {
+    "list": [
+      "C"
+    ]
+  },
+  "[EH]": {
+    "list": [
+      "EH"
+    ]
+  },
+  "[K]": {
+    "list": [
+      "K"
+    ]
+  },
+  "[L]": {
+    "list": [
+      "L"
+    ]
+  },
+  "[O]": {
+    "list": [
+      "O"
+    ]
+  },
+  "[W]": {
+    "list": [
+      "W"
+    ]
+  },
+  "[alias]": {
+    "list": [
+      "alias"
+    ]
+  },
+  "[TI]": {
+    "list": [
+      "TI"
     ]
   }
 }
