@@ -382,6 +382,11 @@ function stitch_search(corpus, config)
     expand_search_state!(search_state)
 
     while true
+        # alternatives = [length(m.alternatives) for m in search_state.matches]
+        # if any(alt -> alt > 1, alternatives)
+        #     printstyled(search_state.abstraction.body, "\n", color=:magenta, bold=false)
+        #     printstyled(alternatives, "\n", color=:magenta, bold=false)
+        # end
 
         # check if there are no expansions to try, and backtrack if so
         if isempty(search_state.expansions)

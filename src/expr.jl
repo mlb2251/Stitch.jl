@@ -72,7 +72,7 @@ mutable struct Match
     end_items:: Union{Nothing,Int}
 
     # choice vars
-    choice_var_captures::Vector{Union{SExpr,Nothing}}
+    choice_var_captures::Vector{Vector{SExpr}}
 end
 
 mutable struct MatchPossibilities

@@ -734,7 +734,7 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match::Match)::Vec
     @assert expansion.idx == length(match.choice_var_captures)
 
     # dont consume the hole
-    push!(not_consuming_hole.choice_var_captures, nothing)
+    push!(not_consuming_hole.choice_var_captures, SExpr[])
 
 
     # consume the hole
@@ -756,7 +756,7 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match::Match)::Vec
 
     captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]::SExpr
 
-    consuming_hole.choice_var_captures[end] = captured
+    consuming_hole.choice_var_captures[end] = SExpr[captured]
 
     return [consuming_hole]
 end
@@ -1121,16 +1121,16 @@ function choice_var_always_used_or_not(search_state)
 end
 
 function choice_var_always_used_or_not(search_state::SearchState{Match}, i)
-    first_match = search_state.matches[1].choice_var_captures[i] === nothing
-    if all(match -> (match.choice_var_captures[i] === nothing) == first_match, search_state.matches)
+    first_match_length = length(search_state.matches[1].choice_var_captures[i])
+    if all(match -> length(match.choice_var_captures[i]) == first_match_length, search_state.matches)
         return true
     end
     return false
 end
 
 function choice_var_always_used_or_not(search_state::SearchState{MatchPossibilities}, i)
-    first_match = search_state.matches[1].alternatives[1].choice_var_captures[i] === nothing
-    if all(match_poss -> all(match -> (match.choice_var_captures[i] === nothing) == first_match, match_poss.alternatives), search_state.matches)
+    first_match_length = length(search_state.matches[1].alternatives[1].choice_var_captures[i])
+    if all(match_poss -> all(match -> length(match.choice_var_captures[i]) == first_match_length, match_poss.alternatives), search_state.matches)
         return true
     end
     return false

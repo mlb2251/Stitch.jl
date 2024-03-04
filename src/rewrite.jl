@@ -51,7 +51,7 @@ end
 """
 Just copying Eqn 15 from https://arxiv.org/pdf/2211.16605.pdf
 """
-function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteConflictInfo{M}} where M
+function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteConflictInfo{M}} where {M}
 
     rcis = Dict(
         expr.metadata.id => RewriteConflictInfo{M}(
@@ -98,7 +98,7 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
     return util, rcis
 end
 
-function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossibilities) :: Tuple{Float64, Match}
+function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossibilities)::Tuple{Float64,Match}
     (util, i) = findmax(match.alternatives) do m
         u, _ = compute_best_utility(rcis, m)
         u
@@ -106,8 +106,8 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossib
     return util, match.alternatives[i]
 end
 
-function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match) :: Tuple{Float64, Match}
-    args = vcat(m.unique_args, [v for v in m.choice_var_captures if !isnothing(v)])
+function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match)::Tuple{Float64,Match}
+    args = vcat(m.unique_args, [v for vs in m.choice_var_captures for v in vs])
     if m.start_items !== nothing
         args = vcat(args, expr_of(m).children[1:m.start_items])
     end
@@ -138,11 +138,16 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
         for sym in m.sym_of_idx
             push!(children, sexpr_leaf(sym))
         end
-        for capture in m.choice_var_captures
-            if isnothing(capture)
+        for capture_subseq in m.choice_var_captures
+            if length(capture_subseq) == 0
                 push!(children, sexpr_leaf(SYM_CHOICE_VAR_NOTHING))
             else
-                push!(children, rewrite_inner(capture, search_state, rcis))
+                nodes = SExpr[]
+                # push!(nodes, sexpr_leaf(SYM_SUBSEQ_HEAD))
+                for capture in capture_subseq
+                    push!(nodes, rewrite_inner(capture, search_state, rcis))
+                end
+                push!(children, sexpr_node(nodes))
             end
         end
         if !isnothing(m.continuation)
