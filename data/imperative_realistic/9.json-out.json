@@ -39,7 +39,7 @@
             [
                 1,
                 0,
-                "(/subseq (Expr (Call (Name g_print Load) (list (_starred_content (Constant i1 None))) nil)) (Expr (Call (Name g_print Load) (list (_starred_content #0)) nil)))",
+                "(/seq (Expr (Call (Name g_print Load) (list (_starred_content (Constant i1 None))) nil)) (Expr (Call (Name g_print Load) (list (_starred_content #0)) nil)))",
                 "seqS",
                 [
                     "E"

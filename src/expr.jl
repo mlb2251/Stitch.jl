@@ -213,7 +213,6 @@ end
 const SYM_HOLE = Symbol("??")
 const SYM_SEQ_HOLE = Symbol("...")
 const SYM_SEQ_HEAD = Symbol("/seq")
-const SYM_SUBSEQ_HEAD = Symbol("/subseq")
 const SYM_CHOICE_VAR_NOTHING = Symbol("/nothing")
 const SYM_SPLICE = Symbol("/splice")
 const SYM_END = Symbol("\$end")

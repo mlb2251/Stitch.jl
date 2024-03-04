@@ -7,7 +7,7 @@
             [
                 0,
                 0,
-                "(/subseq d e f g h i)",
+                "(/seq d e f g h i)",
                 "uninit_state",
                 [],
                 []

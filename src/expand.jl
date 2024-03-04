@@ -612,11 +612,7 @@ function expand_abstraction!(expansion::SequenceExpansion, hole, holes, abstract
     # take a hole ?? and make it (/seq ...). The hole is then pushed to the stack
     hole.leaf = nothing
     head = new_hole((hole, 1))
-    head.leaf = if expansion.is_subseq
-        SYM_SUBSEQ_HEAD
-    else
-        SYM_SEQ_HEAD
-    end
+    head.leaf = SYM_SEQ_HEAD
     nh = new_seq_hole((hole, 2))
 
     push!(hole.children, head)
@@ -866,11 +862,7 @@ function unexpand_abstraction!(expansion::SequenceExpansion, hole, holes, abstra
     # remove the ... and /seq from the sequence
     is_seq_hole_token(pop!(hole.children)) || error("expected sequence hole token")
     head = pop!(hole.children).leaf
-    if expansion.is_subseq
-        head === SYM_SUBSEQ_HEAD || error("expected SYM_SUBSEQ_HEAD")
-    else
-        head === SYM_SEQ_HEAD || error("expected SYM_SEQ_HEAD")
-    end
+    head === SYM_SEQ_HEAD || error("expected SYM_SEQ_HEAD")
 
     # set the head symbol of the hole, to make it a ?? hole
     hole.leaf = SYM_HOLE
@@ -971,7 +963,7 @@ function unexpand_match!(expansion::SequenceChoiceVarExpansion, match::Match)
     @assert expansion.idx == length(match.choice_var_captures)
 end
 
-const MatchKey = Tuple{Vector{Int64},Vector{Symbol},Vector{Tuple{Symbol, Int64}}}
+const MatchKey = Tuple{Vector{Int64},Vector{Symbol},Vector{Tuple{Symbol,Int64}}}
 
 function collapse_equivalent_matches(expansion::Expansion, updated_matches)
     return nothing
@@ -1140,7 +1132,7 @@ function variables_at_front_of_root_sequence(search_state)
     # returns true in one of the following child_states
     # 1. the root sequence is a /seq and the first element is a choice variable
     #       this is always worse than the case where you just use a subsequence
-    # 2. the root sequence is a /subseq and the first element is a metavariable or a choice variable
+    # 2. the root sequence is a /seq and the first element is a metavariable or a choice variable
     #       this is always worse than just having a shorter subsequence
     search_state.config.no_opt_rooted_sequence && return false
     ab = search_state.abstraction.body
@@ -1148,7 +1140,7 @@ function variables_at_front_of_root_sequence(search_state)
         return false
     end
     first_child = ab.children[1]
-    if !(first_child.leaf == SYM_SEQ_HEAD || first_child.leaf == SYM_SUBSEQ_HEAD)
+    if !(first_child.leaf == SYM_SEQ_HEAD)
         return false
     end
     if length(ab.children) < 2

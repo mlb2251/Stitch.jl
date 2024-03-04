@@ -21,7 +21,7 @@
             [
                 1,
                 2,
-                "(/subseq (Assign (list (Name %1 Store)) (Call (Name g_int Load) (list (_starred_content (Call (Name g_input Load) nil nil))) nil) None) (For (Name %2 Store) (Call (Name g_range Load) (list (_starred_content (Name %1 Load))) nil) #0 (/seq) None))",
+                "(/seq (Assign (list (Name %1 Store)) (Call (Name g_int Load) (list (_starred_content (Call (Name g_input Load) nil nil))) nil) None) (For (Name %2 Store) (Call (Name g_range Load) (list (_starred_content (Name %1 Load))) nil) #0 (/seq) None))",
                 "seqS",
                 [
                     "seqS"
@@ -34,7 +34,7 @@
             [
                 0,
                 2,
-                "(/subseq (Assign (list (Name %1 Store)) (Call (Name g_int Load) (list (_starred_content (Call (Name g_input Load) nil nil))) nil) None) (Assign (list (Name %2 Store)) (Call (Name g_list Load) (list (_starred_content (fn_1))) nil) None))",
+                "(/seq (Assign (list (Name %1 Store)) (Call (Name g_int Load) (list (_starred_content (Call (Name g_input Load) nil nil))) nil) None) (Assign (list (Name %2 Store)) (Call (Name g_list Load) (list (_starred_content (fn_1))) nil) None))",
                 "seqS",
                 [],
                 [
