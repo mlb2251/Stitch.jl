@@ -458,17 +458,19 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
     new_match_poss = MatchPossibilities[]
     whole_list_update = false
     for (idx, match_poss) in enumerate(search_state.matches)
-        updated_matches = Match[]
+        updated_matches::Union{Nothing, Vector{Match}} = nothing
         match_poss_update = false
         for (alt_idx, match) in enumerate(match_poss.alternatives)
             extras = expand_match!(expansion, match)
-            push!(updated_matches, match)
+            if match_poss_update
+                push!(updated_matches, match)
+            end
             if extras === nothing
                 continue
             else
                 if !match_poss_update
                     match_poss_update = true
-                    append!(updated_matches, match_poss.alternatives[1:alt_idx-1])
+                    updated_matches = match_poss.alternatives[1:alt_idx]
                 end
                 append!(updated_matches, extras)
             end
