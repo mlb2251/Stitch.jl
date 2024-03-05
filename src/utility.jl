@@ -71,7 +71,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         offset -= 1
         offset == 0 && break
         expr_of(matches[offset]).metadata.id <= next_id && continue
-        
+
 
         # rarer case: run binary search to find the rightmost non-child of the previous match
         offset = searchsortedlast(

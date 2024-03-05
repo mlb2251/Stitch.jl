@@ -68,8 +68,8 @@ mutable struct Match
     # metavariable for continuation
     continuation::Union{Nothing,SExpr}
     # metavariable for beginning and end
-    start_items:: Union{Nothing,Int}
-    end_items:: Union{Nothing,Int}
+    start_items::Union{Nothing,Int}
+    end_items::Union{Nothing,Int}
 
     # choice vars
     choice_var_captures::Vector{Vector{SExpr}}
@@ -90,8 +90,8 @@ end
 
 fresh_match_possibilities(::Type{MatchPossibilities}, expr, id, config) = MatchPossibilities(
     [
-        fresh_match_possibilities(Match, expr, id, config)
-    ]
+    fresh_match_possibilities(Match, expr, id, config)
+]
 )
 
 fresh_match_possibilities(::Type{Match}, expr, id, config) = Match(
