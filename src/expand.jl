@@ -742,25 +742,28 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match::Match)::Vec
     # consume the hole
     # first check if there's more space in the sequence
     last_hole = match.holes[end]::RemainingSequenceHole
-    if last_hole.num_consumed == length(last_hole.root_node.children)
-        # no more space in the sequence, so we can't consume the hole
-        return []
+    results = Match[]
+    for count in 1:length(last_hole.root_node.children)-last_hole.num_consumed
+        if count > 1
+            break
+        end
+        consuming_hole = copy_match(match)
+
+        pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
+        consuming_hole.holes_size -= last_hole.root_node.children[last_hole.num_consumed+1].metadata.size
+        # push the hole back on the stack
+        push!(consuming_hole.holes_stack, last_hole)
+
+        new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + count, last_hole.is_subseq)
+        push!(consuming_hole.holes, new_sequence_hole)
+
+        captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]::SExpr
+
+        consuming_hole.choice_var_captures[end] = SExpr[captured]
+
+        push!(results, consuming_hole)
     end
-    consuming_hole = copy_match(match)
-
-    pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
-    consuming_hole.holes_size -= last_hole.root_node.children[last_hole.num_consumed+1].metadata.size
-    # push the hole back on the stack
-    push!(consuming_hole.holes_stack, last_hole)
-
-    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1, last_hole.is_subseq)
-    push!(consuming_hole.holes, new_sequence_hole)
-
-    captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]::SExpr
-
-    consuming_hole.choice_var_captures[end] = SExpr[captured]
-
-    return [consuming_hole]
+    return results
 end
 
 function unexpand!(search_state::SearchState{Match}, expansion, hole)
