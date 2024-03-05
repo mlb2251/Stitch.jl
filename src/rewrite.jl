@@ -51,7 +51,7 @@ end
 """
 Just copying Eqn 15 from https://arxiv.org/pdf/2211.16605.pdf
 """
-function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteConflictInfo{M}} where M
+function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteConflictInfo{M}} where {M}
 
     rcis = Dict(
         expr.metadata.id => RewriteConflictInfo{M}(
@@ -98,7 +98,7 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
     return util, rcis
 end
 
-function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossibilities) :: Tuple{Float64, Match}
+function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossibilities)::Tuple{Float64,Match}
     (util, i) = findmax(match.alternatives) do m
         u, _ = compute_best_utility(rcis, m)
         u
@@ -106,7 +106,7 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossib
     return util, match.alternatives[i]
 end
 
-function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match) :: Tuple{Float64, Match}
+function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match)::Tuple{Float64,Match}
     args = vcat(m.unique_args, [v for v in m.choice_var_captures if !isnothing(v)])
     if m.start_items !== nothing
         args = vcat(args, expr_of(m).children[1:m.start_items])

@@ -25,12 +25,12 @@ end
 
 abstract type Expansion end
 
-struct PossibleExpansion{M, T<:Expansion}
+struct PossibleExpansion{M,T<:Expansion}
     matches::Vector{M}
     data::T
 
-    function PossibleExpansion(matches::Vector{M}, data::T) where {M, T}
-        new{M, T}(matches, data)
+    function PossibleExpansion(matches::Vector{M}, data::T) where {M,T}
+        new{M,T}(matches, data)
     end
 end
 
@@ -162,7 +162,7 @@ Base.@kwdef mutable struct SearchConfig
 
     # testing
     strict = false
-    shuffle_expansions_seed:: Union{Nothing, Int64} = nothing
+    shuffle_expansions_seed::Union{Nothing,Int64} = nothing
 end
 
 
@@ -296,7 +296,7 @@ Initializes a Match at every subtree in the corpus
 Note any filtering to the initial match set should NOT be done here because
 downstream we need this for SearchState.all_nodes
 """
-function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vector{M} where M
+function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vector{M} where {M}
     matches = M[]
     id = 1
     for program in corpus.programs
@@ -638,7 +638,7 @@ function rewrite_novel(programs, abstractions::Vector{SExpr}; kwargs...)
         dfa = kwargs["dfa"]
     end
     for (i, abstraction) in enumerate(abstractions)
-        kwargs = (;kwargs..., dfa=dfa)
+        kwargs = (; kwargs..., dfa=dfa)
         programs, dfa = rewrite_novel(
             programs,
             abstraction;

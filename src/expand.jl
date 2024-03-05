@@ -971,7 +971,7 @@ function unexpand_match!(expansion::SequenceChoiceVarExpansion, match::Match)
     @assert expansion.idx == length(match.choice_var_captures)
 end
 
-const MatchKey = Tuple{Vector{Int64},Vector{Symbol},Vector{Tuple{Symbol, Int64}}}
+const MatchKey = Tuple{Vector{Int64},Vector{Symbol},Vector{Tuple{Symbol,Int64}}}
 
 function collapse_equivalent_matches(expansion::Expansion, updated_matches)
     return nothing
