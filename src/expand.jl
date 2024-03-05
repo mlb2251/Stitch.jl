@@ -743,14 +743,12 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match::Match)::Vec
     # first check if there's more space in the sequence
     last_hole = match.holes[end]::RemainingSequenceHole
     results = Match[]
+    captured_list = SExpr[]
     for count in 1:length(last_hole.root_node.children)-last_hole.num_consumed
-        if count > 1
-            break
-        end
         consuming_hole = copy_match(match)
 
         pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
-        consuming_hole.holes_size -= last_hole.root_node.children[last_hole.num_consumed+1].metadata.size
+        consuming_hole.holes_size -= last_hole.root_node.children[last_hole.num_consumed+count].metadata.size
         # push the hole back on the stack
         push!(consuming_hole.holes_stack, last_hole)
 
@@ -759,7 +757,9 @@ function expand_match!(expansion::SequenceChoiceVarExpansion, match::Match)::Vec
 
         captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]::SExpr
 
-        consuming_hole.choice_var_captures[end] = SExpr[captured]
+        push!(captured_list, captured)
+
+        consuming_hole.choice_var_captures[end] = copy(captured_list)
 
         push!(results, consuming_hole)
     end

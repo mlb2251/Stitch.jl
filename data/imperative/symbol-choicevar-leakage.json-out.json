@@ -7,7 +7,7 @@
             [
                 0,
                 1,
-                "(+ %1 1 2 3 4 5 (/seq ?0 %1 ?1 1 2 3 4 5 6 7))",
+                "(+ %1 1 2 3 4 5 (/seq ?0 1 2 3 4 5 6 7))",
                 "uninit_state",
                 [],
                 [
@@ -16,9 +16,9 @@
             ]
         ],
         "programs": [
-            "(fn_1 &b (/choiceseq &a) (/choiceseq &c))",
-            "(fn_1 &g (/choiceseq &f) (/choiceseq))",
-            "(fn_1 &j (/choiceseq) (/choiceseq))"
+            "(fn_1 &b (/choiceseq &a &b &c))",
+            "(fn_1 &g (/choiceseq &f &g))",
+            "(fn_1 &j (/choiceseq &j))"
         ]
     }
 ]
