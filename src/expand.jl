@@ -256,7 +256,7 @@ function collect_expansions(
 
     if is_root
         # in this context, we expand to a subsequence node as well as a sequence node.
-        return [(SequenceExpansion(true), matches), (SequenceExpansion(false), matches)]
+        return [(SequenceExpansion(true), matches)]
     else
         return [(SequenceExpansion(false), matches)]
     end

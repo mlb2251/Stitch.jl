@@ -3,19 +3,10 @@
         "args": {
             "match_sequences": true
         },
-        "abstractions": [
-            [
-                0,
-                0,
-                "(/seq c d ?0 a b)",
-                "uninit_state",
-                [],
-                []
-            ]
-        ],
+        "abstractions": [],
         "programs": [
-            "(fn_1 e)",
-            "(fn_1 /nothing)"
+            "(/seq c d e a b)",
+            "(/seq c d a b)"
         ]
     }
 ]

@@ -32,8 +32,8 @@
             ]
         ],
         "programs": [
-            "(fn_1 (Expr (Call (Name g_print Load) (list (_starred_content (BinOp (BinOp (BinOp (Name &r:0 Load) Add (Name &d:0 Load)) FloorDiv (Name &d:0 Load)) Mult (Name &d:0 Load)))) nil)) (Compare (Name &l:0 Load) (list Gt) (list (Name &d:0 Load))) &t:0 &d:0 &r:0 &l:0 &i:0)",
-            "(fn_1 (If (Compare (Name &c:0 Load) (list Lt) (list (Name &a:0 Load))) (/seq (Expr (Call (Name g_print Load) (list (_starred_content (Name &c:0 Load))) nil))) (/seq)) (Compare (Name &c:0 Load) (list Gt) (list (Name &b:0 Load))) &n:0 &c:0 &b:0 &a:0 &i:0)"
+            "(/seq (/splice (fn_1 (Expr (Call (Name g_print Load) (list (_starred_content (BinOp (BinOp (BinOp (Name &r:0 Load) Add (Name &d:0 Load)) FloorDiv (Name &d:0 Load)) Mult (Name &d:0 Load)))) nil)) (Compare (Name &l:0 Load) (list Gt) (list (Name &d:0 Load))) &t:0 &d:0 &r:0 &l:0 &i:0)))",
+            "(/seq (/splice (fn_1 (If (Compare (Name &c:0 Load) (list Lt) (list (Name &a:0 Load))) (/seq (Expr (Call (Name g_print Load) (list (_starred_content (Name &c:0 Load))) nil))) (/seq)) (Compare (Name &c:0 Load) (list Gt) (list (Name &b:0 Load))) &n:0 &c:0 &b:0 &a:0 &i:0)))"
         ]
     }
 ]
