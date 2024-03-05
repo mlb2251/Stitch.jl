@@ -18,9 +18,9 @@
             ]
         ],
         "programs": [
-            "(fn_1 (+ B 1 2) ((+ A 1 1)) ((+ C 2 2)))",
-            "(fn_1 (+ B 2 3) ((+ A 2 2)) /nothing)",
-            "(fn_1 (+ B 3 4) /nothing /nothing)"
+            "(fn_1 (+ B 1 2) (/choiceseq (+ A 1 1)) (/choiceseq (+ C 2 2)))",
+            "(fn_1 (+ B 2 3) (/choiceseq (+ A 2 2)) (/choiceseq))",
+            "(fn_1 (+ B 3 4) (/choiceseq) (/choiceseq))"
         ]
     }
 ]

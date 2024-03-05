@@ -139,16 +139,12 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
             push!(children, sexpr_leaf(sym))
         end
         for capture_subseq in m.choice_var_captures
-            if length(capture_subseq) == 0
-                push!(children, sexpr_leaf(SYM_CHOICE_VAR_NOTHING))
-            else
-                nodes = SExpr[]
-                # push!(nodes, sexpr_leaf(SYM_SUBSEQ_HEAD))
-                for capture in capture_subseq
-                    push!(nodes, rewrite_inner(capture, search_state, rcis))
-                end
-                push!(children, sexpr_node(nodes))
+            nodes = SExpr[]
+            push!(nodes, sexpr_leaf(SYM_CHOICE_SEQ_HEAD))
+            for capture in capture_subseq
+                push!(nodes, rewrite_inner(capture, search_state, rcis))
             end
+            push!(children, sexpr_node(nodes))
         end
         if !isnothing(m.continuation)
             push!(children, rewrite_inner(m.continuation, search_state, rcis))

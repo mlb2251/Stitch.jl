@@ -725,7 +725,9 @@ function expand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes,
         x
     end
     abstraction.choice_arity += 1
-    push!(abstraction.dfa_choicevars, expansion.dfa_state)
+    # TODO make this more general
+    @assert expansion.dfa_state == :S || expansion.dfa_state == :uninit_state
+    push!(abstraction.dfa_choicevars, :seqS)
 end
 
 function expand_match!(expansion::SequenceChoiceVarExpansion, match::Match)::Vector{Match}
@@ -971,7 +973,7 @@ function unexpand_match!(expansion::SequenceChoiceVarExpansion, match::Match)
     @assert expansion.idx == length(match.choice_var_captures)
 end
 
-const MatchKey = Tuple{Vector{Int64},Vector{Symbol},Vector{Tuple{Symbol, Int64}}}
+const MatchKey = Tuple{Vector{Int64},Vector{Symbol},Vector{Tuple{Symbol,Int64}}}
 
 function collapse_equivalent_matches(expansion::Expansion, updated_matches)
     return nothing

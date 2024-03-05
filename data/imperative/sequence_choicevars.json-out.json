@@ -7,15 +7,15 @@
             [
                 0,
                 0,
-                "(/seq c d ?0 a b)",
+                "(/seq c d ?0 a b e f)",
                 "uninit_state",
                 [],
                 []
             ]
         ],
         "programs": [
-            "(fn_1 e)",
-            "(fn_1 /nothing)"
+            "(fn_1 (/choiceseq e))",
+            "(fn_1 (/choiceseq))"
         ]
     }
 ]

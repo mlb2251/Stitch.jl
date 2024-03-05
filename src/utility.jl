@@ -190,11 +190,7 @@ function delta_local_utility(config, match, expansion::SequenceTerminatorExpansi
 end
 
 function delta_local_utility(config, match, expansion::SequenceChoiceVarExpansion)
-    if length(match.choice_var_captures[expansion.idx + 1]) == 0
-        return -symbol_size(SYM_CHOICE_VAR_NOTHING, config.size_by_symbol) + config.application_utility_choicevar
-    else
-        config.application_utility_choicevar
-    end
+    return -symbol_size(SYM_CHOICE_SEQ_HEAD, config.size_by_symbol) + config.application_utility_choicevar
 end
 
 local_utility_init(config::SearchConfig) = config.application_utility_fixed
