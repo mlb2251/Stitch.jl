@@ -5,6 +5,6 @@ import JSON
 
 include("./framework.jl")
 
-is_testing = false
+is_testing = true
 
 full_tests()
