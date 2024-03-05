@@ -71,7 +71,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         offset -= 1
         offset == 0 && break
         expr_of(matches[offset]).metadata.id <= next_id && continue
-        
+
 
         # rarer case: run binary search to find the rightmost non-child of the previous match
         offset = searchsortedlast(
@@ -190,7 +190,7 @@ function delta_local_utility(config, match, expansion::SequenceTerminatorExpansi
 end
 
 function delta_local_utility(config, match, expansion::SequenceChoiceVarExpansion)
-    if match.choice_var_captures[expansion.idx + 1] === nothing
+    if match.choice_var_captures[expansion.idx+1] === nothing
         return -symbol_size(SYM_CHOICE_VAR_NOTHING, config.size_by_symbol) + config.application_utility_choicevar
     else
         config.application_utility_choicevar
