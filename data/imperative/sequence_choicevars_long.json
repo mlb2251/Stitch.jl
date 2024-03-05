@@ -1,0 +1,5 @@
+[
+    "(/seq a b c c2 c3 c4 c5 d e f g h i j)",
+    "(/seq a b               d e f g h i j)",
+    "(/seq a b c c6 c7 c8 c9 d e f g h i j)"
+]
