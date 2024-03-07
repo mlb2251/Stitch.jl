@@ -1124,6 +1124,11 @@ end
 
 function choice_var_always_used_or_not(search_state::SearchState{Match}, i)
     first_match_length = length(search_state.matches[1].choice_var_captures[i])
+    if first_match_length > 1
+        # TODO this is necessary because metavariables can't match multiple things
+        # so in some cases choice variables are optimal even if always used
+        return false
+    end
     if all(match -> length(match.choice_var_captures[i]) == first_match_length, search_state.matches)
         return true
     end
@@ -1132,6 +1137,11 @@ end
 
 function choice_var_always_used_or_not(search_state::SearchState{MatchPossibilities}, i)
     first_match_length = length(search_state.matches[1].alternatives[1].choice_var_captures[i])
+    if first_match_length > 1
+        # TODO this is necessary because metavariables can't match multiple things
+        # so in some cases choice variables are optimal even if always used
+        return false
+    end
     if all(match_poss -> all(match -> length(match.choice_var_captures[i]) == first_match_length, match_poss.alternatives), search_state.matches)
         return true
     end
