@@ -7,7 +7,7 @@
             [
                 0,
                 0,
-                "(/seq c d ?0 a b)",
+                "(/seq c d ?0 a b e f)",
                 "uninit_state",
                 [],
                 []
