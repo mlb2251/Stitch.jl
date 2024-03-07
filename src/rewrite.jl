@@ -107,7 +107,7 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossib
 end
 
 function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match)::Tuple{Float64,Match}
-    args = vcat(m.unique_args, [v for v in m.choice_var_captures if !isnothing(v)])
+    args = vcat(m.unique_args, [v for vs in m.choice_var_captures for v in vs])
     if m.start_items !== nothing
         args = vcat(args, expr_of(m).children[1:m.start_items])
     end
@@ -138,12 +138,13 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
         for sym in m.sym_of_idx
             push!(children, sexpr_leaf(sym))
         end
-        for capture in m.choice_var_captures
-            if isnothing(capture)
-                push!(children, sexpr_leaf(SYM_CHOICE_VAR_NOTHING))
-            else
-                push!(children, rewrite_inner(capture, search_state, rcis))
+        for capture_subseq in m.choice_var_captures
+            nodes = SExpr[]
+            push!(nodes, sexpr_leaf(SYM_CHOICE_SEQ_HEAD))
+            for capture in capture_subseq
+                push!(nodes, rewrite_inner(capture, search_state, rcis))
             end
+            push!(children, sexpr_node(nodes))
         end
         if !isnothing(m.continuation)
             push!(children, rewrite_inner(m.continuation, search_state, rcis))

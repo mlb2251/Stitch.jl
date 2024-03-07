@@ -14,8 +14,8 @@
             ]
         ],
         "programs": [
-            "(fn_1 e)",
-            "(fn_1 /nothing)"
+            "(fn_1 (/choiceseq e))",
+            "(fn_1 (/choiceseq))"
         ]
     }
 ]

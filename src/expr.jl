@@ -72,7 +72,7 @@ mutable struct Match
     end_items::Union{Nothing,Int}
 
     # choice vars
-    choice_var_captures::Vector{Union{SExpr,Nothing}}
+    choice_var_captures::Vector{Vector{SExpr}}
 end
 
 mutable struct MatchPossibilities
@@ -214,7 +214,7 @@ const SYM_HOLE = Symbol("??")
 const SYM_SEQ_HOLE = Symbol("...")
 const SYM_SEQ_HEAD = Symbol("/seq")
 const SYM_SUBSEQ_HEAD = Symbol("/subseq")
-const SYM_CHOICE_VAR_NOTHING = Symbol("/nothing")
+const SYM_CHOICE_SEQ_HEAD = Symbol("/choiceseq")
 const SYM_SPLICE = Symbol("/splice")
 const SYM_END = Symbol("\$end")
 new_hole(parent_and_argidx) = sexpr_leaf(SYM_HOLE; parent=parent_and_argidx)
