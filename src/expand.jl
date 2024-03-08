@@ -1158,14 +1158,10 @@ function choice_vars_adjacent_to_each_other_at_top_level(exprs)
 end
 
 function is_choice_var(expr)
-    if expr.leaf === nothing
-        return false
-    end
+    expr.leaf === nothing && return false
+    expr.leaf == SYM_HOLE && return false
     l = string(expr.leaf)
-    if l[1] == '?'
-        return true
-    end
-    return false
+    return l[1] == '?'
 end
 
 function choice_var_always_used_or_not(search_state::SearchState{Match}, i)
