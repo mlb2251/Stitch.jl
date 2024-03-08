@@ -159,6 +159,7 @@ Base.@kwdef mutable struct SearchConfig
 
     # extensions
     match_sequences::Bool = false
+    max_choicevar_length::Int = typemax(Int)
 
     # testing
     strict = false

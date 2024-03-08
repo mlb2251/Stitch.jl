@@ -7,16 +7,16 @@
             [
                 0,
                 0,
-                "(/seq a b ?0 d ?1 f g h i j)",
+                "(/seq a b ?0 f g h i j)",
                 "uninit_state",
                 [],
                 []
             ]
         ],
         "programs": [
-            "(fn_1 (/choiceseq c) (/choiceseq e))",
-            "(fn_1 (/choiceseq) (/choiceseq e))",
-            "(fn_1 (/choiceseq c) (/choiceseq))"
+            "(fn_1 (/choiceseq c d e))",
+            "(fn_1 (/choiceseq d e))",
+            "(fn_1 (/choiceseq c d))"
         ]
     }
 ]

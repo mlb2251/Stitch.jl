@@ -742,25 +742,31 @@ function expand_match!(config::SearchConfig, expansion::SequenceChoiceVarExpansi
     # consume the hole
     # first check if there's more space in the sequence
     last_hole = match.holes[end]::RemainingSequenceHole
-    if last_hole.num_consumed == length(last_hole.root_node.children)
-        # no more space in the sequence, so we can't consume the hole
-        return []
+    results = Match[]
+    captured_list = SExpr[]
+    for count in 1:length(last_hole.root_node.children)-last_hole.num_consumed
+        if count > config.max_choicevar_length
+            break
+        end
+        consuming_hole = copy_match(match)
+
+        pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
+        consuming_hole.holes_size -= last_hole.root_node.children[last_hole.num_consumed+count].metadata.size
+        # push the hole back on the stack
+        push!(consuming_hole.holes_stack, last_hole)
+
+        new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + count, last_hole.is_subseq)
+        push!(consuming_hole.holes, new_sequence_hole)
+
+        captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]::SExpr
+
+        push!(captured_list, captured)
+
+        consuming_hole.choice_var_captures[end] = copy(captured_list)
+
+        push!(results, consuming_hole)
     end
-    consuming_hole = copy_match(match)
-
-    pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
-    consuming_hole.holes_size -= last_hole.root_node.children[last_hole.num_consumed+1].metadata.size
-    # push the hole back on the stack
-    push!(consuming_hole.holes_stack, last_hole)
-
-    new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1, last_hole.is_subseq)
-    push!(consuming_hole.holes, new_sequence_hole)
-
-    captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]::SExpr
-
-    consuming_hole.choice_var_captures[end] = SExpr[captured]
-
-    return [consuming_hole]
+    return results
 end
 
 function unexpand!(search_state::SearchState{Match}, expansion, hole)
@@ -1123,29 +1129,34 @@ function choice_var_always_used_or_not(search_state)
 end
 
 function choice_var_always_used_or_not(search_state::SearchState{Match}, i)
-    first_match_length = length(search_state.matches[1].choice_var_captures[i])
-    if first_match_length > 1
-        # TODO this is necessary because metavariables can't match multiple things
-        # so in some cases choice variables are optimal even if always used
-        return false
-    end
-    if all(match -> length(match.choice_var_captures[i]) == first_match_length, search_state.matches)
+    first_match = search_state.matches[1]
+    first_match_choice = first_match.choice_var_captures[i]
+    if all(match -> compatible_captures(match, match.choice_var_captures[i], first_match, first_match_choice), search_state.matches)
         return true
     end
     return false
 end
 
 function choice_var_always_used_or_not(search_state::SearchState{MatchPossibilities}, i)
-    first_match_length = length(search_state.matches[1].alternatives[1].choice_var_captures[i])
-    if first_match_length > 1
-        # TODO this is necessary because metavariables can't match multiple things
-        # so in some cases choice variables are optimal even if always used
-        return false
-    end
-    if all(match_poss -> all(match -> length(match.choice_var_captures[i]) == first_match_length, match_poss.alternatives), search_state.matches)
+    first_match = search_state.matches[1].alternatives[1]
+    first_match_choice = first_match.choice_var_captures[i]
+    if all(match_poss -> all(match -> compatible_captures(match, match.choice_var_captures[i], first_match, first_match_choice), match_poss.alternatives), search_state.matches)
         return true
     end
     return false
+end
+
+function compatible_captures(m_a::Match, capture_a::Vector{SExpr}, m_b::Match, capture_b::Vector{SExpr})
+    # returns true iff capture_a and capture_b are compatible, i.e., they can be replaced by a metavariable
+    if length(capture_a) != length(capture_b)
+        return false
+    end
+    if length(capture_a) <= 1
+        # if there's 0 or 1 it can be replaced by a metavariable
+        return true
+    end
+    # check if they are all the same up to renaming
+    return all(i -> same_in_context(m_a, m_b, capture_a[i], capture_b[i]), 1:length(capture_a))
 end
 
 function variables_at_front_of_root_sequence(search_state)

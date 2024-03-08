@@ -1,5 +1,6 @@
 [
     {
-        "match_sequences": true
+        "match_sequences": true,
+        "max_choicevar_length": 1
     }
 ]
