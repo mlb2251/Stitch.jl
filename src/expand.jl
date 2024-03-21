@@ -1029,7 +1029,11 @@ hole_struct_hash(x::RemainingSequenceHole) = (:RemainingSequenceHole, (x.root_no
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
 function strictly_dominated(search_state)
-    redundant_arg_elim(search_state) || arg_capture(search_state) || choice_var_always_used_or_not(search_state) || variables_at_front_of_root_sequence(search_state)
+    redundant_arg_elim(search_state) && return true
+    arg_capture(search_state) && return true
+    choice_var_always_used_or_not(search_state) && return true
+    variables_at_front_of_root_sequence(search_state) && return true
+    false
 end
 
 # https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
