@@ -1032,6 +1032,7 @@ function strictly_dominated(search_state)
     redundant_arg_elim(search_state) && return true
     arg_capture(search_state) && return true
     choice_var_always_used_or_not(search_state) && return true
+    choice_vars_adjacent_to_each_other(search_state) && return true
     variables_at_front_of_root_sequence(search_state) && return true
     false
 end
@@ -1130,6 +1131,37 @@ function choice_var_always_used_or_not(search_state)
         end
     end
     false
+end
+
+function choice_vars_adjacent_to_each_other(search_state::SearchState{T}) where {T}
+    search_state.config.max_choicevar_length < typemax(Int) && return false
+    search_state.abstraction.choice_arity < 2 && return false
+    choice_vars_adjacent_to_each_other(search_state.abstraction.body)
+end
+
+function choice_vars_adjacent_to_each_other(expr::SExpr)
+    expr.leaf === nothing || return false
+    head = expr.children[1].leaf
+    if head == SYM_SEQ_HEAD || head == SYM_SUBSEQ_HEAD
+        return choice_vars_adjacent_to_each_other_at_top_level(expr.children[2:end])
+    end
+    return any(choice_vars_adjacent_to_each_other, expr.children)
+end
+
+function choice_vars_adjacent_to_each_other_at_top_level(exprs)
+    for i in 1:length(exprs)-1
+        if is_choice_var(exprs[i]) && is_choice_var(exprs[i+1])
+            return true
+        end
+    end
+    return false
+end
+
+function is_choice_var(expr)
+    expr.leaf === nothing && return false
+    expr.leaf == SYM_HOLE && return false
+    l = string(expr.leaf)
+    return l[1] == '?'
 end
 
 function choice_var_always_used_or_not(search_state::SearchState{Match}, i)
