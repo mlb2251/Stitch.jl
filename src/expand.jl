@@ -156,7 +156,11 @@ function collect_expansions(
             sym_of_idx[idx] = match.holes[end].metadata.dfa_state
         else
             @assert freshness_of_idx[idx] == fresh
-            @assert sym_of_idx[idx] == match.holes[end].metadata.dfa_state
+            if sym_of_idx[idx] != match.holes[end].metadata.dfa_state
+                # can happen in rare scenarios, e.g., when a Name and NameStr overlap
+                # TODO test this case directly
+                continue
+            end
         end
         push!(ms, (i, match))
     end
@@ -210,26 +214,29 @@ function collect_expansions(
     if isnothing(config.dfa)
         collect_abstraction_expansions_for_dfa_state!(matches, :uninit_state)
     else
-        matches_e = Vector{Tuple{Int,Match}}()
-        matches_s = Vector{Tuple{Int,Match}}()
-        matches_seqS = Vector{Tuple{Int,Match}}()
+        matches_for_state = Dict{Symbol, Vector{Tuple{Int,Match}}}()
         for (i, match) in matches
             hole = match.holes[end]
             if typeof(hole) != TreeNodeHole
                 continue
             end
             dfa_state = hole.metadata.dfa_state
-            if dfa_state === :E
-                push!(matches_e, (i, match))
-            elseif config.dfa_metavariable_allow_S && dfa_state === :S
-                push!(matches_s, (i, match))
-            elseif config.dfa_metavariable_allow_seqS && dfa_state === :seqS
-                push!(matches_seqS, (i, match))
+            allowed = (
+                dfa_state === :E
+                || (config.dfa_metavariable_allow_S && dfa_state === :S)
+                || (config.dfa_metavariable_allow_seqS && dfa_state === :seqS)
+                || config.dfa_metavariable_allow_anything
+            )
+            if allowed
+                matches_for_this_state = get!(matches_for_state, dfa_state) do
+                    Vector{Tuple{Int,Match}}()
+                end
+                push!(matches_for_this_state, (i, match))
             end
         end
-        collect_abstraction_expansions_for_dfa_state!(matches_e, :E)
-        config.dfa_metavariable_allow_S && collect_abstraction_expansions_for_dfa_state!(matches_s, :S)
-        config.dfa_metavariable_allow_seqS && collect_abstraction_expansions_for_dfa_state!(matches_seqS, :seqS)
+        for (state, ms) in matches_for_state
+            collect_abstraction_expansions_for_dfa_state!(ms, state)
+        end
     end
     result
 end

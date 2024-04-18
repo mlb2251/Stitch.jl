@@ -137,10 +137,11 @@ Base.@kwdef mutable struct SearchConfig
     # only_match_semi::Bool = false
     autoexpand_head::Bool = false # auto expand head of list
     dfa::Union{Dict{Symbol,Dict{Symbol,Vector{Symbol}}},Nothing} = nothing
-    dfa_valid_root_states = Set([:S, :seqS, :E])
+    dfa_valid_root_states::Union{Set{Symbol}, Nothing} = Set([:S, :seqS, :E])
     dfa_start_state = :M
     dfa_metavariable_allow_seqS = true
     dfa_metavariable_allow_S = true
+    dfa_metavariable_allow_anything = false
 
     # optimizations
     no_exclude_single_match::Bool = false
@@ -262,6 +263,9 @@ end
 
 function filter_matches(matches, config)
     if config.dfa === nothing
+        return matches
+    end
+    if config.dfa_valid_root_states === nothing
         return matches
     end
     filter!(matches) do m

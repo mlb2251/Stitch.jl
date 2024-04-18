@@ -63,6 +63,12 @@ function common_args(s)
         help = "Disallow metavariables from being seqS"
         action = :store_true
     end
+
+    @add_arg_table s begin
+        "--dfa-metavariable-allow-anything"
+        help = "Allow metavariables to be anything"
+        action = :store_true
+    end
 end
 
 function gather_common_arguments(args)
@@ -71,7 +77,11 @@ function gather_common_arguments(args)
     corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(JSON.parse(args["corpus"]))])
 
     size_by_symbol = Dict(Symbol(k) => Float32(v) for (k, v) in size_by_symbol_json)
-    dfa_valid_root_states = Set([Symbol(s) for s in JSON.parse(args["dfa-valid-root-states"])])
+    if args["dfa-valid-root-states"] === "any"
+        dfa_valid_root_states = nothing
+    else
+        dfa_valid_root_states = Set([Symbol(s) for s in JSON.parse(args["dfa-valid-root-states"])])
+    end
     kwargs = (;
         dfa=load_dfa(args["dfa"]),
         autoexpand_head=true,
@@ -86,6 +96,7 @@ function gather_common_arguments(args)
         dfa_valid_root_states=dfa_valid_root_states,
         dfa_metavariable_allow_S=!args["dfa-metavariable-disallow-S"],
         dfa_metavariable_allow_seqS=!args["dfa-metavariable-disallow-seqS"],
+        dfa_metavariable_allow_anything=args["dfa-metavariable-allow-anything"],
     )
     return corpus, kwargs
 end
