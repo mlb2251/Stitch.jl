@@ -134,6 +134,9 @@ function collect_expansions(
     abstraction::Abstraction,
     matches::Vector{Tuple{Int,Match}}, config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
+    if abstraction.body.leaf === SYM_HOLE
+        return []
+    end
     matches_of_idx = Dict{Int,Vector{Tuple{Int,Match}}}()
     freshness_of_idx = Dict{Int,Bool}()
     sym_of_idx = Dict{Int,Symbol}()
@@ -156,11 +159,7 @@ function collect_expansions(
             sym_of_idx[idx] = match.holes[end].metadata.dfa_state
         else
             @assert freshness_of_idx[idx] == fresh
-            if sym_of_idx[idx] != match.holes[end].metadata.dfa_state
-                # can happen in rare scenarios, e.g., when a Name and NameStr overlap
-                # TODO test this case directly
-                continue
-            end
+            @assert sym_of_idx[idx] == match.holes[end].metadata.dfa_state
         end
         push!(ms, (i, match))
     end

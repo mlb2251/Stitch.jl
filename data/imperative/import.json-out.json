@@ -1,0 +1,19 @@
+[
+    {
+        "args": {
+            "application_utility_symvar": -0.5,
+            "application_utility_fixed": -3,
+            "match_sequences": true,
+            "dfa": "data_for_testing/dfa_imp.json",
+            "application_utility_choicevar": -1.01,
+            "application_utility_metavar": -1,
+            "size_by_symbol": "data_for_testing/size_by_symbol.json",
+            "dfa_metavariable_allow_anything": true,
+            "dfa_valid_root_states": "any"
+        },
+        "abstractions": [],
+        "programs": [
+            "(Module (/seq (Expr (Constant i2 None)) (Import (list (alias &os:0 None))) (Expr (Call (Name g_print Load) (list (_starred_content (Name &os:0 Load))) nil))) nil)"
+        ]
+    }
+]
