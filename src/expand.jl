@@ -135,6 +135,10 @@ function collect_expansions(
     matches::Vector{Tuple{Int,Match}}, config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
     if abstraction.body.leaf === SYM_HOLE
+        # Never a valid abstraction to just have a single symvar.
+        # Excluded deliberately because it breaks our assumption
+        # that we can assume that symbols in the same context 
+        # will always have the same root state.
         return []
     end
     matches_of_idx = Dict{Int,Vector{Tuple{Int,Match}}}()
