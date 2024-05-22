@@ -134,6 +134,13 @@ function collect_expansions(
     abstraction::Abstraction,
     matches::Vector{Tuple{Int,Match}}, config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
+    if abstraction.body.leaf === SYM_HOLE
+        # Never a valid abstraction to just have a single symvar.
+        # Excluded deliberately because it breaks our assumption
+        # that we can assume that symbols in the same context
+        # will always have the same root state.
+        return []
+    end
     matches_of_idx = Dict{Int,Vector{Tuple{Int,Match}}}()
     freshness_of_idx = Dict{Int,Bool}()
     sym_of_idx = Dict{Int,Symbol}()
@@ -221,6 +228,7 @@ function collect_expansions(
                 dfa_state === :E
                 || (config.dfa_metavariable_allow_S && dfa_state === :S)
                 || (config.dfa_metavariable_allow_seqS && dfa_state === :seqS)
+                || config.dfa_metavariable_allow_anything
             )
             if allowed
                 matches_for_this_state = get!(matches_for_state, dfa_state) do

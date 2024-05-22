@@ -1,0 +1,3 @@
+[
+    "(Module (/seq (Expr (Constant i2 None)) (Import (list (alias &os:0 None))) (Expr (Call (Name g_print Load) (list (_starred_content (Name &os:0 Load))) nil))) nil)"
+]
