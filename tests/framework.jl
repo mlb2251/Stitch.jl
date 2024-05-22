@@ -26,7 +26,11 @@ function proc_args(args)
         args[:size_by_symbol] = sbs
     end
     if :dfa_valid_root_states in keys(args)
-        args[:dfa_valid_root_states] = Set([Symbol(x) for x in args[:dfa_valid_root_states]])
+        if args[:dfa_valid_root_states] == "any"
+            args[:dfa_valid_root_states] = nothing
+        else
+            args[:dfa_valid_root_states] = Set([Symbol(x) for x in args[:dfa_valid_root_states]])
+        end
     end
     if :dfa_start_state in keys(args)
         args[:dfa_start_state] = Symbol(args[:dfa_start_state])
