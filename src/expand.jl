@@ -137,7 +137,7 @@ function collect_expansions(
     if abstraction.body.leaf === SYM_HOLE
         # Never a valid abstraction to just have a single symvar.
         # Excluded deliberately because it breaks our assumption
-        # that we can assume that symbols in the same context 
+        # that we can assume that symbols in the same context
         # will always have the same root state.
         return []
     end
