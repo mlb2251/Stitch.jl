@@ -1224,10 +1224,14 @@ function variables_at_front_of_root_sequence(search_state)
         return false
     end
     second_child = ab.children[2]
-    if second_child.leaf === nothing
-        return false
+    if second_child.leaf !== nothing && is_variable(second_child; no_metavar=first_child.leaf == SYM_SEQ_HEAD)
+        return true
     end
-    return is_variable(second_child; no_metavar=first_child.leaf == SYM_SEQ_HEAD)
+    last_child = ab.children[end]
+    if last_child.leaf !== nothing && is_variable(last_child; no_metavar=first_child.leaf == SYM_SEQ_HEAD)
+        return true
+    end
+    false
 end
 
 function is_variable(expr; no_metavar)
