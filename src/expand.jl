@@ -28,7 +28,7 @@ function possible_expansions!(search_state)
     # filter!(e -> upper_bound_fn(search_state,e) > best_util, search_state.expansions);
 end
 
-function expansions!(typ, search_state::SearchState{Match})
+function expansions!(typ::Type{T}, search_state::SearchState{Match}) where T # force specialization
     flattened_matches = [(i, m) for (i, m) in enumerate(search_state.matches)]
     search_state.stats.matches_considered += length(flattened_matches)
     res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config)
@@ -40,7 +40,7 @@ function expansions!(typ, search_state::SearchState{Match})
     end
 end
 
-function expansions!(typ, search_state::SearchState{MatchPossibilities})
+function expansions!(typ::Type{T}, search_state::SearchState{MatchPossibilities}) where T
     flattened_matches = Vector{Tuple{Int,Match}}()
     for (i, match_poss) in enumerate(search_state.matches)
         for match in match_poss.alternatives
@@ -56,7 +56,7 @@ function expansions!(typ, search_state::SearchState{MatchPossibilities})
             if !(i in keys(out))
                 push!(ks, i)
             end
-            push!(get!(out, i, Match[]), match)
+            push!(get!(()->Match[], out, i), match)
         end
         poss = Vector{MatchPossibilities}()
         for i in ks
@@ -82,7 +82,7 @@ function collect_expansions(
     matches_of_leaf = Dict{Symbol,Vector{Tuple{Int,Match}}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
     matches_of_node = Dict{Tuple{Symbol,Int},Vector{Tuple{Int,Match}}}()
     for (i, match) in matches
-        if typeof(match.holes[end]) != TreeNodeHole
+        if !(match.holes[end] isa TreeNodeHole)
             continue
         end
         if is_leaf(match.holes[end])
@@ -145,7 +145,7 @@ function collect_expansions(
     freshness_of_idx = Dict{Int,Bool}()
     sym_of_idx = Dict{Int,Symbol}()
     for (i, match) in matches
-        if typeof(match.holes[end]) != TreeNodeHole
+        if !(match.holes[end] isa TreeNodeHole)
             continue
         end
         is_leaf(match.holes[end]) || continue
@@ -156,7 +156,7 @@ function collect_expansions(
         fresh = !haskey(match.idx_of_sym, sym)
         idx = get(match.idx_of_sym, sym, length(match.sym_of_idx) + 1)
         ms = get!(matches_of_idx, idx) do
-            []
+            Vector{Tuple{Int,Match}}()
         end
         if !haskey(freshness_of_idx, idx)
             freshness_of_idx[idx] = fresh
@@ -187,7 +187,7 @@ function collect_expansions(
     config
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
-    matches = filter(((_, m),) -> typeof(m.holes[end]) == TreeNodeHole, matches)
+    matches = filter(((_, m),) -> m.holes[end] isa TreeNodeHole, matches)
 
     result = Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}()
 
@@ -220,7 +220,7 @@ function collect_expansions(
         matches_for_state = Dict{Symbol, Vector{Tuple{Int,Match}}}()
         for (i, match) in matches
             hole = match.holes[end]
-            if typeof(hole) != TreeNodeHole
+            if !(hole isa TreeNodeHole)
                 continue
             end
             dfa_state = hole.metadata.dfa_state
@@ -252,7 +252,7 @@ function collect_expansions(
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
     matches = filter(matches) do (i, match)
-        if typeof(match.holes[end]) != TreeNodeHole
+        if !(match.holes[end] isa TreeNodeHole)
             return false
         end
         !is_leaf(match.holes[end]) && match.holes[end].children[1].leaf === SYM_SEQ_HEAD
@@ -281,7 +281,7 @@ function collect_expansions(
 
     matches = filter(matches) do (_, match)
         hole = match.holes[end]
-        if typeof(hole) != RemainingSequenceHole
+        if !(hole isa RemainingSequenceHole)
             return false
         end
         hole.num_consumed < length(hole.root_node.children)
@@ -303,7 +303,7 @@ function collect_expansions(
 
     for (tag, match) in matches
         hole = match.holes[end]
-        if typeof(hole) != RemainingSequenceHole
+        if !(hole isa RemainingSequenceHole)
             continue
         end
         if hole.is_subseq
@@ -341,12 +341,12 @@ function collect_expansions(
 
     for (tag, match) in matches
         hole = match.holes[end]
-        if typeof(hole) != RemainingSequenceHole
+        if !(hole isa RemainingSequenceHole)
             continue
         end
         sym = hole.root_node.metadata.seq_element_dfa_state
         if hole.num_consumed <= length(hole.root_node.children)
-            v = get!(matches_by_sym, sym, Tuple{Int,Match}[])
+            v = get!(()->Tuple{Int,Match}[], matches_by_sym, sym)
             push!(v, (tag, match))
         end
     end
@@ -379,25 +379,25 @@ function expand_general!(search_state, expansion)
     # expand the state
     expand!(search_state, expansion.data, hole)
 
-    expand_utilities!(expansion, search_state)
+    expand_utilities!(expansion.data, search_state)
 
     check_number_of_holes(search_state)
 end
 
-function expand_utilities!(expansion, search_state::SearchState{Match})
+function expand_utilities!(data, search_state::SearchState{Match})
     for match in search_state.matches
         # save the local utility for backtracking
         push!(match.local_utility_stack, match.local_utility)
-        match.local_utility += delta_local_utility(search_state.config, match, expansion.data)
+        match.local_utility += delta_local_utility(search_state.config, match, data)
     end
 end
 
-function expand_utilities!(expansion, search_state::SearchState{MatchPossibilities})
+function expand_utilities!(data, search_state::SearchState{MatchPossibilities})
     for match_poss in search_state.matches
         for match in match_poss.alternatives
             # save the local utility for backtracking
             push!(match.local_utility_stack, match.local_utility)
-            match.local_utility += delta_local_utility(search_state.config, match, expansion.data)
+            match.local_utility += delta_local_utility(search_state.config, match, data)
         end
     end
 end
@@ -692,7 +692,7 @@ end
 
 function expand_match!(config::SearchConfig, expansion::SequenceElementExpansion, match::Match)::Nothing
     last_hole = pop!(match.holes)
-    @assert typeof(last_hole) == RemainingSequenceHole
+    @assert last_hole isa RemainingSequenceHole
     # push the hole back on the stack
     push!(match.holes_stack, last_hole)
 
@@ -712,7 +712,7 @@ end
 function expand_match!(config::SearchConfig, expansion::SequenceTerminatorExpansion, match::Match)::Nothing
     # pop next hole and save it for future backtracking
     last_hole = pop!(match.holes)
-    @assert typeof(last_hole) == RemainingSequenceHole
+    @assert last_hole isa RemainingSequenceHole
     @assert expansion.is_subseq || last_hole.num_consumed == length(last_hole.root_node.children)
     push!(match.holes_stack, last_hole)
     # this does not affect holes_size since we are just removing a ... that currently matches nothing
@@ -945,8 +945,8 @@ end
 
 function unexpand_match!(expansion::SequenceElementExpansion, match::Match)
     # get rid of the ?? and ... holes
-    typeof(pop!(match.holes)) == TreeNodeHole || error("expected TreeNodeHole")
-    typeof(pop!(match.holes)) == RemainingSequenceHole || error("expected RemainingSequenceHole")
+    pop!(match.holes) isa TreeNodeHole || error("expected TreeNodeHole")
+    pop!(match.holes) isa RemainingSequenceHole || error("expected RemainingSequenceHole")
     # put the original ... hole back on the stack
     push!(match.holes, pop!(match.holes_stack))
 
@@ -1112,7 +1112,7 @@ function same_in_context(m1::Match, m2::Match, e1::SExpr, e2::SExpr)
         if e2.leaf === nothing
             return false
         end
-        # @assert typeof(e1.leaf) == Symbol && string(e1.leaf)[1] == '&'
+        # @assert e1.leaf isa Symbol && string(e1.leaf)[1] == '&'
         if !(e1.leaf in m1.sym_of_idx) || !(e2.leaf in m2.sym_of_idx)
             return false
         end

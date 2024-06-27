@@ -25,12 +25,12 @@ end
 
 abstract type Expansion end
 
-struct PossibleExpansion{M,T<:Expansion}
+struct PossibleExpansion{M}
     matches::Vector{M}
-    data::T
+    data
 
-    function PossibleExpansion(matches::Vector{M}, data::T) where {M,T}
-        new{M,T}(matches, data)
+    function PossibleExpansion(matches::Vector{M}, @nospecialize(data)) where {M}
+        new{M}(matches, data)
     end
 end
 
