@@ -29,6 +29,8 @@ struct PossibleExpansion{M}
     matches::Vector{M}
     data
 
+    # previously this specialized on the type of `data` which was causing unncessary type inference. We only
+    # ever deal with PossibleExpansions in large arrays with mixed underlying `.data` types
     function PossibleExpansion(matches::Vector{M}, @nospecialize(data)) where {M}
         new{M}(matches, data)
     end
