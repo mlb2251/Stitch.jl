@@ -110,6 +110,41 @@ end
 sum_no_variables(match::Match) = max(match.local_utility + match.holes_size, 0)
 sum_no_variables(match::MatchPossibilities) = maximum([sum_no_variables(x) for x in match.alternatives])
 
+"""
+similar to upper_bound_sum_no_variables_rectangle but takes into account the fact that
+    you can't get the total hole size sum. Instead, you can only ever get
+    a utility of size * (num matches with hole size > size) for each size.
+"""
+function upper_bound_sum_no_variables_rectangle(search_state, expansion=nothing)::Float32
+    matches = if isnothing(expansion)
+        search_state.matches
+    else
+        expansion.matches
+    end
+
+    if !search_state.config.no_exclude_single_match && length(matches) == 1
+        return 0
+    end
+
+    total_utility = sum(sum_utilities_no_variables, matches, init=0.0)
+
+    hole_size_each = [hole_size_ub(m) for m in matches]
+    hole_size_each = sort(hole_size_each, rev=true)
+
+    best = 0.0
+    for (i, size) in enumerate(hole_size_each)
+        best = max(best, total_utility + size * i)
+    end
+
+    best
+end
+
+sum_utilities_no_variables(match::Match) = max(match.local_utility, 0)
+sum_utilities_no_variables(match::MatchPossibilities) = maximum([sum_utilities_no_variables(x) for x in match.alternatives])
+
+hole_size_ub(match::Match) = match.holes_size
+hole_size_ub(match::MatchPossibilities) = maximum([hole_size_ub(x) for x in match.alternatives])
+
 hole_size(hole::TreeNodeHole) = hole.metadata.size
 hole_size(hole::RemainingSequenceHole) = sum(hole_size, hole.root_node.children[hole.num_consumed+1:end]; init=0.0)
 
