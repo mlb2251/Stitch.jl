@@ -25,12 +25,14 @@ end
 
 abstract type Expansion end
 
-struct PossibleExpansion{M,T<:Expansion}
+struct PossibleExpansion{M}
     matches::Vector{M}
-    data::T
+    data
 
-    function PossibleExpansion(matches::Vector{M}, data::T) where {M,T}
-        new{M,T}(matches, data)
+    # previously this specialized on the type of `data` which was causing unncessary type inference. We only
+    # ever deal with PossibleExpansions in large arrays with mixed underlying `.data` types
+    function PossibleExpansion(matches::Vector{M}, @nospecialize(data)) where {M}
+        new{M}(matches, data)
     end
 end
 

@@ -77,7 +77,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         offset = searchsortedlast(
             matches,
             search_state.all_nodes[next_id].metadata.id,
-            by=m -> if typeof(m) === Int64
+            by=m -> if m isa Int64
                 m
             else
                 expr_of(m).metadata.id
