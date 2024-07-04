@@ -45,8 +45,13 @@ struct SyntacticNodeExpansion <: Expansion
     num_holes::Int
 end
 
+struct SyntacticLiteralExpansion <: Expansion
+    contents::SExpr
+end
+
 Base.show(io::IO, obj::SyntacticLeafExpansion) = pretty_show(io, obj; indent=false)
 Base.show(io::IO, obj::SyntacticNodeExpansion) = pretty_show(io, obj; indent=false)
+Base.show(io::IO, obj::SyntacticLiteralExpansion) = pretty_show(io, obj; indent=false)
 
 struct AbstractionExpansion <: Expansion
     index::Int

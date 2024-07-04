@@ -160,6 +160,12 @@ function delta_local_utility(config, match, expansion::SyntacticNodeExpansion)
     return 0
 end
 
+function delta_local_utility(config, match, expansion::SyntacticLiteralExpansion)
+    # let it be zero?
+    # match.local_utility += 0.;
+    expansion.contents.metadata.size
+end
+
 function delta_local_utility(config, match, expansion::AbstractionExpansion)
     if expansion.fresh
         # Eqn 12: https://arxiv.org/pdf/2211.16605.pdf (application utility second term; cost_app * arity)
