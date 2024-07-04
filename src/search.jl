@@ -45,8 +45,13 @@ struct SyntacticNodeExpansion <: Expansion
     num_holes::Int
 end
 
+struct SyntacticLiteralExpansion <: Expansion
+    contents::SExpr
+end
+
 Base.show(io::IO, obj::SyntacticLeafExpansion) = pretty_show(io, obj; indent=false)
 Base.show(io::IO, obj::SyntacticNodeExpansion) = pretty_show(io, obj; indent=false)
+Base.show(io::IO, obj::SyntacticLiteralExpansion) = pretty_show(io, obj; indent=false)
 
 struct AbstractionExpansion <: Expansion
     index::Int
@@ -411,6 +416,8 @@ function stitch_search(corpus, config)
             plot && push!(plot_data.pruned_bound, (search_state.stats.expansions, config.upper_bound_fn(search_state, expansion)))
             continue # skip - worse than best so far
         end
+
+        printstyled("EXPAND: ", expansion, "\n", color=:blue)
 
         # check_holes_size(expansion.matches)
 

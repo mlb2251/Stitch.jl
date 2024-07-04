@@ -123,7 +123,12 @@ function collect_expansions(
     end
     for ((head, childcount), matches) in matches_of_node
         isempty(matches) && continue
-        push!(result, (SyntacticNodeExpansion(head, childcount), matches))
+        hashes = [match.holes[end].metadata.struct_hash for (_, match) in matches]
+        if all(h -> h == hashes[1], hashes)
+            push!(result, (SyntacticLiteralExpansion(matches[1][2].holes[end]), matches))
+        else
+            push!(result, (SyntacticNodeExpansion(head, childcount), matches))
+        end
     end
 
     result
@@ -571,6 +576,20 @@ function expand_match!(config::SearchConfig, expansion::SyntacticNodeExpansion, 
     return nothing
 end
 
+function expand_abstraction!(expansion::SyntacticLiteralExpansion, hole, holes, abstraction)
+    hole.leaf = nothing
+    hole.children = expansion.contents.children
+end
+
+function expand_match!(config::SearchConfig, expansion::SyntacticLiteralExpansion, match::Match)::Nothing
+    # pop next hole and save it for future backtracking
+    hole = pop!(match.holes)::TreeNodeHole
+    length(hole.children) == length(expansion.contents.children) || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion)")
+    push!(match.holes_stack, hole)
+    match.holes_size -= hole.metadata.size
+    return nothing
+end
+
 
 function expand_abstraction!(expansion::AbstractionExpansion, hole, holes, abstraction)
     hole.leaf = Symbol("#$(expansion.index)")
@@ -838,6 +857,19 @@ function unexpand_match!(expansion::SyntacticNodeExpansion, match::Match)
         match.holes_size += hole.children[1].metadata.size
     end
 end
+
+function unexpand_abstraction!(expansion::SyntacticLiteralExpansion, hole, holes, abstraction)
+    hole.leaf = SYM_HOLE
+    hole.children = []
+end
+
+function unexpand_match!(expansion::SyntacticLiteralExpansion, match::Match)
+    hole = pop!(match.holes_stack)::TreeNodeHole
+    push!(match.holes, hole)
+
+    match.holes_size += hole.metadata.size
+end
+
 
 function unexpand_abstraction!(expansion::AbstractionExpansion, hole, holes, abstraction)
     hole.leaf = SYM_HOLE
