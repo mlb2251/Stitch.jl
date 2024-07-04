@@ -1160,7 +1160,13 @@ end
 
 function choice_vars_adjacent_to_each_other_at_top_level(exprs)
     for i in 1:length(exprs)-1
-        if is_choice_var(exprs[i]) && is_choice_var(exprs[i+1])
+        choice_var_i = is_choice_var(exprs[i])
+        choice_var_i_plus_1 = is_choice_var(exprs[i+1])
+        metavar_i = is_metavar(exprs[i])
+        metavar_i_plus_1 = is_metavar(exprs[i+1])
+        var_i = choice_var_i || metavar_i
+        var_i_plus_1 = choice_var_i_plus_1 || metavar_i_plus_1
+        if (choice_var_i || choice_var_i_plus_1) && var_i && var_i_plus_1
             return true
         end
     end
@@ -1172,6 +1178,13 @@ function is_choice_var(expr)
     expr.leaf == SYM_HOLE && return false
     l = string(expr.leaf)
     return l[1] == '?'
+end
+
+function is_metavar(expr)
+    expr.leaf === nothing && return false
+    expr.leaf == SYM_HOLE && return false
+    l = string(expr.leaf)
+    return l[1] == '#'
 end
 
 function choice_var_always_used_or_not(search_state::SearchState{Match}, i)
