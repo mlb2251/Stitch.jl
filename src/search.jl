@@ -91,6 +91,7 @@ Base.show(io::IO, obj::SymbolExpansion) = pretty_show(io, obj; indent=false)
 
 mutable struct Abstraction
     body::SExpr
+    body_size::Float32
     arity::Int
     sym_arity::Int
     choice_arity::Int
@@ -107,7 +108,7 @@ can_accept_choicevar(a, config) = a.choice_arity < config.max_choice_arity && ca
 Base.show(io::IO, obj::Abstraction) = pretty_show(io, obj; indent=false)
 
 Base.copy(abstraction::Abstraction) = Abstraction(
-    copy(abstraction.body), abstraction.arity, abstraction.sym_arity, abstraction.choice_arity,
+    copy(abstraction.body), abstraction.body_size, abstraction.arity, abstraction.sym_arity, abstraction.choice_arity,
     abstraction.dfa_root, copy(abstraction.dfa_metavars), copy(abstraction.dfa_symvars), copy(abstraction.dfa_choicevars))
 
 Base.@kwdef mutable struct Stats
@@ -139,7 +140,7 @@ Base.@kwdef mutable struct SearchConfig
     # only_match_semi::Bool = false
     autoexpand_head::Bool = false # auto expand head of list
     dfa::Union{Dict{Symbol,Dict{Symbol,Vector{Symbol}}},Nothing} = nothing
-    dfa_valid_root_states::Union{Set{Symbol}, Nothing} = Set([:S, :seqS, :E])
+    dfa_valid_root_states::Union{Set{Symbol},Nothing} = Set([:S, :seqS, :E])
     dfa_start_state = :M
     dfa_metavariable_allow_seqS = true
     dfa_metavariable_allow_S = true
@@ -209,7 +210,7 @@ mutable struct SearchState{M}
     past_expansions::Vector{PossibleExpansion}
 
     function SearchState(corpus, config)
-        abstraction = Abstraction(new_hole(nothing), 0, 0, 0, :uninit_state, [], [], [])
+        abstraction = Abstraction(new_hole(nothing), 0, 0, 0, 0, :uninit_state, [], [], [])
 
         typ = if config.match_sequences
             MatchPossibilities
