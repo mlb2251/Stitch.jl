@@ -8,7 +8,7 @@ function symbol_size(sym::Symbol, size_by_symbol::Dict{Symbol,Float32})
 end
 
 function symbol_size(sym::Symbol, size_by_symbol::Nothing)
-    if sym === SYM_SPLICE
+    if sym === SYM_SPLICE || sym === SYM_HOLE || sym === SYM_SEQ_HOLE
         return 0
     end
     1.0
@@ -104,7 +104,9 @@ function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
         return 0
     end
 
-    sum(sum_no_variables, matches, init=0.0)
+    abstraction_size = size(search_state.abstraction.body, search_state.config.size_by_symbol)
+
+    sum(sum_no_variables, matches, init=0.0) - abstraction_size
 end
 
 sum_no_variables(match::Match) = max(match.local_utility + match.holes_size, 0)
