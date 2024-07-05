@@ -455,10 +455,7 @@ function check_number_of_holes(search_state)
 end
 
 function expand!(search_state::SearchState{Match}, expansion, hole)
-    # abstraction = search_state.abstraction
-    # @assert size(abstraction.body, search_state.config.size_by_symbol) == abstraction.body_size
     expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction, search_state.config)
-    # @assert size(abstraction.body, search_state.config.size_by_symbol) == abstraction.body_size
     for match in search_state.matches
         extras = expand_match!(search_state.config, expansion, match)
         @assert extras === nothing
@@ -467,10 +464,7 @@ end
 
 function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
 
-    # abstraction = search_state.abstraction
-    # @assert size(abstraction.body, search_state.config.size_by_symbol) == abstraction.body_size
     expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction, search_state.config)
-    # @assert size(abstraction.body, search_state.config.size_by_symbol) == abstraction.body_size
     new_match_poss = MatchPossibilities[]
     whole_list_update = false
     for (idx, match_poss) in enumerate(search_state.matches)
@@ -559,7 +553,7 @@ function expand_abstraction!(expansion::SyntacticNodeExpansion, hole, holes, abs
     end
 
     # reverse holes so they go left to right
-    # @views reverse!(search_state.holes[end-expansion.num_holes+1:end])
+    # @views reverse!(search_state.holes[end-expansion.num_holes+1:end]) 
     if expansion.head !== :no_expand_head
         abstraction.body_size += symbol_size(expansion.head, config.size_by_symbol)
     end
@@ -802,20 +796,14 @@ function expand_match!(config::SearchConfig, expansion::SequenceChoiceVarExpansi
 end
 
 function unexpand!(search_state::SearchState{Match}, expansion, hole)
-    # abstraction = search_state.abstraction
-    # @assert size(abstraction.body, search_state.config.size_by_symbol) == abstraction.body_size
     unexpand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction, search_state.config)
-    # @assert size(abstraction.body, search_state.config.size_by_symbol) == abstraction.body_size
     for match in search_state.matches
         unexpand_match!(expansion, match)
     end
 end
 
 function unexpand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
-    # abstraction = search_state.abstraction
-    # @assert size(abstraction.body, search_state.config.size_by_symbol) == abstraction.body_size
     unexpand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction, search_state.config)
-    # @assert size(abstraction.body, search_state.config.size_by_symbol) == abstraction.body_size
     search_state.matches = pop!(search_state.matches_stack)
     for match_poss in search_state.matches
         for match in match_poss.alternatives
