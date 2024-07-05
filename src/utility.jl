@@ -104,9 +104,7 @@ function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
         return 0
     end
 
-    abstraction_size = size(search_state.abstraction.body, search_state.config.size_by_symbol)
-
-    sum(sum_no_variables, matches, init=0.0) - abstraction_size
+    sum(sum_no_variables, matches, init=0.0) - search_state.abstraction.body_size
 end
 
 sum_no_variables(match::Match) = max(match.local_utility + match.holes_size, 0)
