@@ -8,7 +8,7 @@ function symbol_size(sym::Symbol, size_by_symbol::Dict{Symbol,Float32})
 end
 
 function symbol_size(sym::Symbol, size_by_symbol::Nothing)
-    if sym === SYM_SPLICE# || sym === SYM_HOLE || sym === SYM_SEQ_HOLE
+    if sym === SYM_SPLICE
         return 0
     end
     1.0
@@ -103,15 +103,6 @@ function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
     if !search_state.config.no_exclude_single_match && length(matches) == 1
         return 0
     end
-
-    # x = size(search_state.abstraction.body, search_state.config.size_by_symbol)
-    # y = search_state.abstraction.body_size
-    # if x != y
-    #     println("x: ", x)
-    #     println("y: ", y)
-    #     println("search_state.abstraction.body: ", search_state.abstraction.body)
-    #     error("x != y")
-    # end
 
     sum(sum_no_variables, matches, init=0.0)
 end
