@@ -208,6 +208,7 @@ mutable struct SearchState{M}
     expansions_stack::Vector{Vector{PossibleExpansion}}
     matches_stack::Vector{Vector{M}}
     past_expansions::Vector{PossibleExpansion}
+    needs_dominance_check::Bool
 
     function SearchState(corpus, config)
         abstraction = Abstraction(new_hole(nothing), 0, 0, 0, 0, :uninit_state, [], [], [])
@@ -231,7 +232,7 @@ mutable struct SearchState{M}
         new{typ}(config, corpus, all_nodes,
             PlotData(), best_util, best_abstraction, Stats(),
             abstraction, [abstraction.body], matches, PossibleExpansion[],
-            SExpr[], PossibleExpansion[], Match[], PossibleExpansion[])
+            SExpr[], PossibleExpansion[], Match[], PossibleExpansion[], true)
     end
 end
 
@@ -437,11 +438,27 @@ function stitch_search(corpus, config)
         plot && push!(plot_data.size_matches, (search_state.stats.expansions, sum(match -> max(match.local_utility, 0.0), search_state.matches)))
 
         # strict dominance check - https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
-        if strictly_dominated(search_state)
+        if strictly_dominated(search_state) && !search_state.needs_dominance_check
+            printstyled("STRICTLY DOMINATED: ", search_state.abstraction.body, "\n", color=:red, bold=true)
+            # printstyled("STRICTLY DOMINATED: ", [x.expr for x in search_state.matches], "\n", color=:red, bold=true)
+            printstyled("Last expansion: ", expansion.data, "\n", color=:red, bold=true)
+            printstyled("Number matches          ", [length(x.alternatives) for x in search_state.matches], "\n", color=:red, bold=true)
+            # printstyled("Previous number matches", length(search_state.matches_stack[end]), "\n", color=:red, bold=true)
+            printstyled("Previous number matches ", [length(x.alternatives) for x in search_state.matches_stack[end]], "\n", color=:red, bold=true)
+            # printstyled("Matches: ", search_state.matches, "\n", color=:red, bold=true)
+            # printstyled("Previous matches: ", search_state.matches_stack[end], "\n", color=:red, bold=true)
+            error("strictly dominated when it shouldnt be possible")
+        end
+        if search_state.needs_dominance_check && strictly_dominated(search_state)
             is_tracked_pruned(search_state, message="$(@__FILE__):$(@__LINE__) - strictly dominated")
             unexpand_general!(search_state) # force early unexpansion
             continue
         end
+        # printstyled("NOT STRICTLY DOMINATED: ", search_state.abstraction.body, "\n", color=:green, bold=true)
+        # printstyled("Number matches          ", [length(x.alternatives) for x in search_state.matches], "\n", color=:green, bold=true)
+        # printstyled("Matches: ", search_state.matches, "\n", color=:green, bold=true)
+        # printstyled("NOT STRICTLY DOMINATED: ", [x.expr for x in search_state.matches], "\n", color=:green, bold=true)
+        search_state.needs_dominance_check = false
 
         # https://arxiv.org/pdf/2211.16605.pdf "To avoid overfitting, DreamCoder prunes the abstractions that are only useful in programs from a single task."
         if !config.allow_single_task && is_single_task(search_state)
