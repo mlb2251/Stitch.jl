@@ -413,7 +413,7 @@ function stitch_search(corpus, config)
             continue # skip - worse than best so far
         end
 
-        printstyled("EXPAND: ", expansion, "\n", color=:blue)
+        # printstyled("EXPAND: ", expansion, "\n", color=:blue)
 
         # check_holes_size(expansion.matches)
 
