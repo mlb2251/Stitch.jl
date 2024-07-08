@@ -526,7 +526,9 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
     if !matches_same(search_state.matches, new_match_poss)
         search_state.needs_dominance_check = true
     end
+    # printstyled("Number matches          ", [length(x.alternatives) for x in search_state.matches], "\n", color=:blue, bold=true)
     search_state.matches = new_match_poss
+    # printstyled("Number matches          ", [length(x.alternatives) for x in search_state.matches], "\n", color=:blue, bold=true)
 end
 
 function expand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abstraction, config::SearchConfig)::Bool

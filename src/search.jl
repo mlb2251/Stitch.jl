@@ -419,6 +419,8 @@ function stitch_search(corpus, config)
             continue # skip - worse than best so far
         end
 
+        # printstyled("EXPAND: ", expansion, "\n", color=:blue)
+
         # check_holes_size(expansion.matches)
 
         # do the expansion
@@ -446,6 +448,10 @@ function stitch_search(corpus, config)
             unexpand_general!(search_state) # force early unexpansion
             continue
         end
+        # printstyled("NOT STRICTLY DOMINATED: ", search_state.abstraction.body, "\n", color=:green, bold=true)
+        # printstyled("Number matches          ", [length(x.alternatives) for x in search_state.matches], "\n", color=:green, bold=true)
+        # printstyled("Matches: ", search_state.matches, "\n", color=:green, bold=true)
+        # printstyled("NOT STRICTLY DOMINATED: ", [x.expr for x in search_state.matches], "\n", color=:green, bold=true)
         search_state.needs_dominance_check = false
 
         # https://arxiv.org/pdf/2211.16605.pdf "To avoid overfitting, DreamCoder prunes the abstractions that are only useful in programs from a single task."
