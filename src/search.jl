@@ -213,6 +213,7 @@ mutable struct SearchState{M}
     expansions_stack::Vector{Vector{PossibleExpansion}}
     matches_stack::Vector{Vector{M}}
     past_expansions::Vector{PossibleExpansion}
+    needs_dominance_check::Bool
 
     function SearchState(corpus, config)
         abstraction = Abstraction(new_hole(nothing), 0, 0, 0, 0, :uninit_state, [], [], [])
@@ -236,7 +237,7 @@ mutable struct SearchState{M}
         new{typ}(config, corpus, all_nodes,
             PlotData(), best_util, best_abstraction, Stats(),
             abstraction, [abstraction.body], matches, PossibleExpansion[],
-            SExpr[], PossibleExpansion[], Match[], PossibleExpansion[])
+            SExpr[], PossibleExpansion[], Match[], PossibleExpansion[], true)
     end
 end
 
@@ -440,11 +441,12 @@ function stitch_search(corpus, config)
         plot && push!(plot_data.size_matches, (search_state.stats.expansions, sum(match -> max(match.local_utility, 0.0), search_state.matches)))
 
         # strict dominance check - https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
-        if strictly_dominated(search_state)
+        if search_state.needs_dominance_check && strictly_dominated(search_state)
             is_tracked_pruned(search_state, message="$(@__FILE__):$(@__LINE__) - strictly dominated")
             unexpand_general!(search_state) # force early unexpansion
             continue
         end
+        search_state.needs_dominance_check = false
 
         # https://arxiv.org/pdf/2211.16605.pdf "To avoid overfitting, DreamCoder prunes the abstractions that are only useful in programs from a single task."
         if !config.allow_single_task && is_single_task(search_state)
