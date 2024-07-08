@@ -1105,27 +1105,27 @@ end
 function arg_capture(search_state)
     search_state.config.no_opt_arg_capture && return false
     for i in 1:search_state.abstraction.arity
-        if arg_capture(search_state, i)
+        if arg_capture(search_state, match -> match.unique_args[i])
             return true
         end
     end
     false
 end
 
-function arg_capture(search_state::SearchState{Match}, i)
+function arg_capture(search_state::SearchState{Match}, arg_extract_fn)
     first_match = search_state.matches[1]
-    first_match_expr = first_match.unique_args[i]
-    if all(match -> same_in_context(first_match, match, first_match_expr, match.unique_args[i]), search_state.matches)
+    first_match_expr = arg_extract_fn(first_match)
+    if all(match -> same_in_context(first_match, match, first_match_expr, arg_extract_fn(match)), search_state.matches)
         return true
     end
     return false
 end
 
-function arg_capture(search_state::SearchState{MatchPossibilities}, i)
+function arg_capture(search_state::SearchState{MatchPossibilities}, arg_extract_fn)
     first_match = search_state.matches[1].alternatives[1]
-    first_match_expr = first_match.unique_args[i]
+    first_match_expr = arg_extract_fn(first_match)
     if all(
-        match_poss -> all(match -> same_in_context(match, first_match, match.unique_args[i], first_match_expr), match_poss.alternatives),
+        match_poss -> all(match -> same_in_context(match, first_match, arg_extract_fn(match), first_match_expr), match_poss.alternatives),
         search_state.matches
     )
         return true
