@@ -371,6 +371,10 @@ function expand_general!(search_state, expansion)
     push!(search_state.matches_stack, search_state.matches)
     push!(search_state.past_expansions, expansion)
 
+    if !matches_same(search_state.matches, expansion.matches)
+        search_state.needs_dominance_check = true
+    end
+
     # fresh .expansions
     search_state.expansions = PossibleExpansion[]
     # set .matches properly
@@ -383,6 +387,17 @@ function expand_general!(search_state, expansion)
 
     check_number_of_holes(search_state)
 end
+
+# we can assume one of these sets is a subset of the other, so we can just check the lengths
+function matches_same(matches1::Vector{Match}, matches2::Vector{Match})
+    length(matches1) == length(matches2)
+end
+
+function matches_same(matches1::Vector{MatchPossibilities}, matches2::Vector{MatchPossibilities})
+    length(matches1) == length(matches2) && all(i -> length(matches1[i].alternatives) == length(matches2[i].alternatives), 1:length(matches1))
+end
+
+
 
 function expand_utilities!(data, search_state::SearchState{Match})
     for match in search_state.matches
@@ -455,7 +470,7 @@ function check_number_of_holes(search_state)
 end
 
 function expand!(search_state::SearchState{Match}, expansion, hole)
-    expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction, search_state.config)
+    search_state.needs_dominance_check |= expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction, search_state.config)
     for match in search_state.matches
         extras = expand_match!(search_state.config, expansion, match)
         @assert extras === nothing
@@ -463,8 +478,7 @@ function expand!(search_state::SearchState{Match}, expansion, hole)
 end
 
 function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
-
-    expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction, search_state.config)
+    search_state.needs_dominance_check |= expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction, search_state.config)
     new_match_poss = MatchPossibilities[]
     whole_list_update = false
     for (idx, match_poss) in enumerate(search_state.matches)
@@ -509,13 +523,17 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
         new_match_poss = search_state.matches
     end
     push!(search_state.matches_stack, search_state.matches)
+    if !matches_same(search_state.matches, new_match_poss)
+        search_state.needs_dominance_check = true
+    end
     search_state.matches = new_match_poss
 end
 
-function expand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abstraction, config::SearchConfig)
+function expand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abstraction, config::SearchConfig)::Bool
     # set the head symbol of the hole
     hole.leaf = expansion.leaf
     abstraction.body_size += symbol_size(expansion.leaf, config.size_by_symbol)
+    return false
 end
 
 function expand_match!(config::SearchConfig, expansion::SyntacticLeafExpansion, match::Match)::Nothing
@@ -526,7 +544,7 @@ function expand_match!(config::SearchConfig, expansion::SyntacticLeafExpansion, 
     return nothing
 end
 
-function expand_abstraction!(expansion::SyntacticNodeExpansion, hole, holes, abstraction, config::SearchConfig)
+function expand_abstraction!(expansion::SyntacticNodeExpansion, hole, holes, abstraction, config::SearchConfig)::Bool
     # make it no longer a leaf
     hole.leaf = nothing
 
@@ -557,6 +575,8 @@ function expand_abstraction!(expansion::SyntacticNodeExpansion, hole, holes, abs
     if expansion.head !== :no_expand_head
         abstraction.body_size += symbol_size(expansion.head, config.size_by_symbol)
     end
+
+    return false
 end
 
 function expand_match!(config::SearchConfig, expansion::SyntacticNodeExpansion, match::Match)::Nothing
@@ -576,7 +596,7 @@ function expand_match!(config::SearchConfig, expansion::SyntacticNodeExpansion, 
 end
 
 
-function expand_abstraction!(expansion::AbstractionExpansion, hole, holes, abstraction, config::SearchConfig)
+function expand_abstraction!(expansion::AbstractionExpansion, hole, holes, abstraction, config::SearchConfig)::Bool
     hole.leaf = Symbol("#$(expansion.index)")
 
     if expansion.fresh
@@ -585,6 +605,8 @@ function expand_abstraction!(expansion::AbstractionExpansion, hole, holes, abstr
     end
 
     abstraction.body_size += 1
+
+    return true
 end
 
 function expand_match!(config::SearchConfig, expansion::AbstractionExpansion, match::Match)::Nothing
@@ -597,7 +619,7 @@ function expand_match!(config::SearchConfig, expansion::AbstractionExpansion, ma
     return nothing
 end
 
-function expand_abstraction!(expansion::SymbolExpansion, hole, holes, abstraction, config::SearchConfig)
+function expand_abstraction!(expansion::SymbolExpansion, hole, holes, abstraction, config::SearchConfig)::Bool
     # set the head symbol of the hole
     hole.leaf = Symbol("%$(expansion.idx)")
 
@@ -607,6 +629,8 @@ function expand_abstraction!(expansion::SymbolExpansion, hole, holes, abstractio
     end
 
     abstraction.body_size += 1
+
+    return true
 end
 
 function expand_match!(config::SearchConfig, expansion::SymbolExpansion, match::Match)::Nothing
@@ -626,7 +650,7 @@ function expand_match!(config::SearchConfig, expansion::SymbolExpansion, match::
 end
 
 
-function expand_abstraction!(expansion::SequenceExpansion, hole, holes, abstraction, config::SearchConfig)
+function expand_abstraction!(expansion::SequenceExpansion, hole, holes, abstraction, config::SearchConfig)::Bool
     # take a hole ?? and make it (/seq ...). The hole is then pushed to the stack
     hole.leaf = nothing
     head = new_hole((hole, 1))
@@ -643,6 +667,8 @@ function expand_abstraction!(expansion::SequenceExpansion, hole, holes, abstract
     push!(holes, hole)
 
     abstraction.body_size += symbol_size(head.leaf, config.size_by_symbol)
+
+    return false
 end
 
 function expand_match!(config::SearchConfig, expansion::SequenceExpansion, match::Match)::Union{Nothing,Vector{Match}}
@@ -695,11 +721,12 @@ function insert_before_sequence_hole!(create_new, hole, holes)
     new_element
 end
 
-function expand_abstraction!(expansion::SequenceElementExpansion, hole, holes, abstraction, config::SearchConfig)
+function expand_abstraction!(expansion::SequenceElementExpansion, hole, holes, abstraction, config::SearchConfig)::Bool
     element_hole = insert_before_sequence_hole!(i -> new_hole((hole, i)), hole, holes)
     push!(holes, element_hole)
 
     # no change to abstraction.body_size since we are just replacing a ... with a ?? ...
+    return false
 end
 
 function expand_match!(config::SearchConfig, expansion::SequenceElementExpansion, match::Match)::Nothing
@@ -716,11 +743,12 @@ function expand_match!(config::SearchConfig, expansion::SequenceElementExpansion
     return nothing
 end
 
-function expand_abstraction!(expansion::SequenceTerminatorExpansion, hole, holes, abstraction, config::SearchConfig)
+function expand_abstraction!(expansion::SequenceTerminatorExpansion, hole, holes, abstraction, config::SearchConfig)::Bool
     # just remove the last hole, and implicitly close off the sequence
     pop!(hole.children)
 
     # no change to abstraction.body_size since we are just removing a ...
+    return false
 end
 
 function expand_match!(config::SearchConfig, expansion::SequenceTerminatorExpansion, match::Match)::Nothing
@@ -739,7 +767,7 @@ function expand_match!(config::SearchConfig, expansion::SequenceTerminatorExpans
     return nothing
 end
 
-function expand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes, abstraction, config::SearchConfig)
+function expand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes, abstraction, config::SearchConfig)::Bool
     # take a hole (/seq <things> ...) and make it (/seq <things> ?? ...). Place the ?? above the ... on the stack,
     # but do *not* remove ... from the stack, since it will be consumed by the next expansion once the ?? is filled in
 
@@ -754,6 +782,8 @@ function expand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes,
     push!(abstraction.dfa_choicevars, :seqS)
 
     abstraction.body_size += 1
+
+    return true
 end
 
 function expand_match!(config::SearchConfig, expansion::SequenceChoiceVarExpansion, match::Match)::Vector{Match}
