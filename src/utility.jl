@@ -136,7 +136,7 @@ function upper_bound_sum_no_variables_rectangle(search_state, expansion=nothing)
         best = max(best, total_utility + size * i)
     end
 
-    best
+    best - search_state.abstraction.body_size
 end
 
 sum_utilities_no_variables(match::Match) = max(match.local_utility, 0)
