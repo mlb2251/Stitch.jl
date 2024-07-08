@@ -22,7 +22,7 @@ function rewrite(search_state::SearchState)::Tuple{Corpus,Float32,Float32}
 
     size_by_symbol = search_state.config.size_by_symbol
     corpus_compression_utility = size(search_state.corpus, size_by_symbol) - size(rewritten, size_by_symbol)
-    abstraction_size_utility = -size(search_state.abstraction.body, size_by_symbol)
+    abstraction_size_utility = -search_state.abstraction.body_size
     additional_per_match_utility = (
         # adding 1 because that's already handled in the corpus compression utility by the fn_K symbol
         1 + search_state.config.application_utility_fixed
@@ -94,7 +94,7 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
 
     # Eqn 18 from https://arxiv.org/pdf/2211.16605.pdf
     corpus_util = sum(programs -> minimum(p -> rcis[p.expr.metadata.id].cumulative_utility, programs), values(search_state.corpus.programs_by_task))
-    util = corpus_util - size(search_state.abstraction.body, search_state.config.size_by_symbol)
+    util = corpus_util - search_state.abstraction.body_size
     return util, rcis
 end
 

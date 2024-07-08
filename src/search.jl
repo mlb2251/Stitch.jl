@@ -91,6 +91,7 @@ Base.show(io::IO, obj::SymbolExpansion) = pretty_show(io, obj; indent=false)
 
 mutable struct Abstraction
     body::SExpr
+    body_size::Float32
     arity::Int
     sym_arity::Int
     choice_arity::Int
@@ -107,7 +108,7 @@ can_accept_choicevar(a, config) = a.choice_arity < config.max_choice_arity && ca
 Base.show(io::IO, obj::Abstraction) = pretty_show(io, obj; indent=false)
 
 Base.copy(abstraction::Abstraction) = Abstraction(
-    copy(abstraction.body), abstraction.arity, abstraction.sym_arity, abstraction.choice_arity,
+    copy(abstraction.body), abstraction.body_size, abstraction.arity, abstraction.sym_arity, abstraction.choice_arity,
     abstraction.dfa_root, copy(abstraction.dfa_metavars), copy(abstraction.dfa_symvars), copy(abstraction.dfa_choicevars))
 
 Base.@kwdef mutable struct Stats
@@ -119,7 +120,12 @@ Base.@kwdef mutable struct Stats
 end
 
 Base.show(io::IO, obj::Stats) = pretty_show(io, obj; indent=true)
-
+(Base.:+)(stats::Stats, other::Stats) = Stats(
+    stats.expansions + other.expansions,
+    stats.matches_considered + other.matches_considered,
+    stats.completed + other.completed,
+    stats.comparable_worklist_steps + other.comparable_worklist_steps
+)
 
 Base.@kwdef mutable struct SearchConfig
     new_abstraction_name::Symbol = :placeholder
@@ -139,7 +145,7 @@ Base.@kwdef mutable struct SearchConfig
     # only_match_semi::Bool = false
     autoexpand_head::Bool = false # auto expand head of list
     dfa::Union{Dict{Symbol,Dict{Symbol,Vector{Symbol}}},Nothing} = nothing
-    dfa_valid_root_states::Union{Set{Symbol}, Nothing} = Set([:S, :seqS, :E])
+    dfa_valid_root_states::Union{Set{Symbol},Nothing} = Set([:S, :seqS, :E])
     dfa_start_state = :M
     dfa_metavariable_allow_seqS = true
     dfa_metavariable_allow_S = true
@@ -209,7 +215,7 @@ mutable struct SearchState{M}
     past_expansions::Vector{PossibleExpansion}
 
     function SearchState(corpus, config)
-        abstraction = Abstraction(new_hole(nothing), 0, 0, 0, :uninit_state, [], [], [])
+        abstraction = Abstraction(new_hole(nothing), 0, 0, 0, 0, :uninit_state, [], [], [])
 
         typ = if config.match_sequences
             MatchPossibilities
@@ -452,7 +458,7 @@ function stitch_search(corpus, config)
             search_state.stats.completed += 1
 
             if search_state.config.return_first_abstraction
-                return search_state
+                return search_state, search_state.stats
             end
 
             !verbose || println("completed: ", search_state.abstraction.body, " with utility ", bottom_up_utility(search_state), " used in $(length(search_state.matches)) places")
@@ -487,7 +493,7 @@ function stitch_search(corpus, config)
             if config.follow
                 string(search_state.abstraction.body) == string(config.track) || error("shouldnt be possible")
                 plot && break
-                return search_state
+                return search_state, search_state.stats
             end
 
             continue
@@ -509,7 +515,7 @@ function stitch_search(corpus, config)
         plot(plot_data, search_state)
     end
 
-    isnothing(search_state.best_abstraction) && return nothing
+    isnothing(search_state.best_abstraction) && return nothing, search_state.stats
 
     !config.follow || plot || error("shouldnt be possibleee")
 
@@ -520,9 +526,9 @@ function stitch_search(corpus, config)
     config.verbose = config.verbose_best = config.plot = false
     config.track = search_state.best_abstraction.body
     config.follow = config.silent = config.allow_single_task = true
-    res = stitch_search(corpus, config)
+    res, _ = stitch_search(corpus, config)
     isnothing(res) && error("shouldnt be possible - we found it the first time around without tracking")
-    res
+    res, search_state.stats
 end
 
 function plot(plot_data::PlotData, search_state::SearchState)
@@ -590,10 +596,12 @@ function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
     config = SearchConfig(; dfa=dfa, kwargs...)
     check_abstraction_names_not_present(corpus, [config.abstraction_name_function(i) for i in 1:iterations])
     abstractions = Abstraction[]
+    stats_overall = Stats()
     for i in 1:iterations
         println("===Iteration $i===")
         config.new_abstraction_name = Symbol(config.abstraction_name_function(i))
-        search_res = stitch_search(corpus, config)
+        search_res, stats = stitch_search(corpus, config)
+        stats_overall += stats
         if isnothing(search_res)
             println("No more abstractions")
             break
@@ -606,6 +614,8 @@ function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
         push!(abstractions, search_res.abstraction)
     end
     println("Total compression: ", size(original_corpus, config.size_by_symbol) / size(corpus, config.size_by_symbol), "x")
+    println("Total number expansions: ", stats_overall.expansions)
+    println("Total number matches considered: ", stats_overall.matches_considered)
     return abstractions, corpus, dfa
 end
 
