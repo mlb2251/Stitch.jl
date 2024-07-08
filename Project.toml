@@ -4,6 +4,7 @@ authors = ["Matthew Bowers <mlbowers@mit.edu>"]
 version = "0.1.0"
 
 [deps]
+ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 AutoHashEquals = "15f4f7f2-30c1-5605-9d31-71845cf9641f"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 FlameGraphs = "08572546-2f56-4bcf-ba4e-bab62c3a3f89"
