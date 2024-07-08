@@ -443,17 +443,6 @@ function stitch_search(corpus, config)
         plot && push!(plot_data.size_matches, (search_state.stats.expansions, sum(match -> max(match.local_utility, 0.0), search_state.matches)))
 
         # strict dominance check - https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
-        if strictly_dominated(search_state) && !search_state.needs_dominance_check
-            printstyled("STRICTLY DOMINATED: ", search_state.abstraction.body, "\n", color=:red, bold=true)
-            # printstyled("STRICTLY DOMINATED: ", [x.expr for x in search_state.matches], "\n", color=:red, bold=true)
-            printstyled("Last expansion: ", expansion.data, "\n", color=:red, bold=true)
-            printstyled("Number matches          ", [length(x.alternatives) for x in search_state.matches], "\n", color=:red, bold=true)
-            # printstyled("Previous number matches", length(search_state.matches_stack[end]), "\n", color=:red, bold=true)
-            printstyled("Previous number matches ", [length(x.alternatives) for x in search_state.matches_stack[end]], "\n", color=:red, bold=true)
-            # printstyled("Matches: ", search_state.matches, "\n", color=:red, bold=true)
-            # printstyled("Previous matches: ", search_state.matches_stack[end], "\n", color=:red, bold=true)
-            error("strictly dominated when it shouldnt be possible")
-        end
         if search_state.needs_dominance_check && strictly_dominated(search_state)
             is_tracked_pruned(search_state, message="$(@__FILE__):$(@__LINE__) - strictly dominated")
             unexpand_general!(search_state) # force early unexpansion
