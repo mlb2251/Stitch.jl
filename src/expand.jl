@@ -394,7 +394,7 @@ function matches_same(matches1::Vector{Match}, matches2::Vector{Match})
 end
 
 function matches_same(matches1::Vector{MatchPossibilities}, matches2::Vector{MatchPossibilities})
-    length(matches1) == length(matches2) && all(i -> matches_same(matches1[i].alternatives, matches2[i].alternatives), 1:length(matches1))
+    length(matches1) == length(matches2) && all(i -> length(matches1[i].alternatives) == length(matches2[i].alternatives), 1:length(matches1))
 end
 
 
