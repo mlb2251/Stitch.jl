@@ -418,6 +418,8 @@ function stitch_search(corpus, config)
             continue # skip - worse than best so far
         end
 
+        # printstyled("EXPAND: ", search_state.abstraction.body, "\n", color=:blue)
+
         # check_holes_size(expansion.matches)
 
         # do the expansion
