@@ -1109,12 +1109,31 @@ function arg_capture(search_state)
             return true
         end
     end
+    # if all choice var instances start or end with the same expression, then that
+    # expression needs to be included literally rather than absorbed into a choice var
+    for i in 1:search_state.abstraction.choice_arity
+        if arg_capture(search_state, match ->
+                if length(match.choice_var_captures[i]) > 0
+                    match.choice_var_captures[i][1]
+                else nothing end)
+            return true
+        end
+        if arg_capture(search_state, match ->
+                if length(match.choice_var_captures[i]) > 0
+                    match.choice_var_captures[i][end]
+                else nothing end)
+            return true
+        end
+    end
     false
 end
 
 function arg_capture(search_state::SearchState{Match}, arg_extract_fn)
     first_match = search_state.matches[1]
     first_match_expr = arg_extract_fn(first_match)
+    if first_match_expr === nothing
+        return false
+    end
     if all(match -> same_in_context(first_match, match, first_match_expr, arg_extract_fn(match)), search_state.matches)
         return true
     end
@@ -1124,6 +1143,9 @@ end
 function arg_capture(search_state::SearchState{MatchPossibilities}, arg_extract_fn)
     first_match = search_state.matches[1].alternatives[1]
     first_match_expr = arg_extract_fn(first_match)
+    if first_match_expr === nothing
+        return false
+    end
     if all(
         match_poss -> all(match -> same_in_context(match, first_match, arg_extract_fn(match), first_match_expr), match_poss.alternatives),
         search_state.matches
