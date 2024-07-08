@@ -1133,6 +1133,10 @@ function arg_capture(search_state::SearchState{MatchPossibilities}, arg_extract_
     return false
 end
 
+function same_in_context(m1::Match, m2::Match, e1::Nothing, e2::SExpr)
+    return false
+end
+
 function same_in_context(m1::Match, m2::Match, e1::SExpr, e2::SExpr)
     # returns true iff e1 and e2 are the same in the context of m1 and m2
     if e1.metadata.struct_hash == e2.metadata.struct_hash
