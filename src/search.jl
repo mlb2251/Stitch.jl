@@ -413,7 +413,10 @@ function stitch_search(corpus, config)
         expansion = pop!(search_state.expansions)
 
         # upper bound check
-        if config.upper_bound_fn(search_state, expansion) <= search_state.best_util
+        ub = config.upper_bound_fn(search_state, expansion)
+        # println("for abstraction: ", search_state.abstraction.body, " expansion: ", expansion.data)
+        # println("upper bound: ", ub)
+        if ub <= search_state.best_util
             is_tracked_pruned(search_state, expansion=expansion, message="$(@__FILE__):$(@__LINE__) - upper bound $(config.upper_bound_fn(search_state,expansion)) <= best util $(search_state.best_util)")
             plot && push!(plot_data.pruned_bound, (search_state.stats.expansions, config.upper_bound_fn(search_state, expansion)))
             continue # skip - worse than best so far

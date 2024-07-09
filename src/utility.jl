@@ -104,8 +104,14 @@ function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
         return 0
     end
 
-    sum(sum_no_variables, matches, init=0.0) - search_state.abstraction.body_size
+    # an amount that, if subtracted, will make matches[1] have the same utility as its local utility
+    excess_hole_size = minimum([holes_size(m) for m in matches])
+
+    sum(sum_no_variables, matches, init=0.0) - search_state.abstraction.body_size - excess_hole_size
 end
+
+holes_size(match::Match) = match.holes_size
+holes_size(match::MatchPossibilities) = maximum([m.holes_size for m in match.alternatives])
 
 sum_no_variables(match::Match) = max(match.local_utility + match.holes_size, 0)
 sum_no_variables(match::MatchPossibilities) = maximum([sum_no_variables(x) for x in match.alternatives])
