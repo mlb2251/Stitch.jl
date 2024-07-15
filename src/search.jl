@@ -328,6 +328,14 @@ function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vect
             match = fresh_match_possibilities(t, expr, id, config)
             push!(matches, match)
             id += 1
+            if config.match_sequences && expr.leaf === nothing && expr.children[1].leaf === SYM_SEQ_HEAD
+                for i in 1:length(expr.children)
+                    match_specific = copy_match(match)
+                    match_specific.alternatives[1].start_items = i
+                    push!(matches, match_specific)
+                    id += 1
+                end
+            end
         end
     end
     matches
