@@ -106,10 +106,8 @@ end
 function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{MatchPossibilities})::Tuple{Float64,Union{Match, Nothing}}
     if isempty(matches)
         return 0.0, nothing
-    else
-        all_match_alernatives = reduce(vcat, [m.alternatives for m in matches])::Vector{Match}
-        return compute_best_utility(rcis, MatchPossibilities(all_match_alernatives))
-    end
+    all_match_alernatives = reduce(vcat, [m.alternatives for m in matches])::Vector{Match}
+    return compute_best_utility(rcis, MatchPossibilities(all_match_alernatives))
 end
 
 function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossibilities)::Tuple{Float64,Match}
