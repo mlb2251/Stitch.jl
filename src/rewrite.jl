@@ -61,7 +61,13 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
     )
 
     for match in search_state.matches
-        rcis[expr_of(match).metadata.id].rci_match_possibilities = match
+        rci_expr = rcis[expr_of(match).metadata.id]
+        if rci_expr.rci_match_possibilities !== nothing
+            # TODO handle multiple
+            rci_expr.rci_match_possibilities.alternatives = vcat(rci_expr.rci_match_possibilities.alternatives, match.alternatives)
+        else
+            rci_expr.rci_match_possibilities = copy_match(match)
+        end
     end
 
     # special case the identity abstraction (\x. x) since it has a self loop dependency in terms of utility calculation
