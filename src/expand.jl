@@ -266,7 +266,16 @@ function collect_expansions(
 
     if is_root
         # in this context, we expand to a subsequence node as well as a sequence node.
-        return [(SequenceExpansion(true), matches), (SequenceExpansion(false), matches)]
+        have_startitems = Tuple{Int,Match}[]
+        no_startitems = Tuple{Int,Match}[]
+        for (i, match) in matches
+            if match.start_items === nothing
+                push!(no_startitems, (i, match))
+            else
+                push!(have_startitems, (i, match))
+            end
+        end
+        return [(SequenceExpansion(true), have_startitems), (SequenceExpansion(false), no_startitems)]
     else
         return [(SequenceExpansion(false), matches)]
     end
@@ -649,31 +658,18 @@ function expand_match!(config::SearchConfig, expansion::SequenceExpansion, match
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)::TreeNodeHole
     push!(match.holes_stack, hole)
-    if expansion.is_subseq
-        match_main = match
-        match = copy_match(match)
-    else
-        match_main = match
-    end
+    match_main = match
+    start_consumes = if match.start_items === nothing || !expansion.is_subseq 0 else match.start_items - 1 end
     # add a hole representing the remaining sequence
-    push!(match_main.holes, RemainingSequenceHole(hole, 1, expansion.is_subseq))
-    match_main.holes_size -= hole.children[1].metadata.size # remove the /seq node
+    push!(match_main.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_subseq))
     if !expansion.is_subseq
-        return nothing
-    end
-    matches = Match[]
-    # start can consume any number of elements. We've already added the case where it consumes 0 elements
-    for start_consumes in 1:length(hole.children)-1
-        # add a hole representing the remaining sequence
-        match_copy = copy_match(match)
-        push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_subseq))
-        match_copy.start_items = start_consumes + 1
-        for i in 1:match_copy.start_items
-            match_copy.holes_size -= hole.children[i].metadata.size
+        match_main.holes_size -= hole.children[1].metadata.size # remove the /seq node
+    else
+        for i in 1:match_main.start_items
+            match_main.holes_size -= hole.children[i].metadata.size
         end
-        push!(matches, match_copy)
     end
-    matches
+    nothing
 end
 
 function insert_before_sequence_hole!(create_new, hole, holes)
@@ -929,14 +925,12 @@ function unexpand_match!(expansion::SequenceExpansion, match::Match)
     original_hole = pop!(match.holes_stack)::TreeNodeHole
     push!(match.holes, original_hole)
     # check that the ... hole is the same as the one we just popped
-    @assert sequence_hole.num_consumed == 1
     @assert sequence_hole.root_node === original_hole
 
     if expansion.is_subseq && match.start_items !== nothing
         for i in 1:match.start_items
             match.holes_size += original_hole.children[i].metadata.size
         end
-        match.start_items = nothing
     end
     # put back the /seq node
     match.holes_size += original_hole.children[1].metadata.size
