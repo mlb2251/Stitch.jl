@@ -8,7 +8,7 @@ mutable struct RewriteConflictInfo{M}
     cumulative_utility::Float32
     accept_rewrite::Bool
     rci_match_possibilities::Vector{M}
-    rci_match::Union{Match,Nothing}
+    rci_matches::Vector{Match}
 end
 
 const MultiRewriteConflictInfo{M} = Dict{Int64,RewriteConflictInfo{M}}
@@ -55,7 +55,7 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
 
     rcis = Dict(
         expr.metadata.id => RewriteConflictInfo{M}(
-            NaN32, false, M[], nothing
+            NaN32, false, M[], Match[]
         )
         for expr in search_state.all_nodes
     )
@@ -79,8 +79,8 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
         rci = rcis[expr.metadata.id]
 
         reject_util = sum(child -> rcis[child.metadata.id].cumulative_utility, expr.children, init=0.0)
-        accept_util, m = compute_best_utility(rcis, rci.rci_match_possibilities)
-        rci.rci_match = m
+        accept_util, ms = compute_best_utility(rcis, rci.rci_match_possibilities)
+        rci.rci_matches = ms
         rci.cumulative_utility = max(reject_util, accept_util)
         rci.accept_rewrite = accept_util > reject_util + 0.0001 # slightly in favor of rejection to avoid floating point rounding errors in the approximate equality case
         rci.cumulative_utility >= 0 || error("cumulative utility should be non-negative, not $(rcis[expr.metadata.id].cumulative_utility)")
@@ -94,21 +94,23 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
     return util, rcis
 end
 
-function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Match})::Tuple{Float64,Union{Match, Nothing}}
+function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Match})::Tuple{Float64,Vector{Match}}
     @assert length(matches) <= 1
     if isempty(matches)
-        return 0.0, nothing
+        return 0.0, []
     else
-        return compute_best_utility(rcis, matches[1])
+        util, m = compute_best_utility(rcis, matches[1])
+        return util, [m]
     end
 end
 
-function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{MatchPossibilities})::Tuple{Float64,Union{Match, Nothing}}
+function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{MatchPossibilities})::Tuple{Float64,Vector{Match}}
     if isempty(matches)
-        return 0.0, nothing
+        return 0.0, []
     end
     all_match_alernatives = reduce(vcat, [m.alternatives for m in matches])::Vector{Match}
-    return compute_best_utility(rcis, MatchPossibilities(all_match_alernatives))
+    util, m = compute_best_utility(rcis, MatchPossibilities(all_match_alernatives))
+    return util, [m]
 end
 
 function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossibilities)::Tuple{Float64,Match}
@@ -142,43 +144,44 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
     rci.cumulative_utility > 0 || return copy(expr)
 
     if rci.accept_rewrite
-        m = rci.rci_match
-        # do a rewrite
-        children = [sexpr_leaf(search_state.config.new_abstraction_name)]
-        for arg in m.unique_args
-            push!(children, rewrite_inner(arg, search_state, rcis))
-        end
-        for sym in m.sym_of_idx
-            push!(children, sexpr_leaf(sym))
-        end
-        for capture_subseq in m.choice_var_captures
-            nodes = SExpr[]
-            push!(nodes, sexpr_leaf(SYM_CHOICE_SEQ_HEAD))
-            for capture in capture_subseq
-                push!(nodes, rewrite_inner(capture, search_state, rcis))
+        for m in rci.rci_matches
+            # do a rewrite
+            children = [sexpr_leaf(search_state.config.new_abstraction_name)]
+            for arg in m.unique_args
+                push!(children, rewrite_inner(arg, search_state, rcis))
             end
-            push!(children, sexpr_node(nodes))
-        end
-        if !isnothing(m.continuation)
-            push!(children, rewrite_inner(m.continuation, search_state, rcis))
-        end
-        if expr_of(m).metadata.id == expr.metadata.id && (m.start_items !== nothing || m.end_items !== nothing)
-            sequence = SExpr[sexpr_leaf(SYM_SEQ_HEAD)]
-            if m.start_items !== nothing
-                for i in 2:m.start_items
-                    push!(sequence, rewrite_inner(expr.children[i], search_state, rcis))
+            for sym in m.sym_of_idx
+                push!(children, sexpr_leaf(sym))
+            end
+            for capture_subseq in m.choice_var_captures
+                nodes = SExpr[]
+                push!(nodes, sexpr_leaf(SYM_CHOICE_SEQ_HEAD))
+                for capture in capture_subseq
+                    push!(nodes, rewrite_inner(capture, search_state, rcis))
                 end
+                push!(children, sexpr_node(nodes))
             end
-            push!(sequence, sexpr_node([sexpr_leaf(SYM_SPLICE), sexpr_node(children)]))
-            if m.end_items !== nothing
-                for i in m.end_items+1:length(expr.children)
-                    push!(sequence, rewrite_inner(expr.children[i], search_state, rcis))
+            if !isnothing(m.continuation)
+                push!(children, rewrite_inner(m.continuation, search_state, rcis))
+            end
+            if expr_of(m).metadata.id == expr.metadata.id && (m.start_items !== nothing || m.end_items !== nothing)
+                sequence = SExpr[sexpr_leaf(SYM_SEQ_HEAD)]
+                if m.start_items !== nothing
+                    for i in 2:m.start_items
+                        push!(sequence, rewrite_inner(expr.children[i], search_state, rcis))
+                    end
                 end
+                push!(sequence, sexpr_node([sexpr_leaf(SYM_SPLICE), sexpr_node(children)]))
+                if m.end_items !== nothing
+                    for i in m.end_items+1:length(expr.children)
+                        push!(sequence, rewrite_inner(expr.children[i], search_state, rcis))
+                    end
+                end
+                out = sexpr_node(sequence)
+                return out
+            else
+                return sexpr_node(children)
             end
-            out = sexpr_node(sequence)
-            return out
-        else
-            return sexpr_node(children)
         end
     else
         # don't rewrite - just recurse
