@@ -1,0 +1,7 @@
+[
+    "(/seq a b c 1 e f)",
+    "(/seq a b c 2 e f a b c 3 e f)",
+    "(/seq a b c 4 e f a b c 5 e f a b c 6 e f)",
+    "(/seq a b c 7 e f a b c 8 e f a b c 9 e f a b c A e f)",
+    "(/seq a b c B e f a b c C e f a b c D e f a b c E e f a b c F e f)"
+]

@@ -1,0 +1,4 @@
+[
+    "(/seq 123 a b c d e f 456 X A a b c d e f 789 Z U a b c d e f)",
+    "(/seq 321 a b c d e f 654 Y B a b c d e f 987 T V a b c d e f)"
+]
