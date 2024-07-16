@@ -114,21 +114,23 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Ma
     return util, [m]
 end
 
-function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossibilities)::Tuple{Float64,Match}
+function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossibilities; no_start_end=false)::Tuple{Float64,Match}
     (util, i) = findmax(match.alternatives) do m
-        u, _ = compute_best_utility(rcis, m)
+        u, _ = compute_best_utility(rcis, m; no_start_end=no_start_end)
         u
     end
     return util, match.alternatives[i]
 end
 
-function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match)::Tuple{Float64,Match}
+function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match; no_start_end=false)::Tuple{Float64,Match}
     args = vcat(m.unique_args, [v for vs in m.choice_var_captures for v in vs])
-    if m.start_items !== nothing
-        args = vcat(args, expr_of(m).children[1:m.start_items])
-    end
-    if m.end_items !== nothing
-        args = vcat(args, expr_of(m).children[m.end_items+1:end])
+    if !no_start_end
+        if m.start_items !== nothing
+            args = vcat(args, expr_of(m).children[1:m.start_items])
+        end
+        if m.end_items !== nothing
+            args = vcat(args, expr_of(m).children[m.end_items+1:end])
+        end
     end
     util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, args, init=0.0)
     return util, m
