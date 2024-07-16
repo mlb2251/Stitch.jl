@@ -210,12 +210,9 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
         if length(stub_children) == 1
             m = rci.rci_matches[1]
             if m.start_items === nothing && m.end_items === nothing
-                return sexpr_node(stub_children[1])
+                return stub_children[1]
             end
         end
-        # if length(stub_children) == 1
-        #     return sexpr_node(stub_children[1])
-        # end
         @assert length(stub_children) >= 1
         for m in rci.rci_matches
             @assert expr_of(m).metadata.id == expr.metadata.id && (m.start_items !== nothing || m.end_items !== nothing)
@@ -225,8 +222,8 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
         add_to_sequence(expr, sequence, search_state, rcis, 2:first_match.start_items)
         ends_each = [m.start_items for m in rci.rci_matches[2:end]]
         push!(ends_each, length(expr.children))
-        for (m, children, end_each) in zip(rci.rci_matches, stub_children, ends_each)
-            push!(sequence, sexpr_node([sexpr_leaf(SYM_SPLICE), sexpr_node(children)]))
+        for (m, stub, end_each) in zip(rci.rci_matches, stub_children, ends_each)
+            push!(sequence, sexpr_node([sexpr_leaf(SYM_SPLICE), stub]))
             if m.end_items !== nothing
                 add_to_sequence(expr, sequence, search_state, rcis, m.end_items+1:end_each)
             end
@@ -240,7 +237,7 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
     end
 end
 
-function match_to_stub(m::Match, search_state::SearchState, rcis::MultiRewriteConflictInfo)::Vector{SExpr}
+function match_to_stub(m::Match, search_state::SearchState, rcis::MultiRewriteConflictInfo)::SExpr
     children = [sexpr_leaf(search_state.config.new_abstraction_name)]
     for arg in m.unique_args
         push!(children, rewrite_inner(arg, search_state, rcis))
