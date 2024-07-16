@@ -173,12 +173,15 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Ma
         loc = pointer_back[loc]
     end
     sort!(selected_matches, by=m -> m.start_items)
-    # println(expr)
-    # println(loc_to_match_ending_at_loc)
-    # println(sequence_length)
-    # println([(m.start_items, m.end_items) for m in matches])
-    # println(scores)
-    # println(pointer_back)
+    if expr.metadata.id == 38
+        println("176!!")
+        println(expr)
+        println(loc_to_match_ending_at_loc)
+        println(sequence_length)
+        println([(m.start_items, m.end_items) for m in matches])
+        println(scores)
+        println(pointer_back)
+    end
     return scores[end], selected_matches
 end
 
