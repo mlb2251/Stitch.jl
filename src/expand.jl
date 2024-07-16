@@ -659,17 +659,23 @@ function expand_match!(config::SearchConfig, expansion::SequenceExpansion, match
     hole = pop!(match.holes)::TreeNodeHole
     push!(match.holes_stack, hole)
     match_main = match
-    start_consumes = if match.start_items === nothing || !expansion.is_subseq 0 else match.start_items - 1 end
-    # add a hole representing the remaining sequence
-    push!(match_main.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_subseq))
-    if !expansion.is_subseq
-        match_main.holes_size -= hole.children[1].metadata.size # remove the /seq node
-    else
-        for i in 1:match_main.start_items
-            match_main.holes_size -= hole.children[i].metadata.size
-        end
+    if expansion.is_subseq
+        @assert match.start_items !== nothing
     end
+    add_remaining_sequence_hole(match_main, hole, expansion)
     nothing
+end
+
+function add_remaining_sequence_hole(match_copy::Match, hole::SExpr, expansion::SequenceExpansion)
+    start_consumes = if !expansion.is_subseq
+        1
+    else
+        match_copy.start_items::Int64
+    end
+    push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes, expansion.is_subseq))
+    for i in 1:start_consumes
+        match_copy.holes_size -= hole.children[i].metadata.size
+    end
 end
 
 function insert_before_sequence_hole!(create_new, hole, holes)
@@ -773,7 +779,9 @@ function expand_match!(config::SearchConfig, expansion::SequenceChoiceVarExpansi
         consuming_hole = copy_match(match)
 
         pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
-        consuming_hole.holes_size -= last_hole.root_node.children[last_hole.num_consumed+count].metadata.size
+        for i in last_hole.num_consumed+1:last_hole.num_consumed+count
+            consuming_hole.holes_size -= last_hole.root_node.children[i].metadata.size
+        end
         # push the hole back on the stack
         push!(consuming_hole.holes_stack, last_hole)
 
@@ -928,7 +936,7 @@ function unexpand_match!(expansion::SequenceExpansion, match::Match)
     @assert sequence_hole.root_node === original_hole
 
     if expansion.is_subseq && match.start_items !== nothing
-        for i in 1:match.start_items
+        for i in 2:match.start_items
             match.holes_size += original_hole.children[i].metadata.size
         end
     end
