@@ -1,0 +1,23 @@
+[
+    {
+        "args": {
+            "iterations": 1,
+            "match_sequences": true,
+            "max_choice_arity": 0
+        },
+        "abstractions": [
+            [
+                0,
+                0,
+                "(/subseq a b c d e f)",
+                "uninit_state",
+                [],
+                []
+            ]
+        ],
+        "programs": [
+            "(/seq 123 (/splice (fn_1)) 456 X A a b c d e f 789 Z U a b c d e f)",
+            "(/seq 321 (/splice (fn_1)) 654 Y B a b c d e f 987 T V a b c d e f)"
+        ]
+    }
+]
