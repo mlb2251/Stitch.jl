@@ -656,6 +656,9 @@ function expand_match!(config::SearchConfig, expansion::SequenceExpansion, match
         match_main = match
     end
     # add a hole representing the remaining sequence
+    if expansion.is_subseq
+        match_main.start_items = 1
+    end
     add_remaining_sequence_hole(match_main, hole, expansion)
     if !expansion.is_subseq
         return nothing
@@ -673,10 +676,10 @@ function expand_match!(config::SearchConfig, expansion::SequenceExpansion, match
 end
 
 function add_remaining_sequence_hole(match_copy::Match, hole::SExpr, expansion::SequenceExpansion)
-    start_consumes = if match_copy.start_items === nothing
+    start_consumes = if !expansion.is_subseq
         1
     else
-        match_copy.start_items
+        match_copy.start_items::Int64
     end
     push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes, expansion.is_subseq))
     for i in 1:start_consumes
