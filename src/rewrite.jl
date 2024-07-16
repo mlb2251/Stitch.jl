@@ -123,6 +123,10 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Ma
     end
     if length(matches) == 1
         util, m = compute_best_utility(rcis, matches[1])
+        if expr_of(m).metadata.id == 38
+            println("expr: $(expr_of(m))")
+            print("only one: util=$util")
+        end
         return util, [m]
     end
     best_each = [compute_best_utility(rcis, m; no_start_end=true) for m in matches]
@@ -173,15 +177,15 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Ma
         loc = pointer_back[loc]
     end
     sort!(selected_matches, by=m -> m.start_items)
-    if expr.metadata.id == 38
-        println("176!!")
-        println(expr)
-        println(loc_to_match_ending_at_loc)
-        println(sequence_length)
-        println([(m.start_items, m.end_items) for m in matches])
-        println(scores)
-        println(pointer_back)
-    end
+    # if expr.metadata.id == 38
+    #     println("176!!")
+    #     println(expr)
+    #     println(loc_to_match_ending_at_loc)
+    #     println(sequence_length)
+    #     println([(m.start_items, m.end_items) for m in matches])
+    #     println(scores)
+    #     println(pointer_back)
+    # end
     return scores[end], selected_matches
 end
 
