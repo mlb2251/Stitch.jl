@@ -150,44 +150,43 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
     rci.cumulative_utility > 0 || return copy(expr)
 
     if rci.accept_rewrite
-        for m in rci.rci_matches
-            # do a rewrite
-            children = [sexpr_leaf(search_state.config.new_abstraction_name)]
-            for arg in m.unique_args
-                push!(children, rewrite_inner(arg, search_state, rcis))
+        m = rci.rci_matches[1]
+        # do a rewrite
+        children = [sexpr_leaf(search_state.config.new_abstraction_name)]
+        for arg in m.unique_args
+            push!(children, rewrite_inner(arg, search_state, rcis))
+        end
+        for sym in m.sym_of_idx
+            push!(children, sexpr_leaf(sym))
+        end
+        for capture_subseq in m.choice_var_captures
+            nodes = SExpr[]
+            push!(nodes, sexpr_leaf(SYM_CHOICE_SEQ_HEAD))
+            for capture in capture_subseq
+                push!(nodes, rewrite_inner(capture, search_state, rcis))
             end
-            for sym in m.sym_of_idx
-                push!(children, sexpr_leaf(sym))
-            end
-            for capture_subseq in m.choice_var_captures
-                nodes = SExpr[]
-                push!(nodes, sexpr_leaf(SYM_CHOICE_SEQ_HEAD))
-                for capture in capture_subseq
-                    push!(nodes, rewrite_inner(capture, search_state, rcis))
+            push!(children, sexpr_node(nodes))
+        end
+        if !isnothing(m.continuation)
+            push!(children, rewrite_inner(m.continuation, search_state, rcis))
+        end
+        if expr_of(m).metadata.id == expr.metadata.id && (m.start_items !== nothing || m.end_items !== nothing)
+            sequence = SExpr[sexpr_leaf(SYM_SEQ_HEAD)]
+            if m.start_items !== nothing
+                for i in 2:m.start_items
+                    push!(sequence, rewrite_inner(expr.children[i], search_state, rcis))
                 end
-                push!(children, sexpr_node(nodes))
             end
-            if !isnothing(m.continuation)
-                push!(children, rewrite_inner(m.continuation, search_state, rcis))
-            end
-            if expr_of(m).metadata.id == expr.metadata.id && (m.start_items !== nothing || m.end_items !== nothing)
-                sequence = SExpr[sexpr_leaf(SYM_SEQ_HEAD)]
-                if m.start_items !== nothing
-                    for i in 2:m.start_items
-                        push!(sequence, rewrite_inner(expr.children[i], search_state, rcis))
-                    end
+            push!(sequence, sexpr_node([sexpr_leaf(SYM_SPLICE), sexpr_node(children)]))
+            if m.end_items !== nothing
+                for i in m.end_items+1:length(expr.children)
+                    push!(sequence, rewrite_inner(expr.children[i], search_state, rcis))
                 end
-                push!(sequence, sexpr_node([sexpr_leaf(SYM_SPLICE), sexpr_node(children)]))
-                if m.end_items !== nothing
-                    for i in m.end_items+1:length(expr.children)
-                        push!(sequence, rewrite_inner(expr.children[i], search_state, rcis))
-                    end
-                end
-                out = sexpr_node(sequence)
-                return out
-            else
-                return sexpr_node(children)
             end
+            out = sexpr_node(sequence)
+            return out
+        else
+            return sexpr_node(children)
         end
     else
         # don't rewrite - just recurse
