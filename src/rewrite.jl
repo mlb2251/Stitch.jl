@@ -95,6 +95,7 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
 
     # Eqn 18 from https://arxiv.org/pdf/2211.16605.pdf
     corpus_util = sum(programs -> minimum(p -> rcis[p.expr.metadata.id].cumulative_utility, programs), values(search_state.corpus.programs_by_task))
+    println("corpus util: $corpus_util; abstraction size: $(search_state.abstraction.body_size)")
     util = corpus_util - search_state.abstraction.body_size
     return util, rcis
 end
