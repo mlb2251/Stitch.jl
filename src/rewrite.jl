@@ -134,6 +134,7 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Ma
     scores = Float32[]
     match_selected = [0 for _ in 1:sequence_length] 
     loc_to_match_ending_at_loc = Dict{Int32,Vector{Int32}}()
+    println(matches)
     for (i, m) in enumerate(matches)
         ei = m.end_items
         if ei !== nothing
