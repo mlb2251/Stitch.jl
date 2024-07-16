@@ -207,6 +207,9 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match; no_start
             args = vcat(args, expr_of(m).children[m.end_items+1:end])
         end
     end
+    if m.end_items !== nothing
+        args = vcat(args, expr_of(m).children[m.end_items+1:end])
+    end
     util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, args, init=0.0)
     return util, m
 end
