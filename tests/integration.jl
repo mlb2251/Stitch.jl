@@ -7,4 +7,4 @@ include("./framework.jl")
 
 is_testing = true
 
-full_tests()
+full_tests(;check_holes_size=true)
