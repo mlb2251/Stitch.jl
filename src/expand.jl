@@ -659,7 +659,10 @@ function expand_match!(config::SearchConfig, expansion::SequenceExpansion, match
     hole = pop!(match.holes)::TreeNodeHole
     push!(match.holes_stack, hole)
     match_main = match
-    start_consumes = if match.start_items === nothing || !expansion.is_subseq 0 else match.start_items - 1 end
+    if expansion.is_subseq
+        @assert match.start_items !== nothing
+    end
+    start_consumes = if !expansion.is_subseq 0 else match.start_items - 1 end
     # add a hole representing the remaining sequence
     push!(match_main.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_subseq))
     if !expansion.is_subseq
