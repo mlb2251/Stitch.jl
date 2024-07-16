@@ -141,41 +141,20 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
     if rci.accept_rewrite
         m = rci.rci_match
         # do a rewrite
-        children = [sexpr_leaf(search_state.config.new_abstraction_name)]
-        for arg in m.unique_args
-            push!(children, rewrite_inner(arg, search_state, rcis))
-        end
-        for sym in m.sym_of_idx
-            push!(children, sexpr_leaf(sym))
-        end
-        for capture_subseq in m.choice_var_captures
-            nodes = SExpr[]
-            push!(nodes, sexpr_leaf(SYM_CHOICE_SEQ_HEAD))
-            for capture in capture_subseq
-                push!(nodes, rewrite_inner(capture, search_state, rcis))
-            end
-            push!(children, sexpr_node(nodes))
-        end
-        if !isnothing(m.continuation)
-            push!(children, rewrite_inner(m.continuation, search_state, rcis))
-        end
+        stub = match_to_stub(m, search_state, rcis)
         if expr_of(m).metadata.id == expr.metadata.id && (m.start_items !== nothing || m.end_items !== nothing)
             sequence = SExpr[sexpr_leaf(SYM_SEQ_HEAD)]
             if m.start_items !== nothing
-                for i in 2:m.start_items
-                    push!(sequence, rewrite_inner(expr.children[i], search_state, rcis))
-                end
+                add_to_sequence(expr, sequence, search_state, rcis, 2:m.start_items)
             end
-            push!(sequence, sexpr_node([sexpr_leaf(SYM_SPLICE), sexpr_node(children)]))
+            push!(sequence, sexpr_node([sexpr_leaf(SYM_SPLICE), stub]))
             if m.end_items !== nothing
-                for i in m.end_items+1:length(expr.children)
-                    push!(sequence, rewrite_inner(expr.children[i], search_state, rcis))
-                end
+                add_to_sequence(expr, sequence, search_state, rcis, m.end_items+1:length(expr.children))
             end
             out = sexpr_node(sequence)
             return out
         else
-            return sexpr_node(children)
+            return stub
         end
     else
         # don't rewrite - just recurse
@@ -183,3 +162,30 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
     end
 end
 
+function match_to_stub(m::Match, search_state::SearchState, rcis::MultiRewriteConflictInfo)::SExpr
+    children = [sexpr_leaf(search_state.config.new_abstraction_name)]
+    for arg in m.unique_args
+        push!(children, rewrite_inner(arg, search_state, rcis))
+    end
+    for sym in m.sym_of_idx
+        push!(children, sexpr_leaf(sym))
+    end
+    for capture_subseq in m.choice_var_captures
+        nodes = SExpr[]
+        push!(nodes, sexpr_leaf(SYM_CHOICE_SEQ_HEAD))
+        for capture in capture_subseq
+            push!(nodes, rewrite_inner(capture, search_state, rcis))
+        end
+        push!(children, sexpr_node(nodes))
+    end
+    if !isnothing(m.continuation)
+        push!(children, rewrite_inner(m.continuation, search_state, rcis))
+    end
+    return sexpr_node(children)
+end
+
+function add_to_sequence(expr::SExpr, sequence::Vector{SExpr}, search_state::SearchState, rcis::MultiRewriteConflictInfo, r::UnitRange{Int64})
+    for i in r
+        push!(sequence, rewrite_inner(expr.children[i], search_state, rcis))
+    end
+end
