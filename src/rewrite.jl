@@ -93,6 +93,8 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
         # rci.rci_match.accept_rewrite && println("accepted rewrite at $expr with cumulative utility $(rci.rci_match.cumulative_utility) and local utility $(rci.rci_match.local_utility)")
     end
 
+    println(rcis)
+
     # Eqn 18 from https://arxiv.org/pdf/2211.16605.pdf
     corpus_util = sum(programs -> minimum(p -> rcis[p.expr.metadata.id].cumulative_utility, programs), values(search_state.corpus.programs_by_task))
     println("corpus util: $corpus_util; abstraction size: $(search_state.abstraction.body_size)")
