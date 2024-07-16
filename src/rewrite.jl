@@ -83,11 +83,6 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
 
         reject_util = sum(child -> rcis[child.metadata.id].cumulative_utility, expr.children, init=0.0)
         accept_util, ms = compute_best_utility(rcis, rci.rci_match_possibilities)
-        if expr.metadata.id == 38
-            println("expr:", expr)
-            println("accept_util:", accept_util)
-            println("reject_util:", reject_util)
-        end
         rci.rci_matches = ms
         rci.cumulative_utility = max(reject_util, accept_util)
         rci.accept_rewrite = accept_util > reject_util + 0.0001 # slightly in favor of rejection to avoid floating point rounding errors in the approximate equality case
@@ -98,11 +93,11 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
         # rci.rci_match.accept_rewrite && println("accepted rewrite at $expr with cumulative utility $(rci.rci_match.cumulative_utility) and local utility $(rci.rci_match.local_utility)")
     end
 
-    println(rcis)
+    # println(rcis)
 
     # Eqn 18 from https://arxiv.org/pdf/2211.16605.pdf
     corpus_util = sum(programs -> minimum(p -> rcis[p.expr.metadata.id].cumulative_utility, programs), values(search_state.corpus.programs_by_task))
-    println("corpus util: $corpus_util; abstraction size: $(search_state.abstraction.body_size)")
+    # println("corpus util: $corpus_util; abstraction size: $(search_state.abstraction.body_size)")
     util = corpus_util - search_state.abstraction.body_size
     return util, rcis
 end
@@ -123,10 +118,10 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Ma
     end
     if length(matches) == 1
         util, m = compute_best_utility(rcis, matches[1])
-        if expr_of(m).metadata.id == 38
-            println("expr: $(expr_of(m))")
-            print("only one: util=$util")
-        end
+        # if expr_of(m).metadata.id == 38
+        #     println("expr: $(expr_of(m))")
+        #     print("only one: util=$util")
+        # end
         return util, [m]
     end
     best_each = [compute_best_utility(rcis, m; no_start_end=true) for m in matches]
@@ -140,9 +135,9 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Ma
     scores = Float32[]
     match_selected = [0 for _ in 1:sequence_length] 
     loc_to_match_ending_at_loc = Dict{Int32,Vector{Int32}}()
-    if expr.metadata.id == 38
-        println(matches)
-    end
+    # if expr.metadata.id == 38
+    #     println(matches)
+    # end
     for (i, m) in enumerate(matches)
         ei = m.end_items
         if ei !== nothing
