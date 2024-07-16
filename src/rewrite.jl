@@ -159,7 +159,7 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Ma
         end
         loc = pointer_back[loc]
     end
-    reverse!(selected_matches)
+    sort!(selected_matches, by=m -> m.start_items)
     # println(expr)
     # println(loc_to_match_ending_at_loc)
     # println(sequence_length)
