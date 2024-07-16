@@ -656,8 +656,10 @@ function expand_match!(config::SearchConfig, expansion::SequenceExpansion, match
         match_main = match
     end
     # add a hole representing the remaining sequence
-    push!(match_main.holes, RemainingSequenceHole(hole, 1, expansion.is_subseq))
-    match_main.holes_size -= hole.children[1].metadata.size # remove the /seq node
+    if expansion.is_subseq
+        match_main.start_items = 1
+    end
+    add_remaining_sequence_hole(match_main, hole, expansion)
     if !expansion.is_subseq
         return nothing
     end
@@ -666,14 +668,23 @@ function expand_match!(config::SearchConfig, expansion::SequenceExpansion, match
     for start_consumes in 1:length(hole.children)-1
         # add a hole representing the remaining sequence
         match_copy = copy_match(match)
-        push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_subseq))
         match_copy.start_items = start_consumes + 1
-        for i in 1:match_copy.start_items
-            match_copy.holes_size -= hole.children[i].metadata.size
-        end
+        add_remaining_sequence_hole(match_copy, hole, expansion)
         push!(matches, match_copy)
     end
     matches
+end
+
+function add_remaining_sequence_hole(match_copy::Match, hole::SExpr, expansion::SequenceExpansion)
+    start_consumes = if !expansion.is_subseq
+        1
+    else
+        match_copy.start_items::Int64
+    end
+    push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes, expansion.is_subseq))
+    for i in 1:start_consumes
+        match_copy.holes_size -= hole.children[i].metadata.size
+    end
 end
 
 function insert_before_sequence_hole!(create_new, hole, holes)
