@@ -256,7 +256,7 @@ function match_to_stub(m::Match, search_state::SearchState, rcis::MultiRewriteCo
     if !isnothing(m.continuation)
         push!(children, rewrite_inner(m.continuation, search_state, rcis))
     end
-    return children
+    return sexpr_node(children)
 end
 
 function add_to_sequence(expr::SExpr, sequence::Vector{SExpr}, search_state::SearchState, rcis::MultiRewriteConflictInfo, r::UnitRange{Int64})
