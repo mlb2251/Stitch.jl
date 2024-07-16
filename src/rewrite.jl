@@ -108,9 +108,9 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Ma
     if isempty(matches)
         return 0.0, []
     end
-    all_match_alernatives = reduce(vcat, [m.alternatives for m in matches])::Vector{Match}
-    # println([(m.start_items, m.end_items) for m in all_match_alernatives])
-    util, m = compute_best_utility(rcis, MatchPossibilities(all_match_alernatives))
+    best_each = [compute_best_utility(rcis, m) for m in matches]
+    matches = [m for (_, m) in best_each]
+    util, m = compute_best_utility(rcis, MatchPossibilities(matches))
     return util, [m]
 end
 
