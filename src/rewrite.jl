@@ -83,9 +83,11 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
 
         reject_util = sum(child -> rcis[child.metadata.id].cumulative_utility, expr.children, init=0.0)
         accept_util, ms = compute_best_utility(rcis, rci.rci_match_possibilities)
-        println("expr:", expr)
-        println("accept_util:", accept_util)
-        println("reject_util:", reject_util)
+        if expr.metadata.id == 38
+            println("expr:", expr)
+            println("accept_util:", accept_util)
+            println("reject_util:", reject_util)
+        end
         rci.rci_matches = ms
         rci.cumulative_utility = max(reject_util, accept_util)
         rci.accept_rewrite = accept_util > reject_util + 0.0001 # slightly in favor of rejection to avoid floating point rounding errors in the approximate equality case
@@ -134,7 +136,9 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Ma
     scores = Float32[]
     match_selected = [0 for _ in 1:sequence_length] 
     loc_to_match_ending_at_loc = Dict{Int32,Vector{Int32}}()
-    println(matches)
+    if expr.metadata.id == 38
+        println(matches)
+    end
     for (i, m) in enumerate(matches)
         ei = m.end_items
         if ei !== nothing
