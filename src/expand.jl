@@ -779,7 +779,9 @@ function expand_match!(config::SearchConfig, expansion::SequenceChoiceVarExpansi
         consuming_hole = copy_match(match)
 
         pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
-        consuming_hole.holes_size -= last_hole.root_node.children[last_hole.num_consumed+count].metadata.size
+        for i in last_hole.num_consumed+1:last_hole.num_consumed+count
+            consuming_hole.holes_size -= last_hole.root_node.children[i].metadata.size
+        end
         # push the hole back on the stack
         push!(consuming_hole.holes_stack, last_hole)
 
@@ -934,7 +936,7 @@ function unexpand_match!(expansion::SequenceExpansion, match::Match)
     @assert sequence_hole.root_node === original_hole
 
     if expansion.is_subseq && match.start_items !== nothing
-        for i in 1:match.start_items
+        for i in 2:match.start_items
             match.holes_size += original_hole.children[i].metadata.size
         end
     end
