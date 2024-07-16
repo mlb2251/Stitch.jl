@@ -103,7 +103,6 @@ function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
     if !search_state.config.no_exclude_single_match && length(matches) == 1
         return 0
     end
-
     sum(sum_no_variables, matches, init=0.0) - search_state.abstraction.body_size
 end
 
