@@ -54,6 +54,8 @@ function check_rewrite(corpus, compressed_corpus, abstractions; kwargs...)
 end
 
 function compute(corpus, kwargs, kwargs_specific; seed=nothing)
+    # to_follow = parse(SExpr, "(/subseq a b c d e f a b c d e f)")
+    # abstractions, compressed_corpus, _ = compress(corpus; strict=strict, shuffle_expansions_seed=seed, kwargs_specific..., follow=true, track=to_follow)
     abstractions, compressed_corpus, _ = compress(corpus; strict=strict, shuffle_expansions_seed=seed, kwargs_specific...)
     check_rewrite(corpus, compressed_corpus, abstractions; kwargs_specific...)
     abstractions = [abstraction_to_list(x) for x in abstractions]
@@ -64,7 +66,7 @@ function compute(corpus, kwargs, kwargs_specific; seed=nothing)
     )
 end
 
-function integrate(in_file, out_file)
+function integrate(in_file, out_file; additional_args...)
 
     printstyled("Testing $in_file\n", color=:blue, bold=true)
     # read in the corpus
@@ -81,6 +83,7 @@ function integrate(in_file, out_file)
     for kwargs in argument_sets
         println(in_file, " ", kwargs)
         kwargs_specific, shuf = proc_args(kwargs)
+        kwargs_specific = merge(kwargs_specific, additional_args)
         out_per = compute(corpus, kwargs, kwargs_specific)
         if !isnothing(shuf)
             for seed in 1:shuf
@@ -103,7 +106,7 @@ function integrate(in_file, out_file)
     end
 end
 
-function folder_tests(folder)
+function folder_tests(folder; kwargs...)
     @testset "$folder" begin
         for file in readdir("data/$folder")
             if !endswith(file, ".json")
@@ -114,19 +117,19 @@ function folder_tests(folder)
             end
             in_file = "data/$folder/$file"
             out_file = "data/$folder/$file-out.json"
-            integrate(in_file, out_file)
+            integrate(in_file, out_file; kwargs...)
         end
     end
 end
 
-function full_tests()
+function full_tests(;kwargs...)
     @testset "integration" begin
         # one test set for each folder in data/
         for folder in readdir("data")
             if !isdir("data/$folder")
                 continue
             end
-            folder_tests(folder)
+            folder_tests(folder; kwargs...)
         end
     end
 end

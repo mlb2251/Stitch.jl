@@ -1,0 +1,26 @@
+[
+    {
+        "args": {
+            "iterations": 1,
+            "match_sequences": true,
+            "max_choice_arity": 0
+        },
+        "abstractions": [
+            [
+                0,
+                0,
+                "(/subseq a b c d e f a b c d e f a b c d e f)",
+                "uninit_state",
+                [],
+                []
+            ]
+        ],
+        "programs": [
+            "(/seq a b c d e f)",
+            "(/seq a b c d e f a b c d e f)",
+            "(/seq (/splice (fn_1)))",
+            "(/seq (/splice (fn_1)) a b c d e f)",
+            "(/seq (/splice (fn_1)) a b c d e f a b c d e f)"
+        ]
+    }
+]
