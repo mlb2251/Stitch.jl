@@ -662,16 +662,7 @@ function expand_match!(config::SearchConfig, expansion::SequenceExpansion, match
     if expansion.is_subseq
         @assert match.start_items !== nothing
     end
-    start_consumes = if !expansion.is_subseq 0 else match.start_items - 1 end
-    # add a hole representing the remaining sequence
-    push!(match_main.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_subseq))
-    if !expansion.is_subseq
-        match_main.holes_size -= hole.children[1].metadata.size # remove the /seq node
-    else
-        for i in 1:match_main.start_items
-            match_main.holes_size -= hole.children[i].metadata.size
-        end
-    end
+    add_remaining_sequence_hole(match_main, hole, expansion)
     nothing
 end
 
