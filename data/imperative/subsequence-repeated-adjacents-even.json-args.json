@@ -1,0 +1,8 @@
+[
+    {
+        "match_sequences": true,
+        "max_choice_arity": 0,
+        "iterations": 1,
+        "application_utility_fixed": -2
+    }
+]
