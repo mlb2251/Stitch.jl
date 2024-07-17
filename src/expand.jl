@@ -864,7 +864,7 @@ function unexpand!(search_state::SearchState{Match}, expansion, hole, hole_idx)
     # # TODO actually pass this through rather than asserting
     # @assert hole_idx == length(search_state.holes)
     for match in search_state.matches
-        unexpand_match!(expansion, match)
+        unexpand_match!(expansion, match, hole_idx)
     end
 end
 
@@ -878,7 +878,7 @@ function unexpand!(search_state::SearchState{MatchPossibilities}, expansion, hol
     search_state.matches = pop!(search_state.matches_stack)
     for match_poss in search_state.matches
         for match in match_poss.alternatives
-            unexpand_match!(expansion, match)
+            unexpand_match!(expansion, match, hole_idx)
         end
     end
 end
@@ -993,7 +993,7 @@ function unexpand_abstraction!(expansion::SequenceExpansion, hole, holes, abstra
     abstraction.body_size -= symbol_size(head, config.size_by_symbol)
 end
 
-function unexpand_match!(expansion::SequenceExpansion, match::Match)
+function unexpand_match!(expansion::SequenceExpansion, match::Match, hole_idx::Int)
     # remove the ... hole
     sequence_hole = pop!(match.holes)::RemainingSequenceHole
     # get the original hole and put it back on the stack
