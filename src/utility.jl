@@ -103,11 +103,49 @@ function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
     if !search_state.config.no_exclude_single_match && length(matches) == 1
         return 0
     end
-    sum(sum_no_variables, matches, init=0.0) - search_state.abstraction.body_size
+    id_to_size = Dict{Int64, Float32}(
+        node.metadata.id => node.metadata.size
+        for node in search_state.all_nodes
+    )
+    set = Set{Int64}()
+    for match in matches
+        hole_ids(match, set)
+    end
+    holes_size = if length(set) == 0
+        0.0
+    else
+        sum(x -> id_to_size[x], set)
+    end
+    holes_size + sum(sum_utilities, matches, init=0.0) - search_state.abstraction.body_size
 end
 
 sum_no_variables(match::Match) = max(match.local_utility + match.holes_size, 0)
 sum_no_variables(match::MatchPossibilities) = maximum([sum_no_variables(x) for x in match.alternatives])
+
+sum_utilities(match::Match) = max(match.local_utility, 0)
+sum_utilities(match::MatchPossibilities) = maximum([sum_utilities(x) for x in match.alternatives])
+
+function hole_ids(match::Match, ids_set::Set{Int64})
+    for hole in match.holes
+        hole_ids(hole, ids_set)
+    end
+end
+
+function hole_ids(match::MatchPossibilities, ids_set::Set{Int64})
+    for m in match.alternatives
+        hole_ids(m, ids_set)
+    end
+end
+
+function hole_ids(hole::TreeNodeHole, ids_set::Set{Int64})
+    push!(ids_set, hole.metadata.id)
+end
+
+function hole_ids(hole::RemainingSequenceHole, ids_set::Set{Int64})
+    for i in hole.num_consumed+1:length(hole.root_node.children)
+        push!(ids_set, hole.root_node.children[i].metadata.id)
+    end
+end
 
 hole_size(hole::TreeNodeHole) = hole.metadata.size
 hole_size(hole::RemainingSequenceHole) = sum(hole_size, hole.root_node.children[hole.num_consumed+1:end]; init=0.0)
