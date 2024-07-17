@@ -83,8 +83,18 @@ function pop_hole_at(m::Match, hole_idx::Int)::Hole
     hole
 end
 
+function insert_hole_at(m::Match, hole_idx::Int, hole::Hole)
+    insert!(m.holes, hole_idx, hole)
+    nothing
+end
+
 function add_new_hole(m::Match, hole::Hole)
     push!(m.holes, hole)
+    nothing
+end
+
+function remove_added_hole(m::Match)
+    pop!(m.holes)
     nothing
 end
 
@@ -719,7 +729,7 @@ function expand_match!(config::SearchConfig, expansion::SequenceExpansion, match
     for start_consumes in 1:length(hole.children)-1
         # add a hole representing the remaining sequence
         match_copy = copy_match(match)
-        push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_subseq))
+        add_new_hole(match_copy, RemainingSequenceHole(hole, start_consumes + 1, expansion.is_subseq))
         match_copy.start_items = start_consumes + 1
         for i in 1:match_copy.start_items
             match_copy.holes_size -= hole.children[i].metadata.size
@@ -761,8 +771,8 @@ function expand_match!(config::SearchConfig, expansion::SequenceElementExpansion
     push!(match.holes_stack, last_hole)
 
     new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1, last_hole.is_subseq)
-    push!(match.holes, new_sequence_hole)
-    push!(match.holes, new_sequence_hole.root_node.children[new_sequence_hole.num_consumed])
+    add_new_hole(match, new_sequence_hole)
+    add_new_hole(match, new_sequence_hole.root_node.children[new_sequence_hole.num_consumed])
 
     # this does not affect holes_size since we are just replacing a ... with a ?? and a ...
     return nothing
@@ -827,8 +837,7 @@ function expand_match!(config::SearchConfig, expansion::SequenceChoiceVarExpansi
         end
         consuming_hole = copy_match(match)
 
-        consuming_hole.holes[hole_idx] === last_hole || error("no idea how this could happen")
-        deleteat!(consuming_hole.holes, hole_idx)
+        pop_hole_at(consuming_hole, hole_idx) === last_hole || error("no idea how this could happen")
 
         for i in last_hole.num_consumed+1:last_hole.num_consumed+count
             consuming_hole.holes_size -= last_hole.root_node.children[i].metadata.size
@@ -837,7 +846,7 @@ function expand_match!(config::SearchConfig, expansion::SequenceChoiceVarExpansi
         push!(consuming_hole.holes_stack, last_hole)
 
         new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + count, last_hole.is_subseq)
-        insert!(consuming_hole.holes, hole_idx, new_sequence_hole)
+        insert_hole_at(consuming_hole, hole_idx, new_sequence_hole)
 
         captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]::SExpr
 
@@ -882,7 +891,7 @@ end
 
 function unexpand_match!(expansion::SyntacticLeafExpansion, match::Match)
     hole = pop!(match.holes_stack)::TreeNodeHole
-    push!(match.holes, hole)
+    add_new_hole(match, hole)
 
     match.holes_size += hole.metadata.size
 end
@@ -911,7 +920,7 @@ function unexpand_match!(expansion::SyntacticNodeExpansion, match::Match)
         expansion.num_holes
     end
     for _ in 1:num_remove
-        pop!(match.holes)
+        remove_added_hole(match)
     end
 
     hole = pop!(match.holes_stack)::TreeNodeHole
