@@ -889,7 +889,7 @@ function unexpand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, a
     abstraction.body_size -= symbol_size(expansion.leaf, config.size_by_symbol)
 end
 
-function unexpand_match!(expansion::SyntacticLeafExpansion, match::Match)
+function unexpand_match!(expansion::SyntacticLeafExpansion, match::Match, hole_idx::Int)
     hole = pop!(match.holes_stack)::TreeNodeHole
     add_new_hole(match, hole)
 
@@ -913,7 +913,7 @@ function unexpand_abstraction!(expansion::SyntacticNodeExpansion, hole, holes, a
     end
 end
 
-function unexpand_match!(expansion::SyntacticNodeExpansion, match::Match)
+function unexpand_match!(expansion::SyntacticNodeExpansion, match::Match, hole_idx::Int)
     num_remove = if expansion.head !== :no_expand_head
         expansion.num_holes - 1
     else
@@ -942,7 +942,7 @@ function unexpand_abstraction!(expansion::AbstractionExpansion, hole, holes, abs
     abstraction.body_size -= 1
 end
 
-function unexpand_match!(expansion::AbstractionExpansion, match::Match)
+function unexpand_match!(expansion::AbstractionExpansion, match::Match, hole_idx::Int)
     hole = pop!(match.holes_stack)::TreeNodeHole
     push!(match.holes, hole)
     if expansion.fresh
@@ -963,7 +963,7 @@ function unexpand_abstraction!(expansion::SymbolExpansion, hole, holes, abstract
     abstraction.body_size -= 1
 end
 
-function unexpand_match!(expansion::SymbolExpansion, match::Match)
+function unexpand_match!(expansion::SymbolExpansion, match::Match, hole_idx::Int)
     hole = pop!(match.holes_stack)::TreeNodeHole
     push!(match.holes, hole)
 
@@ -1043,7 +1043,7 @@ function unexpand_abstraction!(expansion::SequenceElementExpansion, hole, holes,
     # doesn't affect holes_size since we are just replacing a ?? with a ...
 end
 
-function unexpand_match!(expansion::SequenceElementExpansion, match::Match)
+function unexpand_match!(expansion::SequenceElementExpansion, match::Match, hole_idx::Int)
     # get rid of the ?? and ... holes
     pop!(match.holes) isa TreeNodeHole || error("expected TreeNodeHole")
     pop!(match.holes) isa RemainingSequenceHole || error("expected RemainingSequenceHole")
@@ -1061,7 +1061,7 @@ function unexpand_abstraction!(expansion::SequenceTerminatorExpansion, hole, hol
     # doesn't affect holes_size since we are just adding a ... that has no size
 end
 
-function unexpand_match!(expansion::SequenceTerminatorExpansion, match::Match)
+function unexpand_match!(expansion::SequenceTerminatorExpansion, match::Match, hole_idx::Int)
     push!(match.holes, pop!(match.holes_stack))
 
     if expansion.is_subseq
@@ -1085,7 +1085,7 @@ function unexpand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, hole
     abstraction.body_size -= 1
 end
 
-function unexpand_match!(expansion::SequenceChoiceVarExpansion, match::Match)
+function unexpand_match!(expansion::SequenceChoiceVarExpansion, match::Match, hole_idx::Int)
     # we are operating on the non-consuming hole
     # just get rid of the element from the dictionary choice_var_captures
     pop!(match.choice_var_captures)
