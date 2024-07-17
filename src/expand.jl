@@ -487,7 +487,7 @@ function expand!(search_state::SearchState{Match}, expansion, hole, hole_idx)
 
     expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction, search_state.config)
     for match in search_state.matches
-        extras = expand_match!(search_state.config, expansion, match)
+        extras = expand_match!(search_state.config, expansion, match, hole_idx)
         @assert extras === nothing
     end
 end
