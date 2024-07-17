@@ -373,10 +373,10 @@ Saves current state to the stack, and reinitializes as a fresh state
 function expand_general!(search_state, expansion)
 
     # pop hole
-    println("EXPAND")
-    println("Search state holes: ", search_state.holes)
-    println("Expansion: ", expansion.data)
-    println("Expansion hole idx: ", expansion.hole_idx)
+    # println("EXPAND")
+    # println("Search state holes: ", search_state.holes)
+    # println("Expansion: ", expansion.data)
+    # println("Expansion hole idx: ", expansion.hole_idx)
     hole_idx = expansion.hole_idx
     @assert hole_idx == length(search_state.holes)
     hole = search_state.holes[hole_idx]
@@ -445,10 +445,10 @@ function unexpand_general!(search_state::SearchState)
 
     check_number_of_holes(search_state)
     # all(match -> length(match.args) == length(search_state.args), search_state.matches) || error("mismatched number of holes")    
-    println("UNEXPAND")
-    println("Search state holes: ", search_state.holes)
-    println("Expansion: ", expansion.data)
-    println("Expansion hole idx: ", expansion.hole_idx)
+    # println("UNEXPAND")
+    # println("Search state holes: ", search_state.holes)
+    # println("Expansion: ", expansion.data)
+    # println("Expansion hole idx: ", expansion.hole_idx)
 
     @assert expansion.hole_idx == length(search_state.holes)
     @assert hole_idx == length(search_state.holes)
