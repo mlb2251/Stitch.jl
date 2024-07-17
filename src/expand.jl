@@ -505,7 +505,7 @@ function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole,
         updated_matches = Match[]
         match_poss_update = false
         for (alt_idx, match) in enumerate(match_poss.alternatives)
-            extras = expand_match!(search_state.config, expansion, match)
+            extras = expand_match!(search_state.config, expansion, match, hole_idx)
             push!(updated_matches, match)
             if extras === nothing
                 continue
@@ -552,7 +552,7 @@ function expand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abs
     abstraction.body_size += symbol_size(expansion.leaf, config.size_by_symbol)
 end
 
-function expand_match!(config::SearchConfig, expansion::SyntacticLeafExpansion, match::Match)::Nothing
+function expand_match!(config::SearchConfig, expansion::SyntacticLeafExpansion, match::Match, hole_idx::Int)::Nothing
     hole = pop!(match.holes)::TreeNodeHole
     match.holes_size -= hole.metadata.size
     push!(match.holes_stack, hole)
@@ -593,7 +593,7 @@ function expand_abstraction!(expansion::SyntacticNodeExpansion, hole, holes, abs
     end
 end
 
-function expand_match!(config::SearchConfig, expansion::SyntacticNodeExpansion, match::Match)::Nothing
+function expand_match!(config::SearchConfig, expansion::SyntacticNodeExpansion, match::Match, hole_idx::Int)::Nothing
     # pop next hole and save it for future backtracking
     hole = pop!(match.holes)::TreeNodeHole
     length(hole.children) == expansion.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion)")
@@ -621,8 +621,9 @@ function expand_abstraction!(expansion::AbstractionExpansion, hole, holes, abstr
     abstraction.body_size += 1
 end
 
-function expand_match!(config::SearchConfig, expansion::AbstractionExpansion, match::Match)::Nothing
-    hole = pop!(match.holes)::TreeNodeHole
+function expand_match!(config::SearchConfig, expansion::AbstractionExpansion, match::Match, hole_idx::Int)::Nothing
+    hole = match.holes[hole_idx]::TreeNodeHole
+    deleteat!(match.holes, hole_idx)
     match.holes_size -= hole.metadata.size
     push!(match.holes_stack, hole)
     if expansion.fresh
@@ -643,9 +644,10 @@ function expand_abstraction!(expansion::SymbolExpansion, hole, holes, abstractio
     abstraction.body_size += 1
 end
 
-function expand_match!(config::SearchConfig, expansion::SymbolExpansion, match::Match)::Nothing
+function expand_match!(config::SearchConfig, expansion::SymbolExpansion, match::Match, hole_idx::Int)::Nothing
     # pop next hole and save it for future backtracking
-    hole = pop!(match.holes)::TreeNodeHole
+    hole = match.holes[hole_idx]::TreeNodeHole
+    deleteat!(match.holes, hole_idx)
     match.holes_size -= hole.metadata.size
     push!(match.holes_stack, hole)
 
@@ -679,9 +681,10 @@ function expand_abstraction!(expansion::SequenceExpansion, hole, holes, abstract
     abstraction.body_size += symbol_size(head.leaf, config.size_by_symbol)
 end
 
-function expand_match!(config::SearchConfig, expansion::SequenceExpansion, match::Match)::Union{Nothing,Vector{Match}}
+function expand_match!(config::SearchConfig, expansion::SequenceExpansion, match::Match, hole_idx::Int)::Union{Nothing,Vector{Match}}
     # pop next hole and save it for future backtracking
-    hole = pop!(match.holes)::TreeNodeHole
+    hole = match.holes[hole_idx]::TreeNodeHole
+    deleteat!(match.holes, hole_idx)
     push!(match.holes_stack, hole)
     if expansion.is_subseq
         match_main = match
@@ -736,9 +739,9 @@ function expand_abstraction!(expansion::SequenceElementExpansion, hole, holes, a
     # no change to abstraction.body_size since we are just replacing a ... with a ?? ...
 end
 
-function expand_match!(config::SearchConfig, expansion::SequenceElementExpansion, match::Match)::Nothing
-    last_hole = pop!(match.holes)
-    @assert last_hole isa RemainingSequenceHole
+function expand_match!(config::SearchConfig, expansion::SequenceElementExpansion, match::Match, hole_idx::Int)::Nothing
+    last_hole = match.holes[hole_idx]::RemainingSequenceHole
+    deleteat!(match.holes, hole_idx)
     # push the hole back on the stack
     push!(match.holes_stack, last_hole)
 
@@ -757,10 +760,10 @@ function expand_abstraction!(expansion::SequenceTerminatorExpansion, hole, holes
     # no change to abstraction.body_size since we are just removing a ...
 end
 
-function expand_match!(config::SearchConfig, expansion::SequenceTerminatorExpansion, match::Match)::Nothing
+function expand_match!(config::SearchConfig, expansion::SequenceTerminatorExpansion, match::Match, hole_idx::Int)::Nothing
     # pop next hole and save it for future backtracking
-    last_hole = pop!(match.holes)
-    @assert last_hole isa RemainingSequenceHole
+    last_hole = match.holes[hole_idx]::RemainingSequenceHole
+    deleteat!(match.holes, hole_idx)
     @assert expansion.is_subseq || last_hole.num_consumed == length(last_hole.root_node.children)
     push!(match.holes_stack, last_hole)
     # this does not affect holes_size since we are just removing a ... that currently matches nothing
@@ -790,7 +793,7 @@ function expand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes,
     abstraction.body_size += 1
 end
 
-function expand_match!(config::SearchConfig, expansion::SequenceChoiceVarExpansion, match::Match)::Vector{Match}
+function expand_match!(config::SearchConfig, expansion::SequenceChoiceVarExpansion, match::Match, hole_idx::Int)::Vector{Match}
     not_consuming_hole = match
 
     @assert expansion.idx == length(match.choice_var_captures)
@@ -801,7 +804,7 @@ function expand_match!(config::SearchConfig, expansion::SequenceChoiceVarExpansi
 
     # consume the hole
     # first check if there's more space in the sequence
-    last_hole = match.holes[end]::RemainingSequenceHole
+    last_hole = match.holes[hole_idx]::RemainingSequenceHole
     results = Match[]
     captured_list = SExpr[]
     for count in 1:length(last_hole.root_node.children)-last_hole.num_consumed
@@ -810,7 +813,9 @@ function expand_match!(config::SearchConfig, expansion::SequenceChoiceVarExpansi
         end
         consuming_hole = copy_match(match)
 
-        pop!(consuming_hole.holes) === last_hole || error("no idea how this could happen")
+        consuming_hole.holes[hole_idx] === last_hole || error("no idea how this could happen")
+        deleteat!(consuming_hole.holes, hole_idx)
+
         for i in last_hole.num_consumed+1:last_hole.num_consumed+count
             consuming_hole.holes_size -= last_hole.root_node.children[i].metadata.size
         end
@@ -818,7 +823,7 @@ function expand_match!(config::SearchConfig, expansion::SequenceChoiceVarExpansi
         push!(consuming_hole.holes_stack, last_hole)
 
         new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + count, last_hole.is_subseq)
-        push!(consuming_hole.holes, new_sequence_hole)
+        insert!(consuming_hole.holes, hole_idx, new_sequence_hole)
 
         captured = new_sequence_hole.root_node.children[new_sequence_hole.num_consumed]::SExpr
 
