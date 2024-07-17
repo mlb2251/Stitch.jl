@@ -406,7 +406,6 @@ function expand_general!(search_state, expansion)
     # println("Expansion: ", expansion.data)
     # println("Expansion hole idx: ", expansion.hole_idx)
     hole_idx = expansion.hole_idx
-    @assert hole_idx == length(search_state.holes)
     hole = search_state.holes[hole_idx]
     deleteat!(search_state.holes, hole_idx)
     # hole_dfa_state = pop!(search_state.hole_dfa_states)
@@ -478,8 +477,6 @@ function unexpand_general!(search_state::SearchState)
     # println("Expansion: ", expansion.data)
     # println("Expansion hole idx: ", expansion.hole_idx)
 
-    @assert expansion.hole_idx == length(search_state.holes)
-    @assert hole_idx == length(search_state.holes)
 
 end
 
@@ -631,6 +628,9 @@ end
 
 
 function expand_abstraction!(expansion::AbstractionExpansion, hole, holes, abstraction, config::SearchConfig, hole_idx::Int)
+    if length(hole.children) != 0
+        error("Invalid hole: $hole")
+    end
     hole.leaf = Symbol("#$(expansion.index)")
 
     if expansion.fresh
@@ -694,7 +694,7 @@ function expand_abstraction!(expansion::SequenceExpansion, hole, holes, abstract
     push!(hole.children, head)
     push!(hole.children, nh)
 
-    push!(holes, hole)
+    insert!(holes, hole_idx, hole)
 
     abstraction.body_size += symbol_size(head.leaf, config.size_by_symbol)
 end
@@ -710,7 +710,7 @@ function expand_match!(config::SearchConfig, expansion::SequenceExpansion, match
         match_main = match
     end
     # add a hole representing the remaining sequence
-    add_new_hole(match_main, RemainingSequenceHole(hole, 1, expansion.is_subseq))
+    insert_hole_at(match_main, hole_idx, RemainingSequenceHole(hole, 1, expansion.is_subseq))
     match_main.holes_size -= hole.children[1].metadata.size # remove the /seq node
     if !expansion.is_subseq
         return nothing
@@ -730,12 +730,14 @@ function expand_match!(config::SearchConfig, expansion::SequenceExpansion, match
     matches
 end
 
-function insert_before_sequence_hole!(create_new, hole, holes)
+function insert_before_sequence_hole!(create_new, hole, holes, hole_idx)
     # take a hole (/seq <things> ...) and make it (/seq <things> <new> ...). Also manipulate the stack of holes,
     # so that the ... hole is updated for the fact that it is now one further to the right. It is not
     # removed because it can still be filled in with more elements.
 
     # The newly created hole is then returned
+
+    @assert hole.children[end].leaf === SYM_SEQ_HOLE
 
     i = length(hole.children)
     new_element = create_new(i)
@@ -745,12 +747,12 @@ function insert_before_sequence_hole!(create_new, hole, holes)
     new_sequence_hole = new_seq_hole((hole, i + 1))
     push!(hole.children, new_sequence_hole)
 
-    push!(holes, hole)
+    insert!(holes, hole_idx, hole)
     new_element
 end
 
 function expand_abstraction!(expansion::SequenceElementExpansion, hole, holes, abstraction, config::SearchConfig, hole_idx::Int)
-    element_hole = insert_before_sequence_hole!(i -> new_hole((hole, i)), hole, holes)
+    element_hole = insert_before_sequence_hole!(i -> new_hole((hole, i)), hole, holes, hole_idx)
     push!(holes, element_hole)
 
     # no change to abstraction.body_size since we are just replacing a ... with a ?? ...
@@ -762,7 +764,7 @@ function expand_match!(config::SearchConfig, expansion::SequenceElementExpansion
     push!(match.holes_stack, last_hole)
 
     new_sequence_hole = RemainingSequenceHole(last_hole.root_node, last_hole.num_consumed + 1, last_hole.is_subseq)
-    add_new_hole(match, new_sequence_hole)
+    insert_hole_at(match, hole_idx, new_sequence_hole)
     add_new_hole(match, new_sequence_hole.root_node.children[new_sequence_hole.num_consumed])
 
     # this does not affect holes_size since we are just replacing a ... with a ?? and a ...
@@ -795,7 +797,11 @@ function expand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes,
     # take a hole (/seq <things> ...) and make it (/seq <things> ?? ...). Place the ?? above the ... on the stack,
     # but do *not* remove ... from the stack, since it will be consumed by the next expansion once the ?? is filled in
 
-    insert_before_sequence_hole!(hole, holes) do i
+    if length(hole.children) == 0
+        error("Expected a sequence hole, got $hole")
+    end
+
+    insert_before_sequence_hole!(hole, holes, hole_idx) do i
         x = new_hole((hole, i))
         x.leaf = Symbol("?$(expansion.idx)")
         x
@@ -882,7 +888,7 @@ end
 
 function unexpand_match!(expansion::SyntacticLeafExpansion, match::Match, hole_idx::Int)
     hole = pop!(match.holes_stack)::TreeNodeHole
-    add_new_hole(match, hole)
+    insert_hole_at(match, hole_idx, hole)
 
     match.holes_size += hole.metadata.size
 end
@@ -967,8 +973,9 @@ function unexpand_match!(expansion::SymbolExpansion, match::Match, hole_idx::Int
 end
 
 function unexpand_abstraction!(expansion::SequenceExpansion, hole, holes, abstraction, config::SearchConfig, hole_idx::Int)
-    pop!(holes) === hole || error("expected same hole")
-
+    holes[hole_idx] === hole || error("expected same hole")
+    deleteat!(holes, hole_idx)
+    
     # remove the ... and /seq from the sequence
     is_seq_hole_token(pop!(hole.children)) || error("expected sequence hole token")
     head = pop!(hole.children).leaf
@@ -1004,7 +1011,7 @@ function unexpand_match!(expansion::SequenceExpansion, match::Match, hole_idx::I
     match.holes_size += original_hole.children[1].metadata.size
 end
 
-function remove_inserted_before_sequence_hole!(check_fn, hole, holes)
+function remove_inserted_before_sequence_hole!(check_fn, hole, holes, hole_idx)
     # undoes the effect of insert_before_sequence_hole!() by removing the hole that was inserted
     # before the ... hole. The check_fn is called on the hole that was removed, to make sure it is
     # the right one.
@@ -1020,14 +1027,15 @@ function remove_inserted_before_sequence_hole!(check_fn, hole, holes)
     push!(hole.children, new_sequence_hole)
 
     # delete the (/seq <extra> ...) hole
-    pop!(holes) === hole || error("expected same sequence")
+    holes[hole_idx] === hole || error("expected same sequence")
+    deleteat!(holes, hole_idx)
 end
 
 function unexpand_abstraction!(expansion::SequenceElementExpansion, hole, holes, abstraction, config::SearchConfig, hole_idx::Int)
     # remove the ?? hole from the list of holes
     pop!(holes).leaf === SYM_HOLE || error("expected SYM_HOLE")
 
-    remove_inserted_before_sequence_hole!(hole, holes) do m
+    remove_inserted_before_sequence_hole!(hole, holes, hole_idx) do m
         m.leaf == SYM_HOLE || error("expected SYM_HOLE")
     end
 
@@ -1067,7 +1075,7 @@ function unexpand_match!(expansion::SequenceTerminatorExpansion, match::Match, h
 end
 
 function unexpand_abstraction!(expansion::SequenceChoiceVarExpansion, hole, holes, abstraction, config::SearchConfig, hole_idx::Int)
-    remove_inserted_before_sequence_hole!(hole, holes) do m
+    remove_inserted_before_sequence_hole!(hole, holes, hole_idx) do m
         m.leaf == Symbol("?$(expansion.idx)") || error("expected Symbol(?$(expansion.idx)), got $m")
     end
     abstraction.choice_arity -= 1
