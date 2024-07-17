@@ -38,8 +38,6 @@ function rewrite(search_state::SearchState)::Tuple{Corpus,Float32,Float32}
 
     # @show rewritten
     if !isapprox(cumulative_utility, compressive_utility, rtol=1e-5)
-        println("rewritten programs:")
-        println(rewritten)
         msg = "ERROR: [$search_state] cumulative_utility != compressive_utility: $cumulative_utility != $compressive_utility"
         if search_state.config.strict
             error(msg)
@@ -86,18 +84,13 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
         rci.rci_matches = ms
         rci.cumulative_utility = max(reject_util, accept_util)
         rci.accept_rewrite = accept_util > reject_util + 0.0001 # slightly in favor of rejection to avoid floating point rounding errors in the approximate equality case
-        # println("expr:", expr)
-        # println("accept rewrite:", rci.accept_rewrite, " accept_util:", accept_util, " reject_util:", reject_util)
         rci.cumulative_utility >= 0 || error("cumulative utility should be non-negative, not $(rcis[expr.metadata.id].cumulative_utility)")
 
         # rci.rci_match.accept_rewrite && println("accepted rewrite at $expr with cumulative utility $(rci.rci_match.cumulative_utility) and local utility $(rci.rci_match.local_utility)")
     end
 
-    # println(rcis)
-
     # Eqn 18 from https://arxiv.org/pdf/2211.16605.pdf
     corpus_util = sum(programs -> minimum(p -> rcis[p.expr.metadata.id].cumulative_utility, programs), values(search_state.corpus.programs_by_task))
-    # println("corpus util: $corpus_util; abstraction size: $(search_state.abstraction.body_size)")
     util = corpus_util - search_state.abstraction.body_size
     return util, rcis
 end
@@ -118,16 +111,11 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Ma
     end
     if length(matches) == 1
         util, m = compute_best_utility(rcis, matches[1])
-        # if expr_of(m).metadata.id == 38
-        #     println("expr: $(expr_of(m))")
-        #     print("only one: util=$util")
-        # end
         return util, [m]
     end
     best_each = [compute_best_utility(rcis, m; no_start_end=true) for m in matches]
     matches = [m for (_, m) in best_each]
     utilities = [u for (u, _) in best_each]
-    # println("utilities: $utilities")
     expr = best_each[1][2].expr
     @assert expr.children[1].leaf == SYM_SEQ_HEAD
     sequence_length = length(expr.children)
@@ -135,9 +123,6 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Ma
     scores = Float32[]
     match_selected = [0 for _ in 1:sequence_length] 
     loc_to_match_ending_at_loc = Dict{Int32,Vector{Int32}}()
-    # if expr.metadata.id == 38
-    #     println(matches)
-    # end
     for (i, m) in enumerate(matches)
         ei = m.end_items
         if ei !== nothing
@@ -172,15 +157,6 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Ma
         loc = pointer_back[loc]
     end
     sort!(selected_matches, by=m -> m.start_items)
-    # if expr.metadata.id == 38
-    #     println("176!!")
-    #     println(expr)
-    #     println(loc_to_match_ending_at_loc)
-    #     println(sequence_length)
-    #     println([(m.start_items, m.end_items) for m in matches])
-    #     println(scores)
-    #     println(pointer_back)
-    # end
     return scores[end], selected_matches
 end
 
@@ -214,7 +190,6 @@ end
 rewrite_program(program, search_state, rcis) = Program(rewrite_inner(program.expr, search_state, rcis), program.id, program.task)
 
 function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewriteConflictInfo)::SExpr
-    # println("rewrite inner", expr)
     rci = rcis[expr.metadata.id]
 
     # if cumulative utility <= 0 then there are no rewrites in this whole subtree
