@@ -3,14 +3,16 @@ using Random
 function possible_expansions!(search_state)
     isempty(search_state.expansions) || error("expansions should be empty")
 
-    expansions!(SyntacticLeafExpansion, search_state)
-    expansions!(AbstractionExpansion, search_state)
-    expansions!(SymbolExpansion, search_state)
+    hole_idx = length(search_state.holes)
+
+    expansions!(SyntacticLeafExpansion, search_state, hole_idx)
+    expansions!(AbstractionExpansion, search_state, hole_idx)
+    expansions!(SymbolExpansion, search_state, hole_idx)
     if search_state.config.match_sequences
-        expansions!(SequenceExpansion, search_state)
-        expansions!(SequenceElementExpansion, search_state)
-        expansions!(SequenceTerminatorExpansion, search_state)
-        expansions!(SequenceChoiceVarExpansion, search_state)
+        expansions!(SequenceExpansion, search_state, hole_idx)
+        expansions!(SequenceElementExpansion, search_state, hole_idx)
+        expansions!(SequenceTerminatorExpansion, search_state, hole_idx)
+        expansions!(SequenceChoiceVarExpansion, search_state, hole_idx)
     end
 
     if search_state.config.shuffle_expansions_seed !== nothing
@@ -28,19 +30,20 @@ function possible_expansions!(search_state)
     # filter!(e -> upper_bound_fn(search_state,e) > best_util, search_state.expansions);
 end
 
-function expansions!(typ::Type{T}, search_state::SearchState{Match}) where T # force specialization
+function expansions!(typ::Type{T}, search_state::SearchState{Match}, hole_idx::Int) where T # force specialization
     flattened_matches = [(i, m) for (i, m) in enumerate(search_state.matches)]
     search_state.stats.matches_considered += length(flattened_matches)
-    res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config)
+    res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config, hole_idx)
     for (expansion, tagged_matches) in res
         push!(search_state.expansions, PossibleExpansion(
             [m for (_, m) in tagged_matches],
             expansion,
+            hole_idx,
         ))
     end
 end
 
-function expansions!(typ::Type{T}, search_state::SearchState{MatchPossibilities}) where T
+function expansions!(typ::Type{T}, search_state::SearchState{MatchPossibilities}, hole_idx::Int) where T
     flattened_matches = Vector{Tuple{Int,Match}}()
     for (i, match_poss) in enumerate(search_state.matches)
         for match in match_poss.alternatives
@@ -48,7 +51,7 @@ function expansions!(typ::Type{T}, search_state::SearchState{MatchPossibilities}
         end
     end
     search_state.stats.matches_considered += length(flattened_matches)
-    res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config)
+    res = collect_expansions(typ, search_state.abstraction, flattened_matches, search_state.config, hole_idx)
     for (expansion, tagged_matches) in res
         out = Dict{Int,Vector{Match}}()
         ks = Vector{Int}()
@@ -65,6 +68,7 @@ function expansions!(typ::Type{T}, search_state::SearchState{MatchPossibilities}
         push!(search_state.expansions, PossibleExpansion(
             poss,
             expansion,
+            hole_idx,
         ))
     end
 end
@@ -77,17 +81,19 @@ for example primitives or variables.
 function collect_expansions(
     ::Type{SyntacticLeafExpansion},
     abstraction::Abstraction,
-    matches::Vector{Tuple{Int,Match}}, config
+    matches::Vector{Tuple{Int,Match}},
+    config::SearchConfig,
+    hole_idx::Int
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
     matches_of_leaf = Dict{Symbol,Vector{Tuple{Int,Match}}}() # can't prealloc - these must be fresh array objects that must persist and cant be cleared after this!
     matches_of_node = Dict{Tuple{Symbol,Int},Vector{Tuple{Int,Match}}}()
     for (i, match) in matches
-        if !(match.holes[end] isa TreeNodeHole)
+        if !(match.holes[hole_idx] isa TreeNodeHole)
             continue
         end
-        if is_leaf(match.holes[end])
+        if is_leaf(match.holes[hole_idx])
             # leaf case
-            leaf = match.holes[end].leaf
+            leaf = match.holes[hole_idx].leaf
             startswith(string(leaf), "&") && continue
 
             matches_for_leaf = get!(matches_of_leaf, leaf) do
@@ -97,7 +103,7 @@ function collect_expansions(
             push!(matches_for_leaf, (i, match))
         else
             # node case - group with other nodes that have same number of children (and head if autoexpand_head is on)
-            head = match.holes[end].children[1].leaf
+            head = match.holes[hole_idx].children[1].leaf
 
             if head === SYM_SEQ_HEAD # this is a sequence
                 continue
@@ -107,7 +113,7 @@ function collect_expansions(
                 head = :no_expand_head
             end
 
-            childcount = length(match.holes[end].children)
+            childcount = length(match.holes[hole_idx].children)
             matches_for_leaf = get!(matches_of_node, (head, childcount)) do
                 Match[]
             end
@@ -132,7 +138,9 @@ end
 function collect_expansions(
     ::Type{SymbolExpansion},
     abstraction::Abstraction,
-    matches::Vector{Tuple{Int,Match}}, config
+    matches::Vector{Tuple{Int,Match}},
+    config::SearchConfig,
+    hole_idx::Int
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
     if abstraction.body.leaf === SYM_HOLE
         # Never a valid abstraction to just have a single symvar.
@@ -145,11 +153,11 @@ function collect_expansions(
     freshness_of_idx = Dict{Int,Bool}()
     sym_of_idx = Dict{Int,Symbol}()
     for (i, match) in matches
-        if !(match.holes[end] isa TreeNodeHole)
+        if !(match.holes[hole_idx] isa TreeNodeHole)
             continue
         end
-        is_leaf(match.holes[end]) || continue
-        sym = match.holes[end].leaf
+        is_leaf(match.holes[hole_idx]) || continue
+        sym = match.holes[hole_idx].leaf
         if !startswith(string(sym), "&") # this is not a symbol
             continue
         end
@@ -160,10 +168,10 @@ function collect_expansions(
         end
         if !haskey(freshness_of_idx, idx)
             freshness_of_idx[idx] = fresh
-            sym_of_idx[idx] = match.holes[end].metadata.dfa_state
+            sym_of_idx[idx] = match.holes[hole_idx].metadata.dfa_state
         else
             @assert freshness_of_idx[idx] == fresh
-            @assert sym_of_idx[idx] == match.holes[end].metadata.dfa_state
+            @assert sym_of_idx[idx] == match.holes[hole_idx].metadata.dfa_state
         end
         push!(ms, (i, match))
     end
@@ -184,10 +192,11 @@ function collect_expansions(
     ::Type{AbstractionExpansion},
     abstraction::Abstraction,
     matches::Vector{Tuple{Int,Match}},
-    config
+    config::SearchConfig,
+    hole_idx::Int
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
-    matches = filter(((_, m),) -> m.holes[end] isa TreeNodeHole, matches)
+    matches = filter(((_, m),) -> m.holes[hole_idx] isa TreeNodeHole, matches)
 
     result = Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}()
 
@@ -198,8 +207,8 @@ function collect_expansions(
         end
         # variable reuse
         for i in 0:abstraction.arity-1
-            ms_specific = filter(((_, m),) -> m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash, ms)
-            # ms_specific = [m for m in ms_specific if m.holes[end].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
+            ms_specific = filter(((_, m),) -> m.holes[hole_idx].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash, ms)
+            # ms_specific = [m for m in ms_specific if m.holes[hole_idx].metadata.struct_hash == m.unique_args[i+1].metadata.struct_hash]
             if isempty(ms_specific)
                 continue
             end
@@ -219,7 +228,7 @@ function collect_expansions(
     else
         matches_for_state = Dict{Symbol, Vector{Tuple{Int,Match}}}()
         for (i, match) in matches
-            hole = match.holes[end]
+            hole = match.holes[hole_idx]
             if !(hole isa TreeNodeHole)
                 continue
             end
@@ -248,14 +257,15 @@ function collect_expansions(
     ::Type{SequenceExpansion},
     abstraction::Abstraction,
     matches::Vector{Tuple{Int,Match}},
-    config
+    config::SearchConfig,
+    hole_idx::Int
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
     matches = filter(matches) do (i, match)
-        if !(match.holes[end] isa TreeNodeHole)
+        if !(match.holes[hole_idx] isa TreeNodeHole)
             return false
         end
-        !is_leaf(match.holes[end]) && match.holes[end].children[1].leaf === SYM_SEQ_HEAD
+        !is_leaf(match.holes[hole_idx]) && match.holes[hole_idx].children[1].leaf === SYM_SEQ_HEAD
     end
     if length(matches) == 0
         return []
@@ -276,11 +286,12 @@ function collect_expansions(
     ::Type{SequenceElementExpansion},
     abstraction::Abstraction,
     matches::Vector{Tuple{Int,Match}},
-    config
+    config::SearchConfig,
+    hole_idx::Int
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
     matches = filter(matches) do (_, match)
-        hole = match.holes[end]
+        hole = match.holes[hole_idx]
         if !(hole isa RemainingSequenceHole)
             return false
         end
@@ -296,13 +307,14 @@ function collect_expansions(
     ::Type{SequenceTerminatorExpansion},
     abstraction::Abstraction,
     matches::Vector{Tuple{Int,Match}},
-    config
+    config::SearchConfig,
+    hole_idx::Int
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
     matches_by_subseq = [Vector{Tuple{Int,Match}}(), Vector{Tuple{Int,Match}}()]
 
     for (tag, match) in matches
-        hole = match.holes[end]
+        hole = match.holes[hole_idx]
         if !(hole isa RemainingSequenceHole)
             continue
         end
@@ -330,7 +342,8 @@ function collect_expansions(
     ::Type{SequenceChoiceVarExpansion},
     abstraction::Abstraction,
     matches::Vector{Tuple{Int,Match}},
-    config
+    config::SearchConfig,
+    hole_idx::Int
 )::Vector{Tuple{Expansion,Vector{Tuple{Int,Match}}}}
 
     if !can_accept_choicevar(abstraction, config)
@@ -340,7 +353,7 @@ function collect_expansions(
     matches_by_sym = Dict{Symbol,Vector{Tuple{Int,Match}}}()
 
     for (tag, match) in matches
-        hole = match.holes[end]
+        hole = match.holes[hole_idx]
         if !(hole isa RemainingSequenceHole)
             continue
         end
@@ -360,10 +373,17 @@ Saves current state to the stack, and reinitializes as a fresh state
 function expand_general!(search_state, expansion)
 
     # pop hole
-    hole = pop!(search_state.holes)
+    println("EXPAND")
+    println("Search state holes: ", search_state.holes)
+    println("Expansion: ", expansion.data)
+    println("Expansion hole idx: ", expansion.hole_idx)
+    hole_idx = expansion.hole_idx
+    @assert hole_idx == length(search_state.holes)
+    hole = search_state.holes[hole_idx]
+    deleteat!(search_state.holes, hole_idx)
     # hole_dfa_state = pop!(search_state.hole_dfa_states)
     is_hole(hole) || is_seq_hole(hole) || error("not a hole: $hole")
-    push!(search_state.holes_stack, hole)
+    push!(search_state.holes_stack, (hole, hole_idx))
     # push!(search_state.hole_dfa_states_stack,hole_dfa_state)
 
     # save state for backtracking
@@ -377,7 +397,7 @@ function expand_general!(search_state, expansion)
     search_state.matches = expansion.matches
 
     # expand the state
-    expand!(search_state, expansion.data, hole)
+    expand!(search_state, expansion.data, hole, hole_idx)
 
     expand_utilities!(expansion.data, search_state)
 
@@ -404,7 +424,7 @@ end
 
 function unexpand_general!(search_state::SearchState)
 
-    hole = pop!(search_state.holes_stack)
+    (hole, hole_idx) = pop!(search_state.holes_stack)
     # hole_dfa_state = pop!(search_state.hole_dfa_states_stack);
 
     # pop the expansion to undo
@@ -412,7 +432,7 @@ function unexpand_general!(search_state::SearchState)
 
     unexpand_utilities!(search_state)
 
-    unexpand!(search_state, expansion.data, hole)
+    unexpand!(search_state, expansion.data, hole, hole_idx)
 
     # unexpand - this should be an inverse to expand!()
     search_state.matches === expansion.matches || error("mismatched matches")
@@ -420,11 +440,18 @@ function unexpand_general!(search_state::SearchState)
     # restore other state
     search_state.expansions = pop!(search_state.expansions_stack)
     search_state.matches = pop!(search_state.matches_stack)
-    push!(search_state.holes, hole)
+    insert!(search_state.holes, hole_idx, hole)
     # push!(search_state.hole_dfa_states, hole_dfa_state)
 
     check_number_of_holes(search_state)
     # all(match -> length(match.args) == length(search_state.args), search_state.matches) || error("mismatched number of holes")    
+    println("UNEXPAND")
+    println("Search state holes: ", search_state.holes)
+    println("Expansion: ", expansion.data)
+    println("Expansion hole idx: ", expansion.hole_idx)
+
+    @assert expansion.hole_idx == length(search_state.holes)
+    @assert hole_idx == length(search_state.holes)
 
 end
 
@@ -454,7 +481,10 @@ function check_number_of_holes(search_state)
     all(m -> has_number_of_holes(m, length(search_state.holes)), search_state.matches) || error("mismatched number of holes")
 end
 
-function expand!(search_state::SearchState{Match}, expansion, hole)
+function expand!(search_state::SearchState{Match}, expansion, hole, hole_idx)
+    # TODO actually pass this through rather than asserting
+    @assert hole_idx == length(search_state.holes) + 1
+
     expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction, search_state.config)
     for match in search_state.matches
         extras = expand_match!(search_state.config, expansion, match)
@@ -462,7 +492,11 @@ function expand!(search_state::SearchState{Match}, expansion, hole)
     end
 end
 
-function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
+function expand!(search_state::SearchState{MatchPossibilities}, expansion, hole, hole_idx)
+    # TODO actually pass this through rather than asserting
+    if hole_idx != length(search_state.holes) + 1
+        error( "hole_size: $hole_idx, length(search_state.holes): $(length(search_state.holes))")
+    end
 
     expand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction, search_state.config)
     new_match_poss = MatchPossibilities[]
@@ -797,14 +831,21 @@ function expand_match!(config::SearchConfig, expansion::SequenceChoiceVarExpansi
     return results
 end
 
-function unexpand!(search_state::SearchState{Match}, expansion, hole)
+function unexpand!(search_state::SearchState{Match}, expansion, hole, hole_idx)
     unexpand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction, search_state.config)
+    # # TODO actually pass this through rather than asserting
+    # @assert hole_idx == length(search_state.holes)
     for match in search_state.matches
         unexpand_match!(expansion, match)
     end
 end
 
-function unexpand!(search_state::SearchState{MatchPossibilities}, expansion, hole)
+function unexpand!(search_state::SearchState{MatchPossibilities}, expansion, hole, hole_idx)
+    # # TODO actually pass this through rather than asserting
+    # if hole_idx != length(search_state.holes)
+    #     error("hole_idx: $hole_idx, length(search_state.holes): $(length(search_state.holes))")
+    # end
+
     unexpand_abstraction!(expansion, hole, search_state.holes, search_state.abstraction, search_state.config)
     search_state.matches = pop!(search_state.matches_stack)
     for match_poss in search_state.matches

@@ -28,11 +28,12 @@ abstract type Expansion end
 struct PossibleExpansion{M}
     matches::Vector{M}
     data
+    hole_idx::Int
 
     # previously this specialized on the type of `data` which was causing unncessary type inference. We only
     # ever deal with PossibleExpansions in large arrays with mixed underlying `.data` types
-    function PossibleExpansion(matches::Vector{M}, @nospecialize(data)) where {M}
-        new{M}(matches, data)
+    function PossibleExpansion(matches::Vector{M}, @nospecialize(data), hole_idx::Int) where {M}
+        new{M}(matches, data, hole_idx)
     end
 end
 
@@ -209,7 +210,7 @@ mutable struct SearchState{M}
     expansions::Vector{PossibleExpansion}
 
     # backtracking data
-    holes_stack::Vector{SExpr}
+    holes_stack::Vector{Tuple{SExpr, Int}}
     # hole_dfa_states_stack::Vector{Symbol}
     expansions_stack::Vector{Vector{PossibleExpansion}}
     matches_stack::Vector{Vector{M}}
