@@ -93,9 +93,8 @@ function add_new_hole(m::Match, hole::Hole)
     nothing
 end
 
-function remove_added_hole(m::Match)
+function remove_added_hole(m::Match)::Hole
     pop!(m.holes)
-    nothing
 end
 
 function add_new_holes(m::Match, holes::Vector{H}) where H <: Hole
@@ -925,7 +924,7 @@ function unexpand_match!(expansion::SyntacticNodeExpansion, match::Match, hole_i
 
     hole = pop!(match.holes_stack)::TreeNodeHole
     length(hole.children) == expansion.num_holes || error("mismatched number of children to expand to; should be same though since expand!() checked this")
-    push!(match.holes, hole)
+    insert_hole_at(match, hole_idx, hole)
 
     if expansion.head !== :no_expand_head
         match.holes_size += hole.children[1].metadata.size
@@ -944,7 +943,7 @@ end
 
 function unexpand_match!(expansion::AbstractionExpansion, match::Match, hole_idx::Int)
     hole = pop!(match.holes_stack)::TreeNodeHole
-    push!(match.holes, hole)
+    insert_hole_at(match, hole_idx, hole)
     if expansion.fresh
         pop!(match.unique_args) === hole || error("expected same hole")
     end
@@ -965,7 +964,7 @@ end
 
 function unexpand_match!(expansion::SymbolExpansion, match::Match, hole_idx::Int)
     hole = pop!(match.holes_stack)::TreeNodeHole
-    push!(match.holes, hole)
+    insert_hole_at(match, hole_idx, hole)
 
     if expansion.fresh
         pop!(match.sym_of_idx)
@@ -995,10 +994,10 @@ end
 
 function unexpand_match!(expansion::SequenceExpansion, match::Match, hole_idx::Int)
     # remove the ... hole
-    sequence_hole = pop!(match.holes)::RemainingSequenceHole
+    sequence_hole = pop_hole_at(match, hole_idx)::RemainingSequenceHole
     # get the original hole and put it back on the stack
     original_hole = pop!(match.holes_stack)::TreeNodeHole
-    push!(match.holes, original_hole)
+    insert_hole_at(match, hole_idx, original_hole)
     # check that the ... hole is the same as the one we just popped
     @assert sequence_hole.num_consumed == 1
     @assert sequence_hole.root_node === original_hole
@@ -1045,10 +1044,10 @@ end
 
 function unexpand_match!(expansion::SequenceElementExpansion, match::Match, hole_idx::Int)
     # get rid of the ?? and ... holes
-    pop!(match.holes) isa TreeNodeHole || error("expected TreeNodeHole")
-    pop!(match.holes) isa RemainingSequenceHole || error("expected RemainingSequenceHole")
+    remove_added_hole(match) isa TreeNodeHole || error("expected TreeNodeHole")
+    pop_hole_at(match, hole_idx) isa RemainingSequenceHole || error("expected RemainingSequenceHole")
     # put the original ... hole back on the stack
-    push!(match.holes, pop!(match.holes_stack))
+    insert_hole_at(match, hole_idx, pop!(match.holes_stack))
 
     # doesn't affect holes_size since we are just replacing a ?? and ... with a ...
 end
@@ -1062,7 +1061,7 @@ function unexpand_abstraction!(expansion::SequenceTerminatorExpansion, hole, hol
 end
 
 function unexpand_match!(expansion::SequenceTerminatorExpansion, match::Match, hole_idx::Int)
-    push!(match.holes, pop!(match.holes_stack))
+    insert_hole_at(match, hole_idx, pop!(match.holes_stack))
 
     if expansion.is_subseq
         e = expr_of(match)
