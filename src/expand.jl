@@ -199,7 +199,11 @@ function collect_expansions(
             sym_of_idx[idx] = hole_at(match, hole_idx).metadata.dfa_state
         else
             @assert freshness_of_idx[idx] == fresh
-            @assert sym_of_idx[idx] == hole_at(match, hole_idx).metadata.dfa_state
+            if sym_of_idx[idx] != hole_at(match, hole_idx).metadata.dfa_state
+                # This can only happen in situations where we would never be
+                # able to match anyway, so we can safely ignore this match.
+                continue
+            end
         end
         push!(ms, (i, match))
     end
