@@ -553,7 +553,8 @@ function expand_abstraction!(expansion::SyntacticLeafExpansion, hole, holes, abs
 end
 
 function expand_match!(config::SearchConfig, expansion::SyntacticLeafExpansion, match::Match, hole_idx::Int)::Nothing
-    hole = pop!(match.holes)::TreeNodeHole
+    hole = match.holes[hole_idx]::TreeNodeHole
+    deleteat!(match.holes, hole_idx)
     match.holes_size -= hole.metadata.size
     push!(match.holes_stack, hole)
     @assert is_leaf(hole)
@@ -595,7 +596,8 @@ end
 
 function expand_match!(config::SearchConfig, expansion::SyntacticNodeExpansion, match::Match, hole_idx::Int)::Nothing
     # pop next hole and save it for future backtracking
-    hole = pop!(match.holes)::TreeNodeHole
+    hole = match.holes[hole_idx]::TreeNodeHole
+    deleteat!(match.holes, hole_idx)
     length(hole.children) == expansion.num_holes || error("mismatched number of children to expand to at location: $(match.expr) with hole $hole for expansion $(expansion)")
     push!(match.holes_stack, hole)
 
