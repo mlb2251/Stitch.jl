@@ -3,7 +3,7 @@ using Random
 function possible_expansions!(search_state)
     isempty(search_state.expansions) || error("expansions should be empty")
 
-    hole_idx = length(search_state.holes)
+    hole_idx = 1
 
     expansions!(SyntacticLeafExpansion, search_state, hole_idx)
     expansions!(AbstractionExpansion, search_state, hole_idx)
