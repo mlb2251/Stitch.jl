@@ -215,6 +215,7 @@ mutable struct SearchState{M}
     expansions_stack::Vector{Vector{PossibleExpansion}}
     matches_stack::Vector{Vector{M}}
     past_expansions::Vector{PossibleExpansion}
+    seed::Int64
 
     function SearchState(corpus, config)
         abstraction = Abstraction(new_hole(nothing), 0, 0, 0, 0, :uninit_state, [], [], [])
@@ -238,8 +239,15 @@ mutable struct SearchState{M}
         new{typ}(config, corpus, all_nodes,
             PlotData(), best_util, best_abstraction, Stats(),
             abstraction, [abstraction.body], matches, PossibleExpansion[],
-            SExpr[], PossibleExpansion[], Match[], PossibleExpansion[])
+            SExpr[], PossibleExpansion[], Match[], PossibleExpansion[], 2)
     end
+end
+
+function random_int!(search_state)
+    # blum blum shub
+    search_state.seed *= search_state.seed
+    search_state.seed %= (11813 * 44777)
+    return search_state.seed
 end
 
 function run_dfa!(expr, dfa, state)

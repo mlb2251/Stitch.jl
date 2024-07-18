@@ -3,7 +3,13 @@ using Random
 function possible_expansions!(search_state)
     isempty(search_state.expansions) || error("expansions should be empty")
 
-    hole_idx = length(search_state.holes)
+    rng = MersenneTwister(length(search_state.past_expansions))
+
+    hole_idx = if rand(rng) < 1.0 / 3
+        rand(rng, 1:length(search_state.holes))
+    else
+        length(search_state.holes)
+    end
 
     expansions!(SyntacticLeafExpansion, search_state, hole_idx)
     expansions!(AbstractionExpansion, search_state, hole_idx)
