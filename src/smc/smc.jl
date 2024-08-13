@@ -1,0 +1,352 @@
+import JSON
+
+abstract type PExpr end
+
+
+struct App <: PExpr
+    f::PExpr
+    args::Vector{PExpr}
+end
+
+# struct Abs <: PExpr
+#     argc::Int
+#     argnames::Vector{Symbol}
+#     body::PExpr
+# end
+
+struct Var <: PExpr
+    idx::Int
+    name::Symbol
+end
+
+struct MetaVar <: PExpr
+    idx::Int
+    name::Symbol
+end
+
+struct Prim <: PExpr
+    name::Symbol
+end
+
+
+struct Production
+    head::PExpr
+    argc::Int
+end
+Production(e::App) = Production(e.f, length(e.args))
+# Production(e::Abs) = error("there is no production for an abstraction")
+Production(e::Var) = Production(e, 0)
+Production(e::MetaVar) = Production(e, 0)
+Production(e::Prim) = Production(e, 0)
+
+
+const NONAME::Symbol = :noname
+
+function generate_metavar_names()
+    # A..Z then AA..ZZ
+    names = Symbol.(collect('A':'Z'))
+    for i in 1:26
+        for j in 1:26
+            push!(names, Symbol(string(Char(i+64), Char(j+64))))
+        end
+    end
+    return names
+end
+
+const metavar_names = generate_metavar_names()
+
+
+struct ProgramInfo
+    id::Int
+end
+
+# in future these should be aligned to things you can actually match with like production rule level
+# or boop level
+struct CorpusNode
+    expr::PExpr
+    children::Vector{CorpusNode}
+    # children_expr_paths::Vector{Path}
+    production::Production
+    program::ProgramInfo
+end
+
+struct Corpus
+    programs::Vector{ProgramInfo}
+    roots::Vector{CorpusNode}
+end
+
+function Corpus(programs::Vector{String})
+    Corpus(PExpr[parse_expr(p) for p in programs])
+end
+
+function Corpus(exprs::Vector{PExpr})
+    programs = ProgramInfo.(1:length(exprs))
+    nodes = [CorpusNode(expr, program) for (expr, program) in zip(exprs, programs)]
+    return Corpus(programs, nodes)
+end
+
+function CorpusNode(expr::PExpr, program::ProgramInfo)
+    # if expr isa Abs
+    #     # we skip over lambdas because you cant match at them
+    #     return CorpusNode(expr.body, program)
+    # end
+    node = CorpusNode(expr, CorpusNode[], Production(expr), program)
+    if expr isa App
+        # we dont do `f` - matching at `f` is not eta long
+        for arg in expr.args
+            push!(node.children, CorpusNode(arg, program))
+        end
+    end
+    return node
+end
+
+function descendants(node::CorpusNode; nodes=Vector{CorpusNode}())
+    for child in node.children
+        push!(nodes, child)
+        descendants(child; nodes=nodes)
+    end
+    return nodes
+end
+
+function descendants(corpus::Corpus)
+    nodes = Vector{CorpusNode}()
+    for root in corpus.roots
+        descendants(root; nodes=nodes)
+    end
+    return nodes
+end
+
+
+const Path = Vector{Int}
+
+mutable struct Abstraction
+    matches::Vector{CorpusNode}
+    metavar_paths::Vector{Path}
+    expr::PExpr
+    fresh_metavar::Int
+    size::Int
+end
+
+function getchild(node::CorpusNode, path::Path)::CorpusNode
+    for i in path
+        node = node.children[i]
+    end
+    return node
+end
+
+function getchild(node::PExpr, path::Path)::PExpr
+    # while node isa Abs
+    #     node = node.body  # abs are skipped over in getchild
+    # end
+    for i in path
+        @assert node isa App
+        node = node.args[i]
+        # while node isa Abs
+        #     node = node.body # abs are skipped over in getchild
+        # end
+    end
+    return node
+end
+
+function setchild!(node::PExpr, path::Path, child::PExpr)
+    isempty(path) && return child
+    parent = getchild(node, path[1:end-1])
+    @assert parent isa App
+    # could be a little broken around how Abs / body is handled
+    parent.args[path[end]] = child
+    node
+end
+
+# function setchild!(node::CorpusNode, path::Path, child::CorpusNode)
+#     for i in 1:length(path)-1
+#         node = node.children[path[i]]
+#     end
+#     node.children[path[end]] = child
+# end
+
+function sample_expansion!(abs::Abstraction)
+    length(abs.metavar_paths) == 0 && return false
+    # pick a random path to expand
+    i = rand(1:length(abs.metavar_paths))
+    path = popat!(abs.metavar_paths, i)
+    # pick a random match location to use as the basis for expansion
+    match = abs.matches[rand(1:end)]
+    
+    prod = getchild(match, path).production
+
+    # subset to the matches
+    filter!(abs.matches) do node
+        getchild(node, path).production == prod
+    end
+
+    if prod.argc > 0
+        new_expr = App(prod.head, PExpr[])
+        for i in 1:prod.argc
+            push!(new_expr.args, MetaVar(abs.fresh_metavar, metavar_names[abs.fresh_metavar]))
+            abs.fresh_metavar += 1
+            new_path = copy(path)
+            push!(new_path, i)
+            push!(abs.metavar_paths, new_path)
+        end
+    else
+        new_expr = prod.head
+    end
+    abs.expr = setchild!(abs.expr, path, new_expr)
+    abs.size += 1
+    return true
+end
+
+
+function identity_abstraction(corpus)
+    nodes = descendants(corpus)
+    return Abstraction(nodes, Path[Int[]], MetaVar(1, metavar_names[1]), 2, 0)
+end
+
+function Base.show(io::IO, a::Abstraction)
+    print(io, "[matches=", length(a.matches), " arity=", length(a.metavar_paths), " utility=", length(a.matches)*a.size, " :")
+    # if length(a.metavar_paths) > 0
+    #     print(io, "(λ")
+    #     for (i, _) in enumerate(a.metavar_paths)
+    #         printstyled(io, metavar_names[i], " "; color=i%8)
+    #     end
+    #     print(io, "-> ")
+    # end
+    print(io, a.expr)
+    # length(a.metavar_paths) > 0 && print(io, ")")
+    print(io, "]")
+end
+
+function test(; path="data/cogsci/nuts-bolts.json")
+    programs = String.(JSON.parsefile(path))
+    corpus = Corpus(programs)
+
+    for k in 1:10
+        abs = identity_abstraction(corpus)
+        while true
+            println(abs)
+            sample_expansion!(abs) || break
+        end
+        println()
+    end
+end
+
+
+
+Base.parse(::Type{PExpr}, s) = parse_expr(s)
+
+function parse_expr(s)
+    s = replace(
+        s,
+        r"\(" => " ( ",
+        r"\)" => " ) ",
+        "{" => " { ",
+        "}" => " } ",
+        "->" => " -> ",
+        "λ" => " λ ",
+        "," => " , ",
+        r"\s+" => " " # must come at end – collapse extra whitespace
+    )
+    tokens = split(s)
+    expr, rest = parse_expr_inner(tokens, Symbol[])
+    @assert isempty(rest) "parse error: trailing characters: $rest"
+    return expr
+end
+
+function parse_expr_inner(tokens, env::Vector{Symbol})
+    length(tokens) == 0 && error("unexpected end of input")
+    token = tokens[1]
+    token_sym = Symbol(token)
+    if token == "("
+        # Possible expression heads
+        tokens = tokens[2:end]
+        token = tokens[1]
+        if token == "lam" || token == "lambda" || token == "λ"
+            # parse (λx y z -> body) or (λx,y,z -> body) or (λ_ _ _ -> body) or (λ_ -> body)
+            # semantically equivalent to (λx -> (λy -> (λz -> body)))
+            tokens = tokens[2:end]
+            num_args = 0
+            argnames = Symbol[]
+            while true
+                name = tokens[1]
+                @assert Base.isidentifier(name) "expected identifier for lambda argument, got $name"
+                env = [name, env...]
+                push!(argnames, Symbol(name))
+                num_args += 1
+                tokens = tokens[2:end]
+                if tokens[1] == "," # optional comma
+                    tokens = tokens[2:end]
+                end
+                if tokens[1] == "->" # end of arg list
+                    tokens = tokens[2:end]
+                    break
+                end
+            end
+            body, tokens = parse_expr_inner(tokens, env)
+            tokens[1] != ")" && error("expected closing paren")
+            @assert false
+            # return Abs(num_args, argnames, body), tokens[2:end]
+        else
+            # Parse an application
+            f, tokens = parse_expr_inner(tokens, env)
+            args = []
+            while tokens[1] != ")"
+                arg, tokens = parse_expr_inner(tokens, env)
+                push!(args, arg)
+            end
+            return App(f, args), tokens[2:end]
+        end
+    elseif token_sym ∈ env
+        # Parse a var by name like "foo"
+        idx = findfirst(x -> x === token_sym, env) # shadowing
+        return Var(idx, token_sym), tokens[2:end]
+    elseif token[1] == '#'
+        # parse debruijn index #4
+        idx = parse(Int, token[2:end])
+        @assert idx > 0 "need one-index debruijn"
+        return Var(idx, get!(env, idx, NONAME)), tokens[2:end]
+    elseif '#' ∈ token
+        # variable combining name and debruijn like x#4
+        parts = split(token, "#")
+        name = Symbol(parts[1])
+        idx = parse(Int, parts[2])
+        @assert parts[1] == env[idx] "debruijn index must match variable name"
+        return Var(idx, name), tokens[2:end]
+    else
+        return Prim(token_sym), tokens[2:end]
+    end
+end
+
+function Base.show(io::IO, e::App)
+    paren_depth = get(io, :paren_depth, 0)::Int
+    printstyled(io, "("; color=paren_depth%8)
+    # print(io, "(")
+    new_io = IOContext(io, :paren_depth => paren_depth + 1)
+    print(new_io, e.f)
+    for arg in e.args
+        print(new_io, " ", arg)
+    end
+    # print(io, ")")
+    printstyled(io, ")"; color=paren_depth%8)
+end
+# function Base.show(io::IO, e::Abs)
+#     print(io, "(λ")
+#     for arg in e.argnames
+#         print(io, arg, " ")
+#     end
+#     print(io, "-> ", e.body, ")")
+# end
+Base.show(io::IO, e::Var) = print(io, e.name)
+Base.show(io::IO, e::Prim) = print(io, e.name)
+Base.show(io::IO, e::MetaVar) = printstyled(io, e.name; color=e.idx%8, bold=true)
+
+
+function Base.show(io::IO, c::Corpus)
+    for (i,(p,root)) in enumerate(zip(c.programs, c.roots))
+        print(io, p.id, ": ", root)
+        i < length(c.programs) && println(io)
+    end
+end
+
+function Base.show(io::IO, n::CorpusNode)
+    print(io, n.expr)
+end
