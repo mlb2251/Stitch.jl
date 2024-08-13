@@ -382,15 +382,15 @@ end
 
 function Base.show(io::IO, e::App)
     paren_depth = get(io, :paren_depth, 0)::Int
-    printstyled(io, "("; color=paren_depth%8)
-    # print(io, "(")
+    # printstyled(io, "("; color=paren_depth%8)
+    print(io, "(")
     new_io = IOContext(io, :paren_depth => paren_depth + 1)
     print(new_io, e.f)
     for arg in e.args
         print(new_io, " ", arg)
     end
-    # print(io, ")")
-    printstyled(io, ")"; color=paren_depth%8)
+    print(io, ")")
+    # printstyled(io, ")"; color=paren_depth%8)
 end
 # function Base.show(io::IO, e::Abs)
 #     print(io, "(λ")
@@ -401,7 +401,7 @@ end
 # end
 Base.show(io::IO, e::Var) = print(io, e.name)
 Base.show(io::IO, e::Prim) = print(io, e.name)
-Base.show(io::IO, e::MetaVar) = printstyled(io, e.name; color=e.idx%8, bold=true)
+Base.show(io::IO, e::MetaVar) = printstyled(io, e.name; color=(e.idx%7)+1, bold=true)
 
 
 function Base.show(io::IO, c::Corpus)
