@@ -239,7 +239,7 @@ Base.copy(p::Particle) = Particle(copy(p.abs), p.weight, p.done)
 function test(; path="data/cogsci/nuts-bolts.json")
     programs = String.(JSON.parsefile(path))
     corpus = Corpus(programs)
-    num_particles = 500
+    num_particles = 300
 
     init_abs = identity_abstraction(corpus)
     init_particle = Particle(init_abs, 0., false)
@@ -247,8 +247,7 @@ function test(; path="data/cogsci/nuts-bolts.json")
 
 
     best_utility = 0.
-    # temperature = 1000.
-    temperature = 1.
+    temperature = .5
 
     while any(p -> !p.done, particles)
         for particle in particles
@@ -268,7 +267,7 @@ function test(; path="data/cogsci/nuts-bolts.json")
             end
         end
         # weights = exp.([p.logweight/temperature for p in particles])
-        weights = [p.weight/temperature for p in particles]
+        weights = [exp(log(p.weight)/temperature) for p in particles]
         if sum(weights) ≈ 0
             break
         end
