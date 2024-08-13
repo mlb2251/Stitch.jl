@@ -49,20 +49,19 @@ Base.hash(e::Prim, h::UInt) = hash(hash(e.name, h))
 
 
 struct Production
+    type::Symbol
     head::PExpr
     argc::Int
 end
-Production(e::App) = Production(e.f, length(e.args))
+Production(e::App) = Production(:app, e.f, length(e.args))
 # Production(e::Abs) = error("there is no production for an abstraction")
 # Production(e::Var) = Production(e, 0)
 Production(e::MetaVar) = error("there is no production for a metavar")
-Production(e::Prim) = Production(e, 0)
+Production(e::Prim) = Production(:prim, e, 0)
 
-Base.copy(p::Production) = Production(copy(p.head), p.argc)
-
-Base.:(==)(p1::Production, p2::Production) = p1.argc == p2.argc && p1.head == p2.head
-
-Base.hash(p::Production, h::UInt) = hash(hash(p.head, hash(p.argc, h)))
+Base.copy(p::Production) = Production(copy(p.type), copy(p.head), p.argc)
+Base.:(==)(p1::Production, p2::Production) = p1.type == p2.type && p1.argc == p2.argc && p1.head == p2.head
+Base.hash(p::Production, h::UInt) = hash(hash(p.type, hash(p.head, hash(p.argc, h))))
 
 
 
@@ -215,21 +214,36 @@ end
 
 function sample_expansion!(abs::Abstraction)
     length(abs.metavar_paths) == 0 && return false
-    # pick a random path to expand
-    i = rand(1:length(abs.metavar_paths))
-    path = popat!(abs.metavar_paths, i)
+
     # pick a random match location to use as the basis for expansion
     match = abs.matches[rand(1:end)]
+
+    # pick a random path to consider expanding
+    i = rand(eachindex(abs.metavar_paths))
+    path = abs.metavar_paths[i]
     child_i = getchild(match, path)
 
     # should we do multiuse or syntactic expansion? Lets pick something that makes sense here. So lets check for multiuse
     # loop over all pairs of metavar_paths with this one
 
-    # multiuse_candidates = filter(abs.metavar_paths) do other_path
-    #     child_i.expr == getchild(match, other_path).expr
+    # multiuse_candidates = filter(eachindex(abs.metavar_paths)) do j
+    #     child_i.expr_id == getchild(match, abs.metavar_paths[j]).expr_id
     # end
 
-    prod = child_i.production
+    # if length(multiuse_candidates) > 0
+    #     # pick a random one
+    #     j = multiuse_candidates[rand(1:end)]
+    #     popat!(abs.metavar_paths, j)
+    # end
+
+    syntactic_expansion!(abs, match, i, path, child_i)
+
+    return true
+end
+
+function syntactic_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path::Path, child_i::CorpusNode)
+
+    popat!(abs.metavar_paths, i);
 
     # subset to the matches
     filter!(abs.matches) do node
@@ -237,7 +251,10 @@ function sample_expansion!(abs::Abstraction)
         child_i.production_id == child_j.production_id
     end
 
-    if prod.argc > 0
+
+    # grow the abstraction
+    prod = child_i.production
+    if prod.type === :app
         new_expr = App(prod.head, PExpr[])
         for j in 1:prod.argc
             push!(new_expr.args, MetaVar(abs.fresh_metavar, metavar_names[abs.fresh_metavar]))
@@ -252,8 +269,8 @@ function sample_expansion!(abs::Abstraction)
     abs.expr = setchild!(abs.expr, path, new_expr)
     abs.size += 1
     abs.utility = length(abs.matches)*abs.size
-    return true
 end
+
 
 
 function identity_abstraction(corpus)
