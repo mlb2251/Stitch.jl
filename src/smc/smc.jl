@@ -51,17 +51,16 @@ Base.hash(e::Prim, h::UInt) = hash(hash(e.name, h))
 struct Production
     head::PExpr
     argc::Int
-    hash::UInt
 end
-Production(e::App) = Production(e.f, length(e.args), hash(e.f, hash(length(e.args))))
+Production(e::App) = Production(e.f, length(e.args))
 # Production(e::Abs) = error("there is no production for an abstraction")
 # Production(e::Var) = Production(e, 0)
 Production(e::MetaVar) = error("there is no production for a metavar")
-Production(e::Prim) = Production(e, 0, hash(e))
+Production(e::Prim) = Production(e, 0)
 
-Base.copy(p::Production) = Production(copy(p.head), p.argc, p.hash)
+Base.copy(p::Production) = Production(copy(p.head), p.argc)
 
-Base.isequal(p1::Production, p2::Production) = p1.hash == p2.hash && p1.argc == p2.argc && p1.head == p2.head
+Base.:(==)(p1::Production, p2::Production) = p1.argc == p2.argc && p1.head == p2.head
 
 Base.hash(p::Production, h::UInt) = hash(hash(p.head, hash(p.argc, h)))
 
@@ -87,14 +86,17 @@ struct ProgramInfo
     id::Int
 end
 
-# in future these should be aligned to things you can actually match with like production rule level
-# or boop level
-struct CorpusNode
+const production_ids = Dict{Production, Int}()
+const expr_ids = Dict{PExpr, Int}()
+
+
+mutable struct CorpusNode
     expr::PExpr
-    expr_hash::UInt # NON-unique hash
+    expr_id::Int
     children::Vector{CorpusNode}
     # children_expr_paths::Vector{Path}
     production::Production
+    production_id::Int
     program::ProgramInfo
 end
 
@@ -119,7 +121,11 @@ function make_corpus_nodes(expr::PExpr, program::ProgramInfo)
     #     return CorpusNode(expr.body, program)
     # end
 
-    node = CorpusNode(expr, hash(expr), CorpusNode[], Production(expr), program)
+    expr_id = get!(expr_ids, expr, length(expr_ids)+1)
+    prod = Production(expr)
+    prod_id = get!(production_ids, prod, length(production_ids)+1)
+
+    node = CorpusNode(expr, expr_id, CorpusNode[], prod, prod_id, program)
     if expr isa App
         # we dont do `f` - matching at `f` is not eta long
         for arg in expr.args
@@ -172,7 +178,7 @@ Base.copy(a::Abstraction) = Abstraction(copy(a.matches), Path[copy(p) for p in a
 
 function getchild(node::CorpusNode, path::Path)::CorpusNode
     for i in path
-        @inbounds node = node.children[i]
+        node = node.children[i]
     end
     return node
 end
@@ -214,8 +220,22 @@ function sample_expansion!(abs::Abstraction)
     path = popat!(abs.metavar_paths, i)
     # pick a random match location to use as the basis for expansion
     match = abs.matches[rand(1:end)]
+    child_i = getchild(match, path)
 
-    prod = getchild(match, path).production
+    # should we do multiuse or syntactic expansion? Lets pick something that makes sense here. So lets check for multiuse
+    # loop over all pairs of metavar_paths with this one
+    # for j in 1:length(abs.metavar_paths)
+    #     i == j && continue
+    #     other_path = abs.metavar_paths[j]
+    # end
+
+    # multiuse_candidates = filter(abs.metavar_paths) do other_path
+    #     child_i.expr == getchild(match, other_path).expr
+    # end
+
+
+
+    prod = child_i.production
     # prod = match.metavar_args[i].production
 
     # @show abs
@@ -230,8 +250,10 @@ function sample_expansion!(abs::Abstraction)
         #     return true
         # end
         # return false
-        prod2 = getchild(node, path).production
-        prod2.hash == prod.hash
+        child_j = getchild(node, path)
+        # prod2 = child_j.production
+        # prod2 == prod
+        child_i.production_id == child_j.production_id
     end
 
     if prod.argc > 0
@@ -281,10 +303,9 @@ mutable struct Particle
 end
 Base.copy(p::Particle) = Particle(copy(p.abs), p.weight, p.done)
 
-function test(; path="data/cogsci/nuts-bolts.json", seed=nothing)
+function smc(; path="data/cogsci/nuts-bolts.json", seed=nothing, num_particles=3000)
     programs = String.(JSON.parsefile(path))
     corpus = Corpus(programs)
-    num_particles = 3000
 
     init_abs = identity_abstraction(corpus)
     init_particle = Particle(init_abs, 0., false)
