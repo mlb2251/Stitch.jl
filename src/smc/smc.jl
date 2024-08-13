@@ -241,7 +241,9 @@ function test(; path="data/cogsci/nuts-bolts.json")
     corpus = Corpus(programs)
     num_particles = 500
 
-    particles = [Particle(identity_abstraction(corpus), 0.0, false) for _ in 1:num_particles]
+    init_abs = identity_abstraction(corpus)
+    init_particle = Particle(init_abs, 0., false)
+    particles = Particle[copy(init_particle) for _ in 1:num_particles]
 
 
     best_utility = 0.
