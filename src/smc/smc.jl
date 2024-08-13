@@ -28,6 +28,13 @@ struct Prim <: PExpr
     name::Symbol
 end
 
+Base.copy(e::App) = App(copy(e.f), copy.(e.args))
+# Base.copy(e::Abs) = Abs(e.argc, copy(e.argnames), copy(e.body))
+Base.copy(e::Var) = Var(e.idx, e.name)
+Base.copy(e::MetaVar) = MetaVar(e.idx, e.name)
+Base.copy(e::Prim) = Prim(e.name)
+
+
 
 struct Production
     head::PExpr
@@ -125,7 +132,11 @@ mutable struct Abstraction
     expr::PExpr
     fresh_metavar::Int
     size::Int
+    utility::Float64
 end
+
+Base.copy(a::Abstraction) = Abstraction(copy(a.matches), copy.(a.metavar_paths), copy(a.expr), a.fresh_metavar, a.size, a.utility)
+
 
 function getchild(node::CorpusNode, path::Path)::CorpusNode
     for i in path
@@ -193,17 +204,18 @@ function sample_expansion!(abs::Abstraction)
     end
     abs.expr = setchild!(abs.expr, path, new_expr)
     abs.size += 1
+    abs.utility = length(abs.matches)*abs.size
     return true
 end
 
 
 function identity_abstraction(corpus)
     nodes = descendants(corpus)
-    return Abstraction(nodes, Path[Int[]], MetaVar(1, metavar_names[1]), 2, 0)
+    return Abstraction(nodes, Path[Int[]], MetaVar(1, metavar_names[1]), 2, 0, 0.)
 end
 
 function Base.show(io::IO, a::Abstraction)
-    print(io, "[matches=", length(a.matches), " arity=", length(a.metavar_paths), " utility=", length(a.matches)*a.size, " :")
+    print(io, "[matches=", length(a.matches), " arity=", length(a.metavar_paths), " utility=", a.utility, " :")
     # if length(a.metavar_paths) > 0
     #     print(io, "(λ")
     #     for (i, _) in enumerate(a.metavar_paths)
@@ -216,20 +228,71 @@ function Base.show(io::IO, a::Abstraction)
     print(io, "]")
 end
 
+
+mutable struct Particle
+    abs::Abstraction
+    weight::Float64
+    done::Bool
+end
+Base.copy(p::Particle) = Particle(copy(p.abs), p.weight, p.done)
+
 function test(; path="data/cogsci/nuts-bolts.json")
     programs = String.(JSON.parsefile(path))
     corpus = Corpus(programs)
+    num_particles = 500
 
-    for k in 1:10
-        abs = identity_abstraction(corpus)
-        while true
-            println(abs)
-            sample_expansion!(abs) || break
+    particles = [Particle(identity_abstraction(corpus), 0.0, false) for _ in 1:num_particles]
+
+
+    best_utility = 0.
+    # temperature = 1000.
+    temperature = 1.
+
+    while any(p -> !p.done, particles)
+        for particle in particles
+            res = sample_expansion!(particle.abs)
+            particle.done = !res
+            if particle.abs.utility > best_utility
+                best_utility = particle.abs.utility
+                println("new best: ", particle.abs)
+            end
         end
-        println()
+
+        # resample
+        for particle in particles
+            particle.weight = length(particle.abs.matches)
+            if particle.done
+                particle.weight = 0.
+            end
+        end
+        # weights = exp.([p.logweight/temperature for p in particles])
+        weights = [p.weight/temperature for p in particles]
+        if sum(weights) ≈ 0
+            break
+        end
+        weights ./= sum(weights)
+        # @show [exp(p.logweight/temperature) for p in particles]
+        particles = [copy(particles[sample(weights)]) for _ in 1:num_particles]
     end
+
 end
 
+
+"""
+adapted from StatsBase.sample(); samples an index from `weights`
+with probability proportional to the weight at that index
+"""
+function sample(weights)
+    t = rand() * sum(weights)
+    n = length(weights)
+    i = 1
+    cw = weights[1]
+    while cw < t && i < n
+        i += 1
+        @inbounds cw += weights[i]
+    end
+    return i
+end
 
 
 Base.parse(::Type{PExpr}, s) = parse_expr(s)
