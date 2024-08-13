@@ -224,35 +224,16 @@ function sample_expansion!(abs::Abstraction)
 
     # should we do multiuse or syntactic expansion? Lets pick something that makes sense here. So lets check for multiuse
     # loop over all pairs of metavar_paths with this one
-    # for j in 1:length(abs.metavar_paths)
-    #     i == j && continue
-    #     other_path = abs.metavar_paths[j]
-    # end
 
     # multiuse_candidates = filter(abs.metavar_paths) do other_path
     #     child_i.expr == getchild(match, other_path).expr
     # end
 
-
-
     prod = child_i.production
-    # prod = match.metavar_args[i].production
-
-    # @show abs
 
     # subset to the matches
     filter!(abs.matches) do node
-        # if match.metavar_args[i].production == prod
-        #     arg = popat!(match.metavar_args, i);
-        #     for j in 1:prod.argc
-        #         push!(match.metavar_args, arg.children[j])
-        #     end
-        #     return true
-        # end
-        # return false
         child_j = getchild(node, path)
-        # prod2 = child_j.production
-        # prod2 == prod
         child_i.production_id == child_j.production_id
     end
 
