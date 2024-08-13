@@ -22,7 +22,6 @@ end
 
 struct MetaVar <: PExpr
     idx::Int
-    name::Symbol
 end
 
 struct Prim <: PExpr
@@ -32,20 +31,20 @@ end
 Base.copy(e::App) = App(copy(e.f), PExpr[copy(arg) for arg in e.args])
 # Base.copy(e::Abs) = Abs(e.argc, copy(e.argnames), copy(e.body))
 # Base.copy(e::Var) = Var(e.idx, e.name)
-Base.copy(e::MetaVar) = MetaVar(e.idx, e.name)
+Base.copy(e::MetaVar) = MetaVar(e.idx)
 Base.copy(e::Prim) = Prim(e.name)
 
 Base.:(==)(e1::App, e2::App) = e1.f == e2.f && e1.args == e2.args
 # Base.:(==)(e1::Abs, e2::Abs) = e1.argc == e2.argc && e1.argnames == e2.argnames && e1.body == e2.body
 # Base.:(==)(e1::Var, e2::Var) = e1.idx == e2.idx && e1.name == e2.name
-Base.:(==)(e1::MetaVar, e2::MetaVar) = e1.idx == e2.idx && e1.name == e2.name
+Base.:(==)(e1::MetaVar, e2::MetaVar) = e1.idx == e2.idx
 Base.:(==)(e1::Prim, e2::Prim) = e1.name == e2.name
 
-Base.hash(e::App, h::UInt) = hash(hash(e.f, hash(e.args, h)))
+Base.hash(e::App, h::UInt) = hash(e.f, hash(e.args, h))
 # Base.hash(e::Abs, h::UInt) = hash(hash(e.argc, hash(e.argnames, hash(e.body, h)))
 # Base.hash(e::Var, h::UInt) = hash(hash(e.idx, hash(e.name, h)))
-Base.hash(e::MetaVar, h::UInt) = hash(hash(e.idx, hash(e.name, h)))
-Base.hash(e::Prim, h::UInt) = hash(hash(e.name, h))
+Base.hash(e::MetaVar, h::UInt) = hash(e.idx, h)
+Base.hash(e::Prim, h::UInt) = hash(e.name, h)
 
 
 struct Production
@@ -161,20 +160,31 @@ const Path = Vector{Int}
 
 # Base.copy(m::Match) = Match(m.node, copy(m.metavar_args)) # can keep shallow
 
+
+mutable struct MetaVarPath
+    path::Path
+    idx::Int
+    frozen::Bool
+end
+Base.copy(m::MetaVarPath) = MetaVarPath(copy(m.path), m.idx, m.frozen)
+
 mutable struct Abstraction
     # matches::Vector{Match}
     matches::Vector{CorpusNode}
-    metavar_paths::Vector{Path}
+    metavar_paths::Vector{MetaVarPath}
     expr::PExpr
     fresh_metavar::Int
     size::Int
+    multiuses::Int
     utility::Float64
+    arity::Int
 end
 
 # Base.copy(a::Abstraction) = Abstraction(Match[copy(m) for m in a.matches], copy.(a.metavar_paths), copy(a.expr), a.fresh_metavar, a.size, a.utility)
-Base.copy(a::Abstraction) = Abstraction(copy(a.matches), Path[copy(p) for p in a.metavar_paths], copy(a.expr), a.fresh_metavar, a.size, a.utility)
+Base.copy(a::Abstraction) = Abstraction(copy(a.matches), MetaVarPath[copy(p) for p in a.metavar_paths], copy(a.expr), a.fresh_metavar, a.size, a.multiuses, a.utility, a.arity)
 
 
+getchild(node::CorpusNode, path::MetaVarPath)::CorpusNode = getchild(node, path.path)
 function getchild(node::CorpusNode, path::Path)::CorpusNode
     for i in path
         node = node.children[i]
@@ -182,6 +192,7 @@ function getchild(node::CorpusNode, path::Path)::CorpusNode
     return node
 end
 
+getchild(node::PExpr, path::MetaVarPath)::PExpr = getchild(node, path.path)
 function getchild(node::PExpr, path::Path)::PExpr
     # while node isa Abs
     #     node = node.body  # abs are skipped over in getchild
@@ -195,6 +206,8 @@ function getchild(node::PExpr, path::Path)::PExpr
     end
     return node
 end
+
+setchild!(node::PExpr, path::MetaVarPath, child::PExpr) = setchild!(node, path.path, child)
 
 function setchild!(node::PExpr, path::Path, child::PExpr)
     isempty(path) && return child
@@ -213,74 +226,112 @@ end
 # end
 
 function sample_expansion!(abs::Abstraction)
-    length(abs.metavar_paths) == 0 && return false
+    all(p -> p.frozen, abs.metavar_paths) && return false
 
     # pick a random match location to use as the basis for expansion
     match = abs.matches[rand(1:end)]
 
     # pick a random path to consider expanding
-    i = rand(eachindex(abs.metavar_paths))
+    probs = fill(1., length(abs.metavar_paths))
+    for (i, path) in enumerate(abs.metavar_paths)
+        if path.frozen
+            probs[i] = 0.
+        end
+    end
+    probs ./= sum(probs)
+
+    i = sample_normalized(probs)
     path = abs.metavar_paths[i]
     child_i = getchild(match, path)
 
     # should we do multiuse or syntactic expansion? Lets pick something that makes sense here. So lets check for multiuse
     # loop over all pairs of metavar_paths with this one
 
-    # multiuse_candidates = filter(eachindex(abs.metavar_paths)) do j
-    #     child_i.expr_id == getchild(match, abs.metavar_paths[j]).expr_id
-    # end
 
-    # if length(multiuse_candidates) > 0
-    #     # pick a random one
-    #     j = multiuse_candidates[rand(1:end)]
-    #     popat!(abs.metavar_paths, j)
-    # end
+    if rand() < 0.5
+        # consider multiuse expansion
+        multiuse_candidates = filter(eachindex(abs.metavar_paths)) do j
+            j != i && child_i.expr_id == getchild(match, abs.metavar_paths[j]).expr_id
+        end
+
+        if length(multiuse_candidates) > 0
+            # pick a random one
+            j = multiuse_candidates[rand(1:end)]
+            multiuse_expansion!(abs, match, i, path, child_i, j)
+            return true
+        end
+    end
 
     syntactic_expansion!(abs, match, i, path, child_i)
 
     return true
 end
 
-function syntactic_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path::Path, child_i::CorpusNode)
+function syntactic_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode)
 
     popat!(abs.metavar_paths, i);
 
     # subset to the matches
     filter!(abs.matches) do node
-        child_j = getchild(node, path)
-        child_i.production_id == child_j.production_id
+        child_i.production_id == getchild(node, path_i).production_id
     end
-
 
     # grow the abstraction
     prod = child_i.production
     if prod.type === :app
         new_expr = App(prod.head, PExpr[])
         for j in 1:prod.argc
-            push!(new_expr.args, MetaVar(abs.fresh_metavar, metavar_names[abs.fresh_metavar]))
-            abs.fresh_metavar += 1
-            new_path = copy(path)
-            push!(new_path, j)
+            push!(new_expr.args, MetaVar(abs.fresh_metavar))
+            new_path = MetaVarPath(copy(path_i.path), abs.fresh_metavar, false)
+            push!(new_path.path, j)
             push!(abs.metavar_paths, new_path)
+            abs.fresh_metavar += 1
+            abs.arity += 1
         end
     else
         new_expr = prod.head
     end
-    abs.expr = setchild!(abs.expr, path, new_expr)
+    abs.expr = setchild!(abs.expr, path_i, new_expr)
     abs.size += 1
-    abs.utility = length(abs.matches)*abs.size
+    abs.arity -= 1
+    abs.utility = utility(abs)
 end
+
+utility(abs::Abstraction) = length(abs.matches)*(abs.size + abs.multiuses*.9)
+
+
+function multiuse_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode, j::Int)
+    path_j = abs.metavar_paths[j]
+
+    # set i (non-frozen) to j (may or may not be frozen) and freeze both
+    abs.metavar_paths[i].frozen = true
+    abs.metavar_paths[j].frozen = true
+    abs.metavar_paths[i].idx = path_j.idx
+
+    # subset to the matches
+    filter!(abs.matches) do node
+        getchild(node, path_i).expr_id == getchild(node, path_j).expr_id
+    end
+
+    # set the two vars to be the same. `j` is the one that will be kept since it might already be frozen
+    abs.expr = setchild!(abs.expr, path_i, MetaVar(path_j.idx))
+    abs.multiuses += 1
+    abs.arity -= 1
+    abs.utility = utility(abs)
+end
+
 
 
 
 function identity_abstraction(corpus)
     nodes = descendants(corpus)
     # return Abstraction([Match(node, CorpusNode[node]) for node in nodes], Path[Int[]], MetaVar(1, metavar_names[1]), 2, 0, 0.)
-    return Abstraction(nodes, Path[Int[]], MetaVar(1, metavar_names[1]), 2, 0, 0.)
+    metavar_idx = 1
+    return Abstraction(nodes, MetaVarPath[MetaVarPath(Path(), metavar_idx, false)], MetaVar(metavar_idx), metavar_idx+1, 0, 0, 0., 1,)
 end
 
 function Base.show(io::IO, a::Abstraction)
-    print(io, "[matches=", length(a.matches), " arity=", length(a.metavar_paths), " utility=", a.utility, " :")
+    print(io, "[matches=", length(a.matches), " arity=", a.arity, " utility=", a.utility, " :")
     # if length(a.metavar_paths) > 0
     #     print(io, "(λ")
     #     for (i, _) in enumerate(a.metavar_paths)
@@ -333,7 +384,7 @@ function smc(; path="data/cogsci/nuts-bolts.json", seed=nothing, num_particles=3
 
         # resample
         for particle in particles
-            particle.weight = length(particle.abs.matches)
+            particle.weight = particle.abs.utility
             if particle.done
                 particle.weight = 0.
             end
@@ -484,7 +535,7 @@ end
 # end
 # Base.show(io::IO, e::Var) = print(io, e.name)
 Base.show(io::IO, e::Prim) = print(io, e.name)
-Base.show(io::IO, e::MetaVar) = printstyled(io, e.name; color=(e.idx%7)+1, bold=true)
+Base.show(io::IO, e::MetaVar) = printstyled(io, metavar_names[e.idx]; color=(e.idx%6)+1, bold=true)
 
 
 function Base.show(io::IO, c::Corpus)
