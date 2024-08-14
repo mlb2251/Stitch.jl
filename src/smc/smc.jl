@@ -84,8 +84,30 @@ struct ProgramInfo
     id::Int
 end
 
-const production_ids = Dict{Production, Int}()
-const expr_ids = Dict{PExpr, Int}()
+
+# const production_ids = Dict{Production, Id}()
+# const id_of_expr = Dict{PExpr, Id}()
+# const expr_of_id = Vector{PExpr}()
+
+const Id = Int
+
+struct IdSet{T}
+    id_of_entry::Dict{T, Id}
+    entry_of_id::Vector{T}
+end
+IdSet{T}() where T = IdSet(Dict{T, Id}(), Vector{T}())
+function Base.getindex(idset::IdSet{T}, entry::T) where T
+    get!(idset.id_of_entry, entry) do
+        push!(idset.entry_of_id, entry)
+        length(idset.entry_of_id)
+    end
+end
+function Base.getindex(idset::IdSet{T}, id::Id) where T
+    idset.entry_of_id[id]
+end
+
+const production_idset = IdSet{Production}()
+const expr_idset = IdSet{PExpr}()
 
 
 mutable struct CorpusNode
@@ -119,9 +141,9 @@ function make_corpus_nodes(expr::PExpr, program::ProgramInfo)
     #     return CorpusNode(expr.body, program)
     # end
 
-    expr_id = get!(expr_ids, expr, length(expr_ids)+1)
+    expr_id = expr_idset[expr]
     prod = Production(expr)
-    prod_id = get!(production_ids, prod, length(production_ids)+1)
+    prod_id = production_idset[prod]
 
     node = CorpusNode(expr, expr_id, CorpusNode[], prod, prod_id, program)
     if expr isa App
