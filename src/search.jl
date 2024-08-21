@@ -153,7 +153,7 @@ Base.@kwdef mutable struct SearchConfig
     dfa_metavariable_allow_anything = false
 
     # optimizations
-    minimum_number_matches::Bool = 2
+    minimum_number_matches::Int = 2
     no_opt_arg_capture::Bool = false
     no_opt_redundant_args::Bool = false
     no_opt_rooted_sequence::Bool = false
