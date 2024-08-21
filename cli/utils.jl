@@ -13,6 +13,12 @@ function common_args(s)
     end
 
     @add_arg_table s begin
+        "--minimum-number-matches"
+        help = "Minimum number of matches"
+        arg_type = Int
+    end
+
+    @add_arg_table s begin
         "--dfa"
         help = "DFA to use for parsing"
         arg_type = String
@@ -97,6 +103,7 @@ function gather_common_arguments(args)
         dfa_metavariable_allow_S=!args["dfa-metavariable-disallow-S"],
         dfa_metavariable_allow_seqS=!args["dfa-metavariable-disallow-seqS"],
         dfa_metavariable_allow_anything=args["dfa-metavariable-allow-anything"],
+        minimum_number_matches=args["minimum-number-matches"],
     )
     return corpus, kwargs
 end
