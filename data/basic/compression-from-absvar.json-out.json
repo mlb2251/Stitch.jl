@@ -26,7 +26,7 @@
     {
         "args": {
             "no_opt_arg_capture": true,
-            "no_exclude_single_match": true
+            "minimum_number_matches": 1
         },
         "abstractions": [
             [

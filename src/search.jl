@@ -153,7 +153,7 @@ Base.@kwdef mutable struct SearchConfig
     dfa_metavariable_allow_anything = false
 
     # optimizations
-    no_exclude_single_match::Bool = false
+    minimum_number_matches::Bool = 2
     no_opt_arg_capture::Bool = false
     no_opt_redundant_args::Bool = false
     no_opt_rooted_sequence::Bool = false
@@ -640,7 +640,7 @@ function rewrite_novel(programs, abstraction::SExpr; kwargs...)
         iterations=1,
         silent=true,
         return_first_abstraction=true,
-        no_exclude_single_match=true,
+        minimum_number_matches=1,
     )
     rewritten, dfa
 end
