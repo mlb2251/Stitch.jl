@@ -1,0 +1,40 @@
+[
+    {
+        "args": {},
+        "abstractions": [
+            [
+                0,
+                0,
+                "(+ (+ 1 2) (+ 1 2) (+ 1 2))",
+                "uninit_state",
+                [],
+                []
+            ]
+        ],
+        "programs": [
+            "(fn_1)",
+            "(fn_1)",
+            "(fn_1)"
+        ]
+    },
+    {
+        "args": {
+            "minimum_number_matches": 4
+        },
+        "abstractions": [
+            [
+                0,
+                0,
+                "(+ 1 2)",
+                "uninit_state",
+                [],
+                []
+            ]
+        ],
+        "programs": [
+            "(+ (fn_1) (fn_1) (fn_1))",
+            "(+ (fn_1) (fn_1) (fn_1))",
+            "(+ (fn_1) (fn_1) (fn_1))"
+        ]
+    }
+]
