@@ -1,0 +1,32 @@
+[
+    {
+        "args": {},
+        "abstractions": [],
+        "programs": [
+            "(/seq (/seq 1 2) (/seq 1 2) (/seq 1 2))",
+            "(/seq (/seq 1 2) (/seq 1 2) (/seq 1 2))",
+            "(/seq (/seq 1 2) (/seq 1 2) (/seq 1 2))"
+        ]
+    },
+    {
+        "args": {
+            "match_sequences": true,
+            "minimum_number_matches": 4
+        },
+        "abstractions": [
+            [
+                0,
+                0,
+                "(/seq 1 2)",
+                "uninit_state",
+                [],
+                []
+            ]
+        ],
+        "programs": [
+            "(/seq (fn_1) (fn_1) (fn_1))",
+            "(/seq (fn_1) (fn_1) (fn_1))",
+            "(/seq (fn_1) (fn_1) (fn_1))"
+        ]
+    }
+]
