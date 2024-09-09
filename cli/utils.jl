@@ -6,6 +6,12 @@ function common_args(s)
     end
 
     @add_arg_table s begin
+        "--corpus-file"
+        help = "Corpus of programs stored in this file"
+        arg_type = String
+    end
+
+    @add_arg_table s begin
         "--max-arity"
         help = "Maximum arity of abstractions"
         default = 2
@@ -80,7 +86,14 @@ end
 function gather_common_arguments(args)
     size_by_symbol_json = JSON.parse(args["size-by-symbol"])
 
-    corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(JSON.parse(args["corpus"]))])
+    if args["corpus"] !== nothing
+        corpus = args["corpus"]
+    else
+        @assert args["corpus-file"] !== nothing
+        corpus = read(args["corpus-file"], String)
+    end
+
+    corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(JSON.parse(corpus))])
 
     size_by_symbol = Dict(Symbol(k) => Float32(v) for (k, v) in size_by_symbol_json)
     if args["dfa-valid-root-states"] === "any"
