@@ -598,6 +598,7 @@ function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
     check_abstraction_names_not_present(corpus, [config.abstraction_name_function(i) for i in 1:iterations])
     abstractions = Abstraction[]
     stats_overall = Stats()
+    corpus_sizes = [size(corpus, config.size_by_symbol)]
     for i in 1:iterations
         println("===Iteration $i===")
         config.new_abstraction_name = Symbol(config.abstraction_name_function(i))
@@ -613,11 +614,12 @@ function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
         dfa = add_abstraction_to_dfa(dfa, config.new_abstraction_name, search_res.abstraction)
         config = SearchConfig(; dfa=dfa, kwargs...)
         push!(abstractions, search_res.abstraction)
+        push!(corpus_sizes, size(corpus, config.size_by_symbol))
     end
-    println("Total compression: ", size(original_corpus, config.size_by_symbol) / size(corpus, config.size_by_symbol), "x")
+    println("Total compression: ", corpus_sizes[end] / corpus_sizes[1], "x")
     println("Total number expansions: ", stats_overall.expansions)
     println("Total number matches considered: ", stats_overall.matches_considered)
-    return abstractions, corpus, dfa
+    return abstractions, corpus, dfa, corpus_sizes
 end
 
 """
@@ -626,7 +628,7 @@ Rewrite a corpus of programs using an abstraction. kwargs... should
     cost parameters originally used to create the abstraction.
 """
 function rewrite_novel(programs, abstraction::SExpr; kwargs...)
-    _, rewritten, dfa = compress(
+    _, rewritten, dfa, _ = compress(
         programs;
         kwargs...,
         follow=true,

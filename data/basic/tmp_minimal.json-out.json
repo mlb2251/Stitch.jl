@@ -1,5 +1,9 @@
 [
     {
+        "corpus_sizes": [
+            37.0,
+            25.0
+        ],
         "args": {},
         "abstractions": [
             [
@@ -18,6 +22,9 @@
         ]
     },
     {
+        "corpus_sizes": [
+            37.0
+        ],
         "args": {
             "allow_single_task": false
         },
