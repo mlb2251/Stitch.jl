@@ -7,8 +7,8 @@ mutable struct RewriteConflictInfo{M}
     # Simple bottom-up dynamic programming to figure out which is best
     cumulative_utility::Float32
     accept_rewrite::Bool
-    rci_match_possibilities::Union{M,Nothing}
-    rci_match::Union{Match,Nothing}
+    rci_match_possibilities::Vector{M}
+    rci_matches::Vector{Match}
 end
 
 const MultiRewriteConflictInfo{M} = Dict{Int64,RewriteConflictInfo{M}}
@@ -23,7 +23,7 @@ function rewrite(search_state::SearchState)::Tuple{Corpus,Float32,Float32}
     size_by_symbol = search_state.config.size_by_symbol
     corpus_compression_utility = size(search_state.corpus, size_by_symbol) - size(rewritten, size_by_symbol)
     abstraction_size_utility = -search_state.abstraction.body_size
-    num_matches = sum(r.rci_match !== nothing for r in values(rci))
+    num_matches = sum(length(r.rci_matches) for r in values(rci))
     additional_per_match_utility = (
         # adding 1 because that's already handled in the corpus compression utility by the fn_K symbol
         1 + search_state.config.application_utility_fixed
@@ -56,19 +56,14 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
 
     rcis = Dict(
         expr.metadata.id => RewriteConflictInfo{M}(
-            NaN32, false, nothing, nothing
+            NaN32, false, M[], Match[]
         )
         for expr in search_state.all_nodes
     )
 
     for match in search_state.matches
         rci_expr = rcis[expr_of(match).metadata.id]
-        if rci_expr.rci_match_possibilities !== nothing
-            # TODO handle multiple
-            rci_expr.rci_match_possibilities.alternatives = vcat(rci_expr.rci_match_possibilities.alternatives, match.alternatives)
-        else
-            rci_expr.rci_match_possibilities = copy_match(match)
-        end
+        push!(rci_expr.rci_match_possibilities, match)
     end
 
     # special case the identity abstraction (\x. x) since it has a self loop dependency in terms of utility calculation
@@ -85,13 +80,8 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
         rci = rcis[expr.metadata.id]
 
         reject_util = sum(child -> rcis[child.metadata.id].cumulative_utility, expr.children, init=0.0)
-        accept_util = if rci.rci_match_possibilities === nothing
-            0.0
-        else
-            util, m = compute_best_utility(rcis, rci.rci_match_possibilities)
-            rci.rci_match = m
-            util
-        end
+        accept_util, ms = compute_best_utility(rcis, rci.rci_match_possibilities)
+        rci.rci_matches = ms
         rci.cumulative_utility = max(reject_util, accept_util)
         rci.accept_rewrite = accept_util > reject_util + 0.0001 # slightly in favor of rejection to avoid floating point rounding errors in the approximate equality case
         rci.cumulative_utility >= 0 || error("cumulative utility should be non-negative, not $(rcis[expr.metadata.id].cumulative_utility)")
@@ -105,21 +95,42 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
     return util, rcis
 end
 
-function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossibilities)::Tuple{Float64,Match}
+function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Match})::Tuple{Float64,Vector{Match}}
+    @assert length(matches) <= 1
+    if isempty(matches)
+        return 0.0, []
+    else
+        util, m = compute_best_utility(rcis, matches[1])
+        return util, [m]
+    end
+end
+
+function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{MatchPossibilities})::Tuple{Float64,Vector{Match}}
+    if isempty(matches)
+        return 0.0, []
+    end
+    all_match_alernatives = reduce(vcat, [m.alternatives for m in matches])::Vector{Match}
+    util, m = compute_best_utility(rcis, MatchPossibilities(all_match_alernatives))
+    return util, [m]
+end
+
+function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossibilities; no_start_end=false)::Tuple{Float64,Match}
     (util, i) = findmax(match.alternatives) do m
-        u, _ = compute_best_utility(rcis, m)
+        u, _ = compute_best_utility(rcis, m; no_start_end=no_start_end)
         u
     end
     return util, match.alternatives[i]
 end
 
-function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match)::Tuple{Float64,Match}
+function compute_best_utility(rcis::MultiRewriteConflictInfo, m::Match; no_start_end=false)::Tuple{Float64,Match}
     args = vcat(m.unique_args, [v for vs in m.choice_var_captures for v in vs])
-    if m.start_items !== nothing
-        args = vcat(args, expr_of(m).children[1:m.start_items])
-    end
-    if m.end_items !== nothing
-        args = vcat(args, expr_of(m).children[m.end_items+1:end])
+    if !no_start_end
+        if m.start_items !== nothing
+            args = vcat(args, expr_of(m).children[1:m.start_items])
+        end
+        if m.end_items !== nothing
+            args = vcat(args, expr_of(m).children[m.end_items+1:end])
+        end
     end
     util = m.local_utility + sum(arg -> rcis[arg.metadata.id].cumulative_utility, args, init=0.0)
     return util, m
@@ -139,7 +150,7 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
     rci.cumulative_utility > 0 || return copy(expr)
 
     if rci.accept_rewrite
-        m = rci.rci_match
+        m = rci.rci_matches[1]
         # do a rewrite
         stub = match_to_stub(m, search_state, rcis)
         if expr_of(m).metadata.id == expr.metadata.id && (m.start_items !== nothing || m.end_items !== nothing)
