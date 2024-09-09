@@ -22,11 +22,13 @@ function cli()
 
     corpus, kwargs = gather_common_arguments(args)
 
-    abstractions, corpus, _ = compress(
+    abstractions, corpus, _, corpus_sizes = compress(
         corpus;
         iterations=args["iterations"],
         kwargs...
     )
+    println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    println(corpus_sizes)
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     println(JSON.json([
         Dict([
