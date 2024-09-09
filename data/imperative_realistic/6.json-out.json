@@ -1,5 +1,11 @@
 [
     {
+        "corpus_sizes": [
+            1915.0,
+            1785.0,
+            1722.0,
+            1680.0
+        ],
         "args": {
             "application_utility_symvar": -0.5,
             "application_utility_fixed": -3,
@@ -58,6 +64,12 @@
         ]
     },
     {
+        "corpus_sizes": [
+            1915.0,
+            1785.0,
+            1722.0,
+            1650.0
+        ],
         "args": {
             "application_utility_symvar": -0.5,
             "application_utility_fixed": -3,

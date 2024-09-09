@@ -1,0 +1,80 @@
+[
+    {
+        "args": {
+            "match_sequences": true
+        },
+        "abstractions": [
+            [
+                1,
+                0,
+                "(/subseq (l #0) t (r 10) t (l 9) h (r 2) h (r 6) h (l 2) h (l 6) h (r 4) h (r 4) ?0 h (l 6) h (r 4) h)",
+                "uninit_state",
+                [
+                    "uninit_state"
+                ],
+                []
+            ],
+            [
+                1,
+                0,
+                "(/subseq (l 1) t (r 6) t (l 6) t (r 6) t (l #0) ?0 t (r 6) t (l 6) t (r 6) t (l 5) h (r 4) h)",
+                "uninit_state",
+                [
+                    "uninit_state"
+                ],
+                []
+            ],
+            [
+                1,
+                0,
+                "(/subseq (l #0) t (r 14) t (l 13) h (r 12) h (l 10) h (r 8) h (l 6) h (r 4) h (l 8) h (r 12) h)",
+                "uninit_state",
+                [
+                    "uninit_state"
+                ],
+                []
+            ]
+        ],
+        "programs": [
+            "(/seq (l 1) t (r 6) t (l 6) t (r 6) t (l 5) h (r 4) h (l 2) h)",
+            "(/seq (/splice (fn_1 1 (/choiceseq))))",
+            "(/seq (/splice (fn_1 1 (/choiceseq))) (l 7) t (r 10) t)",
+            "(/seq (/splice (fn_1 1 (/choiceseq))) (l 6) h (r 4) h (r 4) h (l 9) t (r 10) t)",
+            "(/seq (/splice (fn_3 1)))",
+            "(/seq (/splice (fn_3 1)) (l 10) h (r 4) h (r 4) h)",
+            "(/seq (/splice (fn_3 1)) (l 10) h (r 4) h (r 4) h (l 10) h (r 4) h (r 4) h (r 4) h)",
+            "(/seq (/splice (fn_3 1)) (l 10) h (r 4) h (r 4) h (l 11) t (r 14) t)",
+            "(/seq (l 1) t (r 6) t (l 6) t (r 6) t (l 6) t (r 6) t (l 5) h (r 4) h)",
+            "(/seq (l 1) t (r 6) t (l 6) t (r 6) t (l 6) t (r 6) t (l 5) h (r 4) h (l 2) h)",
+            "(/seq (l 1) t (r 10) t (/splice (fn_1 10 (/choiceseq))))",
+            "(/seq (l 1) t (r 10) t (/splice (fn_1 10 (/choiceseq))) (l 6) h (r 4) h (r 4) h (l 9) t (r 10) t)",
+            "(/seq (l 1) t (r 14) t (/splice (fn_3 14)) (l 10) h (r 4) h (r 4) h)",
+            "(/seq (/splice (fn_2 6 (/choiceseq))))",
+            "(/seq (/splice (fn_2 6 (/choiceseq))) (l 2) h)",
+            "(/seq (/splice (fn_2 6 (/choiceseq))) (l 5) t (r 6) t)",
+            "(/seq (/splice (fn_2 6 (/choiceseq))) (l 2) h (l 2) h (r 4) h (l 5) t (r 6) t)",
+            "(/seq (l 1) t (r 10) t (l 10) t (r 10) t (/splice (fn_1 10 (/choiceseq))))",
+            "(/seq (l 1) t (r 10) t (l 10) t (r 10) t (/splice (fn_1 10 (/choiceseq))) (l 6) h (r 4) h (r 4) h)",
+            "(/seq (l 1) t (r 14) t (l 14) t (r 14) t (/splice (fn_3 14)))",
+            "(/seq (/splice (fn_2 6 (/choiceseq t (r 6) t (l 6)))) (l 2) h)",
+            "(/seq (/splice (fn_2 6 (/choiceseq t (r 6) t (l 6)))) (l 2) h (l 2) h (r 4) h)",
+            "(/seq (/splice (fn_2 6 (/choiceseq t (r 6) t (l 6)))) (l 2) h (l 2) h (r 4) h (l 5) t (r 6) t)",
+            "(/seq (l 1) t (r 10) t (l 10) t (r 10) t (l 10) t (r 10) t (l 10) t (r 10) t (l 9) h (r 2) h (r 6) h (l 2) h (l 6) h (r 4) h (r 4) h (l 9) t (r 10) t)",
+            "(/seq (l 1) t (r 10) t (l 10) t (r 10) t (l 10) t (r 10) t (/splice (fn_1 10 (/choiceseq))) (l 7) t (r 10) t)",
+            "(/seq (l 1) t (r 10) t (l 10) t (r 10) t (l 10) t (r 10) t (/splice (fn_1 10 (/choiceseq))) (l 6) h (r 4) h (r 4) h)",
+            "(/seq (l 1) t (r 14) t (l 14) t (r 14) t (l 14) t (r 14) t (/splice (fn_3 14)) (l 10) h (r 4) h (r 4) h)",
+            "(/seq (l 1) t (r 14) t (l 14) t (r 14) t (l 14) t (r 14) t (/splice (fn_3 14)) (l 13) t (r 14) t)",
+            "(/seq (/splice (fn_2 5 (/choiceseq h (r 4) h (r 3)))))",
+            "(/seq (/splice (fn_2 5 (/choiceseq h (r 4) h (r 3)))) (l 10) h (r 4) h (r 4) h)",
+            "(/seq (/splice (fn_2 5 (/choiceseq h (r 4) h (r 3)))) (l 10) h (r 4) h (r 4) h (l 11) t (r 6) t (r 2) t (r 6) t)",
+            "(/seq (/splice (fn_2 5 (/choiceseq h (r 4) h (r 3)))) (l 10) h (r 4) h (r 4) h (l 10) h (r 4) h (r 4) h (r 4) h (l 13) t (r 6) t (r 2) t (r 6) t)",
+            "(/seq (/splice (fn_2 5 (/choiceseq h (r 4) h (r 3)))) (l 10) h (r 4) h (r 4) h (l 11) t (r 6) t (r 2) t (r 6) t (l 8) t (r 2) t)",
+            "(/seq (/splice (fn_1 1 (/choiceseq h (r 3) t (r 10) t (l 9) h (r 2) h (r 6) h (l 2)))) (r 4) h (l 18) h (r 4) h (r 4) h (r 4) h (r 4) h)",
+            "(/seq (/splice (fn_1 1 (/choiceseq h (r 3) t (r 10) t (l 9) h (r 2) h (r 6) h (l 2)))) (r 4) h (l 18) h (r 4) h (r 4) h (r 4) h (r 4) h (l 18) h (r 4) h (r 4) h (r 4) h (r 4) h (r 4) h)",
+            "(/seq (/splice (fn_1 1 (/choiceseq h (r 3) t (r 10) t (l 9) h (r 2) h (r 6) h (l 2)))) (r 4) h (l 18) h (r 4) h (r 4) h (r 4) h (r 4) h (l 19) t (r 10) t (r 2) t (r 10) t (l 22) t (r 22) t)",
+            "(/seq (/splice (fn_1 1 (/choiceseq h (r 3) t (r 10) t (l 9) h (r 2) h (r 6) h (l 2)))) (r 4) h (l 18) h (r 4) h (r 4) h (r 4) h (r 4) h (l 18) h (r 4) h (r 4) h (r 4) h (r 4) h (r 4) h (l 21) t (r 10) t (r 2) t (r 10) t (l 12) t (r 2) t)",
+            "(/seq (/splice (fn_3 1)) (r 3) t (r 14) t (l 13) h (r 12) h (l 10) h (r 8) h (l 6) h (r 4) h (l 8) h (r 12) h (l 26) h (r 4) h (r 4) h (r 4) h (r 4) h (r 4) h (r 4) h (l 26) h (r 4) h (r 4) h (r 4) h (r 4) h (r 4) h (r 4) h (r 4) h)",
+            "(/seq (/splice (fn_3 1)) (r 3) t (r 14) t (l 13) h (r 12) h (l 10) h (r 8) h (l 6) h (r 4) h (l 8) h (r 12) h (l 29) t (r 14) t (r 2) t (r 14) t)"
+        ]
+    }
+]
