@@ -56,13 +56,14 @@ end
 function compute(corpus, kwargs, kwargs_specific; seed=nothing)
     # to_follow = parse(SExpr, "(/subseq a b c d e f a b c d e f)")
     # abstractions, compressed_corpus, _ = compress(corpus; strict=strict, shuffle_expansions_seed=seed, kwargs_specific..., follow=true, track=to_follow)
-    abstractions, compressed_corpus, _ = compress(corpus; strict=strict, shuffle_expansions_seed=seed, kwargs_specific...)
+    abstractions, compressed_corpus, _, corpus_sizes = compress(corpus; strict=strict, shuffle_expansions_seed=seed, kwargs_specific...)
     check_rewrite(corpus, compressed_corpus, abstractions; kwargs_specific...)
     abstractions = [abstraction_to_list(x) for x in abstractions]
     return Dict(
         "args" => kwargs,
         "abstractions" => abstractions,
         "programs" => [string(x) for x in compressed_corpus.programs],
+        "corpus_sizes" => corpus_sizes,
     )
 end
 

@@ -1,5 +1,10 @@
 [
     {
+        "corpus_sizes": [
+            37.0,
+            22.0,
+            10.0
+        ],
         "args": {},
         "abstractions": [
             [
@@ -24,6 +29,10 @@
         ]
     },
     {
+        "corpus_sizes": [
+            37.0,
+            9.0
+        ],
         "args": {
             "no_opt_arg_capture": true,
             "no_exclude_single_match": true

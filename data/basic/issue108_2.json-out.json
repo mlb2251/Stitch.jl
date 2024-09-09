@@ -1,5 +1,8 @@
 [
     {
+        "corpus_sizes": [
+            16.0
+        ],
         "args": {},
         "abstractions": [],
         "programs": [
