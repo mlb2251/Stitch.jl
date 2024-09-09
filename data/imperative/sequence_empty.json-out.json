@@ -1,5 +1,8 @@
 [
     {
+        "corpus_sizes": [
+            2.0
+        ],
         "args": {
             "match_sequences": true
         },

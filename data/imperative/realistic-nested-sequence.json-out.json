@@ -1,5 +1,9 @@
 [
     {
+        "corpus_sizes": [
+            98.0,
+            44.0
+        ],
         "args": {
             "iterations": 1,
             "application_utility_symvar": -0.5,
