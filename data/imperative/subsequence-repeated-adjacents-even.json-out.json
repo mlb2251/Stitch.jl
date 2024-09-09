@@ -1,5 +1,9 @@
 [
     {
+        "corpus_sizes": [
+            75.0,
+            9.0
+        ],
         "args": {
             "iterations": 1,
             "application_utility_fixed": -2,
