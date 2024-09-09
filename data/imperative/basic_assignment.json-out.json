@@ -1,5 +1,11 @@
 [
     {
+        "corpus_sizes": [
+            1735.0,
+            1510.0,
+            1318.0,
+            1186.0
+        ],
         "args": {},
         "abstractions": [
             [
@@ -56,6 +62,12 @@
         ]
     },
     {
+        "corpus_sizes": [
+            1735.0,
+            1510.0,
+            1342.0,
+            1206.0
+        ],
         "args": {
             "dfa": "data_for_testing/dfa.json",
             "dfa_valid_root_states": [
@@ -119,6 +131,12 @@
         ]
     },
     {
+        "corpus_sizes": [
+            628.0,
+            568.0,
+            534.0,
+            518.0
+        ],
         "args": {
             "dfa": "data_for_testing/dfa.json",
             "dfa_valid_root_states": [
@@ -178,6 +196,12 @@
         ]
     },
     {
+        "corpus_sizes": [
+            628.0,
+            580.0,
+            562.0,
+            550.0
+        ],
         "args": {
             "application_utility_symvar": -0.5,
             "application_utility_fixed": -3,
