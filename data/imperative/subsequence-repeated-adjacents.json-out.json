@@ -2,7 +2,7 @@
     {
         "corpus_sizes": [
             95.0,
-            44.0
+            20.0
         ],
         "args": {
             "iterations": 1,
