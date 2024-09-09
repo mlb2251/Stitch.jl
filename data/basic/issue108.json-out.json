@@ -1,5 +1,9 @@
 [
     {
+        "corpus_sizes": [
+            15.0,
+            6.0
+        ],
         "args": {},
         "abstractions": [
             [
