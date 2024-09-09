@@ -23,6 +23,7 @@ function rewrite(search_state::SearchState)::Tuple{Corpus,Float32,Float32}
     size_by_symbol = search_state.config.size_by_symbol
     corpus_compression_utility = size(search_state.corpus, size_by_symbol) - size(rewritten, size_by_symbol)
     abstraction_size_utility = -search_state.abstraction.body_size
+    num_matches = sum(r.rci_match !== nothing for r in values(rci))
     additional_per_match_utility = (
         # adding 1 because that's already handled in the corpus compression utility by the fn_K symbol
         1 + search_state.config.application_utility_fixed
@@ -32,7 +33,7 @@ function rewrite(search_state::SearchState)::Tuple{Corpus,Float32,Float32}
         + search_state.config.application_utility_symvar * search_state.abstraction.sym_arity
         # per-choice-var utility
         + search_state.config.application_utility_choicevar * search_state.abstraction.choice_arity
-    ) * length(search_state.matches)
+    ) * num_matches
     compressive_utility = corpus_compression_utility + abstraction_size_utility + additional_per_match_utility
 
     # @show rewritten
@@ -61,7 +62,13 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
     )
 
     for match in search_state.matches
-        rcis[expr_of(match).metadata.id].rci_match_possibilities = match
+        rci_expr = rcis[expr_of(match).metadata.id]
+        if rci_expr.rci_match_possibilities !== nothing
+            # TODO handle multiple
+            rci_expr.rci_match_possibilities.alternatives = vcat(rci_expr.rci_match_possibilities.alternatives, match.alternatives)
+        else
+            rci_expr.rci_match_possibilities = copy_match(match)
+        end
     end
 
     # special case the identity abstraction (\x. x) since it has a self loop dependency in terms of utility calculation

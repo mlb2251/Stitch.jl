@@ -125,6 +125,7 @@ copy_match(m::Match) = Match(
     m.end_items,
     copy(m.choice_var_captures),
 )
+copy_match(m::MatchPossibilities) = MatchPossibilities([copy_match(m) for m in m.alternatives])
 
 
 expr_of(m::Match) = m.expr
