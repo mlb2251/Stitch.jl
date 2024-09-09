@@ -1,5 +1,8 @@
 [
     {
+        "corpus_sizes": [
+            10.0
+        ],
         "args": {
             "application_utility_symvar": -0.5,
             "application_utility_fixed": -3,
