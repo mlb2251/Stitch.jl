@@ -28,7 +28,7 @@ function cli()
         kwargs...
     )
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    println(corpus_sizes)
+    println(JSON.json(corpus_sizes))
     println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     println(JSON.json([
         Dict([
