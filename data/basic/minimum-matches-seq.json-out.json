@@ -1,5 +1,8 @@
 [
     {
+        "corpus_sizes": [
+            30.0
+        ],
         "args": {},
         "abstractions": [],
         "programs": [
@@ -9,6 +12,10 @@
         ]
     },
     {
+        "corpus_sizes": [
+            30.0,
+            12.0
+        ],
         "args": {
             "match_sequences": true,
             "minimum_number_matches": 4

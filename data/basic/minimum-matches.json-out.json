@@ -1,5 +1,9 @@
 [
     {
+        "corpus_sizes": [
+            30.0,
+            3.0
+        ],
         "args": {},
         "abstractions": [
             [
@@ -18,6 +22,10 @@
         ]
     },
     {
+        "corpus_sizes": [
+            30.0,
+            12.0
+        ],
         "args": {
             "minimum_number_matches": 4
         },
