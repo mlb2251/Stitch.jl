@@ -2,14 +2,40 @@
 using Stitch
 using JSON
 
+
+function threading()
+    programs = [
+        "(foo foo foo (lam (bar bar bar (inc \$0))))",
+        "(foo foo foo (lam (bar bar bar (+ \$0 \$0))))",
+        ]
+    corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(programs)])
+    abstractions, corpus, dfa = compress(corpus; iterations=1, max_arity=2, match_sequences=true)
+    println(abstractions[1])
+    println(corpus)
+end
+
+
 function maddy(; programs= "data/cogsci/bridge.json")
-    programs = JSON.parsefile(programs)[1:10]
+    programs = JSON.parsefile(programs)[1:40]
 
     programs = ["(/seq " * p[2:end] for p in programs]
 
     corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(programs)])
 
-    abstractions, corpus, dfa = compress(corpus; iterations=10, max_arity=2, match_sequences=true)
+    abstractions, corpus, dfa = compress(corpus; iterations=1, max_arity=2, match_sequences=true)
+    # abstractions, corpus, dfa = compress(corpus; iterations=1, max_arity=2, match_sequences=true, follow=true, track=parse(SExpr, "(/subseq t (r 10) t (l 9) h (r 2) h (r 6) h (l 2) h (l 6) h (r 4) h (r 4) h)"))
+
+    abstractions
+end
+
+
+function maddy2(; programs= "data/cogsci/nuts-bolts.json")
+    programs = JSON.parsefile(programs)
+
+    corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(programs)])
+
+    abstractions, corpus, dfa = compress(corpus; iterations=1, max_arity=3, match_sequences=false)
+    # abstractions, corpus, dfa = compress(corpus; iterations=1, max_arity=2, match_sequences=true, follow=true, track=parse(SExpr, "(/subseq t (r 10) t (l 9) h (r 2) h (r 6) h (l 2) h (l 6) h (r 4) h (r 4) h)"))
 
     abstractions
 end
