@@ -2,7 +2,7 @@
     {
         "corpus_sizes": [
             95.0,
-            59.0
+            35.0
         ],
         "args": {
             "iterations": 1,
@@ -11,23 +11,22 @@
         },
         "abstractions": [
             [
-                2,
+                1,
                 0,
-                "(/subseq a b c #0 e f a b c #1 e f)",
+                "(/subseq a b c #0 e f)",
                 "uninit_state",
                 [
-                    "uninit_state",
                     "uninit_state"
                 ],
                 []
             ]
         ],
         "programs": [
-            "(/seq a b c 1 e f)",
-            "(/seq (/splice (fn_1 2 3)))",
-            "(/seq (/splice (fn_1 4 5)) a b c 6 e f)",
-            "(/seq (/splice (fn_1 7 8)) a b c 9 e f a b c A e f)",
-            "(/seq (/splice (fn_1 B C)) a b c D e f a b c E e f a b c F e f)"
+            "(/seq (/splice (fn_1 1)))",
+            "(/seq (/splice (fn_1 2)) (/splice (fn_1 3)))",
+            "(/seq (/splice (fn_1 4)) (/splice (fn_1 5)) (/splice (fn_1 6)))",
+            "(/seq (/splice (fn_1 7)) (/splice (fn_1 8)) (/splice (fn_1 9)) (/splice (fn_1 A)))",
+            "(/seq (/splice (fn_1 B)) (/splice (fn_1 C)) (/splice (fn_1 D)) (/splice (fn_1 E)) (/splice (fn_1 F)))"
         ]
     }
 ]
