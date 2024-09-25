@@ -22,7 +22,7 @@ function maddy(; programs= "data/cogsci/bridge.json")
 
     corpus = Corpus([Program(parse(SExpr, p), i, i) for (i, p) in enumerate(programs)])
 
-    abstractions, corpus, dfa = compress(corpus; iterations=1, max_arity=2, match_sequences=true)
+    abstractions, corpus, dfa, _ = compress(corpus; iterations=10, max_arity=2, match_sequences=true)
     # abstractions, corpus, dfa = compress(corpus; iterations=1, max_arity=2, match_sequences=true, follow=true, track=parse(SExpr, "(/subseq t (r 10) t (l 9) h (r 2) h (r 6) h (l 2) h (l 6) h (r 4) h (r 4) h)"))
 
     abstractions

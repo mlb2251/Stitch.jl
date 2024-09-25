@@ -230,7 +230,7 @@ mutable struct SearchState{M}
                 run_dfa!(program.expr, config.dfa, config.dfa_start_state)
             end
         end
-        all_nodes = map(expr_of, matches)
+        all_nodes = deduplicated_nodes(matches)
         best_util = Float32(0)
         best_abstraction = nothing
         matches = filter_matches(matches, config)
@@ -239,6 +239,17 @@ mutable struct SearchState{M}
             abstraction, [abstraction.body], matches, PossibleExpansion[],
             SExpr[], PossibleExpansion[], Match[], PossibleExpansion[])
     end
+end
+
+function deduplicated_nodes(matches)
+    # return deduplicated nodes sorted by id
+    nodes = Dict{Int,SExpr}()
+    for m in matches
+        for node in subexpressions(expr_of(m))
+            nodes[node.metadata.id] = node
+        end
+    end
+    sort(collect(values(nodes)), by=x -> x.metadata.id)
 end
 
 function run_dfa!(expr, dfa, state)
@@ -606,6 +617,7 @@ function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
     check_abstraction_names_not_present(corpus, [config.abstraction_name_function(i) for i in 1:iterations])
     abstractions = Abstraction[]
     stats_overall = Stats()
+    corpus_sizes = [size(corpus, config.size_by_symbol)]
     for i in 1:iterations
         println("===Iteration $i===")
         config.new_abstraction_name = Symbol(config.abstraction_name_function(i))
@@ -621,11 +633,12 @@ function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
         dfa = add_abstraction_to_dfa(dfa, config.new_abstraction_name, search_res.abstraction)
         config = SearchConfig(; dfa=dfa, kwargs...)
         push!(abstractions, search_res.abstraction)
+        push!(corpus_sizes, size(corpus, config.size_by_symbol))
     end
-    println("Total compression: ", size(original_corpus, config.size_by_symbol) / size(corpus, config.size_by_symbol), "x")
+    println("Total compression: ", corpus_sizes[end] / corpus_sizes[1], "x")
     println("Total number expansions: ", stats_overall.expansions)
     println("Total number matches considered: ", stats_overall.matches_considered)
-    return abstractions, corpus, dfa
+    return abstractions, corpus, dfa, corpus_sizes
 end
 
 """
@@ -634,7 +647,7 @@ Rewrite a corpus of programs using an abstraction. kwargs... should
     cost parameters originally used to create the abstraction.
 """
 function rewrite_novel(programs, abstraction::SExpr; kwargs...)
-    _, rewritten, dfa = compress(
+    _, rewritten, dfa, _ = compress(
         programs;
         kwargs...,
         follow=true,
