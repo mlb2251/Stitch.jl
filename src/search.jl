@@ -230,7 +230,7 @@ mutable struct SearchState{M}
                 run_dfa!(program.expr, config.dfa, config.dfa_start_state)
             end
         end
-        all_nodes = map(expr_of, matches)
+        all_nodes = deduplicated_nodes(matches)
         best_util = Float32(0)
         best_abstraction = nothing
         matches = filter_matches(matches, config)
@@ -239,6 +239,17 @@ mutable struct SearchState{M}
             abstraction, [abstraction.body], matches, PossibleExpansion[],
             SExpr[], PossibleExpansion[], Match[], PossibleExpansion[])
     end
+end
+
+function deduplicated_nodes(matches)
+    # return deduplicated nodes sorted by id
+    nodes = Dict{Int,SExpr}()
+    for m in matches
+        for node in subexpressions(expr_of(m))
+            nodes[node.metadata.id] = node
+        end
+    end
+    sort(collect(values(nodes)), by=x -> x.metadata.id)
 end
 
 function run_dfa!(expr, dfa, state)
@@ -329,6 +340,14 @@ function init_all_corpus_matches(t::Type{M}, corpus, config::SearchConfig)::Vect
             match = fresh_match_possibilities(t, expr, id, config)
             push!(matches, match)
             id += 1
+            if config.match_sequences && expr.leaf === nothing && expr.children[1].leaf === SYM_SEQ_HEAD
+                for i in 1:length(expr.children)
+                    match_specific = copy_match(match)
+                    match_specific.alternatives[1].start_items = i
+                    push!(matches, match_specific)
+                    id += 1
+                end
+            end
         end
     end
     matches
