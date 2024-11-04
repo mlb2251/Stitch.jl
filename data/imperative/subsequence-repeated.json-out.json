@@ -2,7 +2,7 @@
     {
         "corpus_sizes": [
             52.0,
-            42.0
+            22.0
         ],
         "args": {
             "iterations": 1,
@@ -20,8 +20,8 @@
             ]
         ],
         "programs": [
-            "(/seq 123 (/splice (fn_1)) 456 X A a b c d e f 789 Z U a b c d e f)",
-            "(/seq 321 (/splice (fn_1)) 654 Y B a b c d e f 987 T V a b c d e f)"
+            "(/seq 123 (/splice (fn_1)) 456 X A (/splice (fn_1)) 789 Z U (/splice (fn_1)))",
+            "(/seq 321 (/splice (fn_1)) 654 Y B (/splice (fn_1)) 987 T V (/splice (fn_1)))"
         ]
     }
 ]

@@ -109,9 +109,55 @@ function compute_best_utility(rcis::MultiRewriteConflictInfo, matches::Vector{Ma
     if isempty(matches)
         return 0.0, []
     end
-    all_match_alernatives = reduce(vcat, [m.alternatives for m in matches])::Vector{Match}
-    util, m = compute_best_utility(rcis, MatchPossibilities(all_match_alernatives))
-    return util, [m]
+    if length(matches) == 1
+        util, m = compute_best_utility(rcis, matches[1])
+        return util, [m]
+    end
+    best_each = [compute_best_utility(rcis, m; no_start_end=true) for m in matches]
+    matches = [m for (_, m) in best_each]
+    utilities = [u for (u, _) in best_each]
+    expr = best_each[1][2].expr
+    @assert expr.children[1].leaf == SYM_SEQ_HEAD
+    sequence_length = length(expr.children)
+    pointer_back = Int64[]
+    scores = Float32[]
+    match_selected = [0 for _ in 1:sequence_length] 
+    loc_to_match_ending_at_loc = Dict{Int32,Vector{Int32}}()
+    for (i, m) in enumerate(matches)
+        ei = m.end_items
+        if ei !== nothing
+            push!(get!(loc_to_match_ending_at_loc, ei, Int32[]), i)
+        end
+    end
+    for i in 1:sequence_length
+        push!(scores, rcis[expr.children[i].metadata.id].cumulative_utility + (if i == 1 0 else scores[i-1] end))
+        push!(pointer_back, i-1)
+        if haskey(loc_to_match_ending_at_loc, i)
+            for match_idx in loc_to_match_ending_at_loc[i]
+                m = matches[match_idx]
+                start_items = m.start_items
+                if start_items !== nothing
+                    score = utilities[match_idx] + (if start_items == 1 0 else scores[start_items] end)
+                    if score > scores[i]
+                        scores[i] = score
+                        pointer_back[i] = start_items
+                        match_selected[i] = match_idx
+                    end
+                end
+            end
+        end
+    end
+    selected_matches = Match[]
+    loc = sequence_length
+    while loc > 0
+        selected = match_selected[loc]
+        if selected != 0
+            push!(selected_matches, matches[selected])
+        end
+        loc = pointer_back[loc]
+    end
+    sort!(selected_matches, by=m -> m.start_items)
+    return scores[end], selected_matches
 end
 
 function compute_best_utility(rcis::MultiRewriteConflictInfo, match::MatchPossibilities; no_start_end=false)::Tuple{Float64,Match}
@@ -150,23 +196,31 @@ function rewrite_inner(expr::SExpr, search_state::SearchState, rcis::MultiRewrit
     rci.cumulative_utility > 0 || return copy(expr)
 
     if rci.accept_rewrite
-        m = rci.rci_matches[1]
-        # do a rewrite
-        stub = match_to_stub(m, search_state, rcis)
-        if expr_of(m).metadata.id == expr.metadata.id && (m.start_items !== nothing || m.end_items !== nothing)
-            sequence = SExpr[sexpr_leaf(SYM_SEQ_HEAD)]
-            if m.start_items !== nothing
-                add_to_sequence(expr, sequence, search_state, rcis, 2:m.start_items)
+        stub_children = [match_to_stub(m, search_state, rcis) for m in rci.rci_matches]
+        if length(stub_children) == 1
+            m = rci.rci_matches[1]
+            if m.start_items === nothing && m.end_items === nothing
+                return stub_children[1]
             end
+        end
+        @assert length(stub_children) >= 1
+        for m in rci.rci_matches
+            @assert expr_of(m).metadata.id == expr.metadata.id && (m.start_items !== nothing || m.end_items !== nothing)
+        end
+        sequence = SExpr[sexpr_leaf(SYM_SEQ_HEAD)]
+        first_match = rci.rci_matches[1]
+        add_to_sequence(expr, sequence, search_state, rcis, 2:first_match.start_items)
+        ends_each = [m.start_items for m in rci.rci_matches[2:end]]
+        push!(ends_each, length(expr.children))
+        for (m, stub, end_each) in zip(rci.rci_matches, stub_children, ends_each)
             push!(sequence, sexpr_node([sexpr_leaf(SYM_SPLICE), stub]))
             if m.end_items !== nothing
-                add_to_sequence(expr, sequence, search_state, rcis, m.end_items+1:length(expr.children))
+                add_to_sequence(expr, sequence, search_state, rcis, m.end_items+1:end_each)
             end
-            out = sexpr_node(sequence)
-            return out
-        else
-            return stub
         end
+        
+        out = sexpr_node(sequence)
+        return out
     else
         # don't rewrite - just recurse
         return sexpr_node([rewrite_inner(child, search_state, rcis) for child in expr.children])
