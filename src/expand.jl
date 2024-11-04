@@ -678,18 +678,6 @@ function add_remaining_sequence_hole(match_copy::Match, hole::SExpr, expansion::
     end
 end
 
-function add_remaining_sequence_hole(match_copy::Match, hole::SExpr, expansion::SequenceExpansion)
-    start_consumes = if !expansion.is_subseq
-        1
-    else
-        match_copy.start_items::Int64
-    end
-    push!(match_copy.holes, RemainingSequenceHole(hole, start_consumes, expansion.is_subseq))
-    for i in 1:start_consumes
-        match_copy.holes_size -= hole.children[i].metadata.size
-    end
-end
-
 function insert_before_sequence_hole!(create_new, hole, holes)
     # take a hole (/seq <things> ...) and make it (/seq <things> <new> ...). Also manipulate the stack of holes,
     # so that the ... hole is updated for the fact that it is now one further to the right. It is not
