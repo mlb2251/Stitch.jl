@@ -28,7 +28,7 @@ function upper_bound_sum_subtree_sizes(search_state, expansion=nothing)::Float32
         expansion.matches
     end
 
-    if !search_state.config.no_exclude_single_match && length(matches) == 1
+    if length(matches) < search_state.config.minimum_number_matches
         return 0
     end
 
@@ -45,7 +45,7 @@ function upper_bound_with_conflicts(search_state, expansion=nothing)::Float32
         expansion.matches
     end
 
-    if !search_state.config.no_exclude_single_match && length(matches) == 1
+    if length(matches) < search_state.config.minimum_number_matches
         return 0
     end
 
@@ -100,7 +100,7 @@ function upper_bound_sum_no_variables(search_state, expansion=nothing)::Float32
         expansion.matches
     end
 
-    if !search_state.config.no_exclude_single_match && length(matches) == 1
+    if length(matches) < search_state.config.minimum_number_matches
         return 0
     end
     sum(sum_no_variables, matches, init=0.0) - search_state.abstraction.body_size

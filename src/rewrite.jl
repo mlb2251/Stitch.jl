@@ -76,6 +76,8 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
         return 0.0
     end
 
+    actual_matches = 0
+
     for expr in search_state.all_nodes
         rci = rcis[expr.metadata.id]
 
@@ -84,9 +86,16 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
         rci.rci_matches = ms
         rci.cumulative_utility = max(reject_util, accept_util)
         rci.accept_rewrite = accept_util > reject_util + 0.0001 # slightly in favor of rejection to avoid floating point rounding errors in the approximate equality case
+        if rci.accept_rewrite
+            actual_matches += 1
+        end
         rci.cumulative_utility >= 0 || error("cumulative utility should be non-negative, not $(rcis[expr.metadata.id].cumulative_utility)")
 
         # rci.rci_match.accept_rewrite && println("accepted rewrite at $expr with cumulative utility $(rci.rci_match.cumulative_utility) and local utility $(rci.rci_match.local_utility)")
+    end
+
+    if actual_matches < search_state.config.minimum_number_matches
+        return 0.0, rcis
     end
 
     # Eqn 18 from https://arxiv.org/pdf/2211.16605.pdf
