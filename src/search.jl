@@ -133,7 +133,7 @@ Base.@kwdef mutable struct SearchConfig
     track::Union{SExpr,Nothing} = nothing
     max_arity::Int = 2
     max_choice_arity::Int = 2
-    upper_bound_fn::Function = upper_bound_sum_no_variables
+    upper_bound_fn::Function = upper_bound_sum_no_variables_rectangle
     expansion_processor::Union{Function,Nothing} = nothing
     verbose::Bool = false
     verbose_best::Bool = true
