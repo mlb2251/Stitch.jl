@@ -3,7 +3,6 @@ import Random
 
 abstract type PExpr end
 
-
 struct App <: PExpr
     f::PExpr
     args::Vector{PExpr}
@@ -269,9 +268,10 @@ function sample_expansion!(abs::Abstraction)
     # should we do multiuse or syntactic expansion? Lets pick something that makes sense here. So lets check for multiuse
     # loop over all pairs of metavar_paths with this one
 
+    P_MULTIUSE = 0.5
 
-    if rand() < 0.5
-        # consider multiuse expansion
+    if rand() < P_MULTIUSE
+        # consider multiuse expansion – is there another argument that is the same as the one we are expanding (at this location)?
         multiuse_candidates = filter(eachindex(abs.metavar_paths)) do j
             j != i && child_i.expr_id == getchild(match, abs.metavar_paths[j]).expr_id
         end
@@ -293,7 +293,7 @@ function syntactic_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_
 
     popat!(abs.metavar_paths, i);
 
-    # subset to the matches
+    # subset to the matches that have the same production as the child we are expanding based on
     filter!(abs.matches) do node
         child_i.production_id == getchild(node, path_i).production_id
     end
@@ -319,9 +319,6 @@ function syntactic_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_
     abs.utility = utility(abs)
 end
 
-utility(abs::Abstraction) = length(abs.matches)*(abs.size + abs.multiuses*.9)
-
-
 function multiuse_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode, j::Int)
     path_j = abs.metavar_paths[j]
 
@@ -342,6 +339,9 @@ function multiuse_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_i
     abs.utility = utility(abs)
 end
 
+function utility(abs::Abstraction)
+    length(abs.matches)*(abs.size + abs.multiuses*.9)
+end
 
 
 
