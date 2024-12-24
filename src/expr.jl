@@ -1,3 +1,6 @@
+export is_leaf, sexpr_leaf, sexpr_node
+
+
 abstract type Hole{S} end
 
 """
