@@ -9,16 +9,12 @@ end
 Base.copy(p::Particle) = Particle(copy(p.abs), p.weight, p.done)
 
 
-Base.@kwdef struct SMCConfig
+Base.@kwdef struct Config
     num_particles::Int=3000
     seed::Union{Int,Nothing}=nothing
     verbose_best::Bool=false
-end
-
-Base.@kwdef struct RunConfig
     prefix::String="fn_"
     N::Int=1
-    smc_config::SMCConfig=SMCConfig()
 end
 
 struct SMCResult
@@ -48,23 +44,44 @@ function Base.show(io::IO, result::SMCResult)
     print(io, round(ratio, digits=2), "x ", result.abstraction)
 end
 
-function compress(;path::String="data/cogsci/nuts-bolts.json", config::RunConfig=RunConfig())
+function compress(;path::String="data/cogsci/nuts-bolts.json", config::Config=Config())
     compress(load_corpus(path), config)
 end
 
-function compress(corpus::Corpus, config::RunConfig)
+function cogsci(; config::Config=Config())
+    paths = [
+        "data/cogsci/nuts-bolts.json",
+        "data/cogsci/bridge.json",
+        "data/cogsci/dials.json",
+        "data/cogsci/furniture.json",
+        "data/cogsci/house.json",
+        "data/cogsci/wheels.json",
+        "data/cogsci/city.json",
+        "data/cogsci/castle.json",
+    ]
+    for path in paths
+        println(path)
+        @time result = compress(;path, config)
+        println(result)
+    end
+end
+
+
+
+
+function compress(corpus::Corpus, config::Config)
     original = corpus
     results = SMCResult[]
     for i in 1:config.N
         name = Symbol(config.prefix, i)
-        result = smc(corpus, config.smc_config, name)
+        result = smc(corpus, config, name)
         push!(results, result)
         corpus = result.rewritten
     end
     return StitchResult(original, results)
 end
 
-function smc(corpus::Corpus, config::SMCConfig, name::Symbol)
+function smc(corpus::Corpus, config::Config, name::Symbol)
 
     @assert !has_prim(corpus, name) "Primitive $(name) already exists in corpus"
 
@@ -97,7 +114,7 @@ function smc(corpus::Corpus, config::SMCConfig, name::Symbol)
 
         # resample
         for particle in particles
-            particle.weight = particle.abs.utility
+            particle.weight = max(1., particle.abs.utility)
             if particle.done
                 particle.weight = 0.
             end

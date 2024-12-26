@@ -1,5 +1,5 @@
 function utility(abs::Abstraction)
-    length(abs.matches)*(abs.size + abs.multiuses*.9)
+    length(abs.matches)*(abs.size - 1 + abs.multiuses*.9)
 end
 
 

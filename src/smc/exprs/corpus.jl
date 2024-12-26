@@ -131,9 +131,9 @@ end
 
 function getchild(node::CorpusNode, path::Path)::CorpusNode
     for i in path
-        node = node.children[i]
+        @inbounds node = node.children[i]
     end
-    return node
+    node
 end
 
 function has_prim(corpus::Corpus, prim::Symbol)

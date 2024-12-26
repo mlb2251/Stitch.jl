@@ -18,9 +18,9 @@ mutable struct MetaVarPath
 end
 Base.copy(m::MetaVarPath) = MetaVarPath(copy(m.path), m.name, m.frozen, m.representative)
 
-getchild(node::CorpusNode, path::MetaVarPath)::CorpusNode = getchild(node, path.path)
-getchild(node::PExpr, path::MetaVarPath)::PExpr = getchild(node, path.path)
-setchild!(node::PExpr, path::MetaVarPath, child::PExpr) = setchild!(node, path.path, child)
+@inline getchild(node::CorpusNode, path::MetaVarPath)::CorpusNode = getchild(node, path.path)
+@inline getchild(node::PExpr, path::MetaVarPath)::PExpr = getchild(node, path.path)
+@inline setchild!(node::PExpr, path::MetaVarPath, child::PExpr) = setchild!(node, path.path, child)
 
 
 mutable struct Abstraction
