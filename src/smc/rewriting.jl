@@ -19,10 +19,10 @@ function rewrite(node::CorpusNode, abs::Abstraction)::PExpr
     # TODO – for now we are greedily doing the rewrite if there's a match
     if scratch.is_match
         args = PExpr[]
-        # we need to reverse the metavar paths because metavar_paths[1] is
-        # meant to be de bruijn index $1 which is the innermost lambda and thus
+        # we need to reverse the metavar paths because metavar_paths[1] (after filtering
+        # for representative paths) is meant to be de bruijn index $1 which is the innermost lambda and thus
         # the outermost (final) application argument
-        for argpath in reverse(abs.metavar_paths)
+        for argpath in reverse(filter(p -> p.representative, abs.metavar_paths))
             child = getchild(node, argpath)
             rewritten_child = rewrite(child, abs)
             push!(args, rewritten_child)
@@ -51,9 +51,7 @@ From each match location, walk up the chain of parents until we hit the root and
 mark them as an ancestor of a match (which means they can be affected by rewriting).
 """
 function mark_rewritable_ancestors!(abs::Abstraction, corpus::Corpus)
-    # affected_ancestors = IdDict{CorpusNode, Nothing}()
     set_scratches!((_) -> RewriteData(), corpus)
-
     for match in abs.matches
         match.scratch.is_match = true
         node = match
@@ -65,7 +63,6 @@ function mark_rewritable_ancestors!(abs::Abstraction, corpus::Corpus)
             node = node.parent
         end
     end
-    # affected_ancestors
     nothing
 end
 
@@ -75,6 +72,3 @@ mutable struct RewriteData
 end
 RewriteData() = RewriteData(false, false)
 
-# function rewritable_programs(abs::Abstraction)
-#     Set{Int}(map(n -> n.program.id, abs.matches))
-# end

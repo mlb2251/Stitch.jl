@@ -29,7 +29,7 @@ mutable struct CorpusNode
     production::Production
     production_id::Int
     program::ProgramInfo
-    scratch::Union{Nothing, Any}
+    scratch::Any
 end
 
 

@@ -1,10 +1,22 @@
 
+"""
+A path to a metavar in a corpus node.
+
+- `path` is the path from the match location to the corpus node corresponding to this metavar
+- `name` is the unique name of the metavar - two metavars with the same name are the same metavar. This is NOT a de bruijn index
+  but each unique name will ultimately map to a unique de bruijn index. 
+- `frozen` indicates that the metavar can no longer be expanded because it was used in a multiuse expansion
+  so changing its index would invalidate the match location subsetting done by the multiuse
+- `representative` indicates that this path is the one that should be used to represent the metavar
+  among all the paths that have the same idx. The order of the representative paths in the abstraction gives the de bruijn index order.
+"""
 mutable struct MetaVarPath
     path::Path
-    idx::Int
+    name::Int
     frozen::Bool
+    representative::Bool
 end
-Base.copy(m::MetaVarPath) = MetaVarPath(copy(m.path), m.idx, m.frozen)
+Base.copy(m::MetaVarPath) = MetaVarPath(copy(m.path), m.name, m.frozen, m.representative)
 
 getchild(node::CorpusNode, path::MetaVarPath)::CorpusNode = getchild(node, path.path)
 getchild(node::PExpr, path::MetaVarPath)::PExpr = getchild(node, path.path)
@@ -46,5 +58,5 @@ function identity_abstraction(corpus, name::Symbol)
     nodes = descendants(corpus)
     # return Abstraction([Match(node, CorpusNode[node]) for node in nodes], Path[Int[]], MetaVar(1, metavar_names[1]), 2, 0, 0.)
     metavar_idx = 1
-    return Abstraction(nodes, MetaVarPath[MetaVarPath(Path(), metavar_idx, false)], MetaVar(metavar_idx), metavar_idx+1, 0, 0, 0., 1, name)
+    return Abstraction(nodes, MetaVarPath[MetaVarPath(Path(), metavar_idx, false, true)], MetaVar(metavar_idx), metavar_idx+1, 0, 0, 0., 1, name)
 end

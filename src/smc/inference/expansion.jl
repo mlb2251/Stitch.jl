@@ -4,7 +4,7 @@ function sample_expansion!(abs::Abstraction)
     # pick a random match location to use as the basis for expansion
     match = abs.matches[rand(1:end)]
 
-    # pick a random path to consider expanding
+    # pick a random (unfrozen) path to consider expanding
     probs = fill(1., length(abs.metavar_paths))
     for (i, path) in enumerate(abs.metavar_paths)
         if path.frozen
@@ -56,7 +56,7 @@ function syntactic_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_
         new_expr = App(prod.head, PExpr[])
         for j in 1:prod.argc
             push!(new_expr.args, MetaVar(abs.fresh_metavar))
-            new_path = MetaVarPath(copy(path_i.path), abs.fresh_metavar, false)
+            new_path = MetaVarPath(copy(path_i.path), abs.fresh_metavar, false, true)
             push!(new_path.path, j)
             push!(abs.metavar_paths, new_path)
             abs.fresh_metavar += 1
@@ -74,10 +74,12 @@ end
 function multiuse_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode, j::Int)
     path_j = abs.metavar_paths[j]
 
-    # set i (non-frozen) to j (may or may not be frozen) and freeze both
+    # freeze i and j
     abs.metavar_paths[i].frozen = true
     abs.metavar_paths[j].frozen = true
-    abs.metavar_paths[i].idx = path_j.idx
+    # set i to be the same as j but not as a representative (and note j may or may not be a representative)
+    abs.metavar_paths[i].name = path_j.name
+    abs.metavar_paths[i].representative = false
 
     # subset to the matches
     filter!(abs.matches) do node
@@ -85,7 +87,7 @@ function multiuse_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_i
     end
 
     # set the two vars to be the same. `j` is the one that will be kept since it might already be frozen
-    abs.expr = setchild!(abs.expr, path_i, MetaVar(path_j.idx))
+    abs.expr = setchild!(abs.expr, path_i, MetaVar(path_j.name))
     abs.multiuses += 1
     abs.arity -= 1
     abs.utility = utility(abs)
