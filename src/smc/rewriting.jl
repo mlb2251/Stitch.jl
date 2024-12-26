@@ -1,14 +1,14 @@
 
 
 
-function rewrite(corpus::Corpus, abs::Abstraction)::Vector{PExpr}
-    rewritten_programs = PExpr[]
+function rewrite(corpus::Corpus, abs::Abstraction)
+    rewritten = Program[]
     mark_rewritable_ancestors!(abs, corpus)
-    for i in 1:length(corpus.roots)
-        rewritten_program = rewrite(corpus.roots[i], abs)
-        push!(rewritten_programs, rewritten_program)
+    for program in corpus.programs
+        rw = rewrite(program.expr, abs)
+        push!(rewritten, Program(program.info, make_corpus_nodes(rw, program.info.id, nothing)))
     end
-    rewritten_programs
+    Corpus(rewritten)
 end
 
 function rewrite(node::CorpusNode, abs::Abstraction)::PExpr

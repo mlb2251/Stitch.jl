@@ -23,9 +23,7 @@ getchild(node::PExpr, path::MetaVarPath)::PExpr = getchild(node, path.path)
 setchild!(node::PExpr, path::MetaVarPath, child::PExpr) = setchild!(node, path.path, child)
 
 
-
 mutable struct Abstraction
-    # matches::Vector{Match}
     matches::Vector{CorpusNode}
     metavar_paths::Vector{MetaVarPath}
     expr::PExpr

@@ -9,15 +9,68 @@ end
 Base.copy(p::Particle) = Particle(copy(p.abs), p.weight, p.done)
 
 
-function smc(; path="data/cogsci/nuts-bolts.json", seed=nothing, num_particles=3000, name::Symbol=:fn)
-    programs = String.(JSON.parsefile(path))
-    corpus = Corpus(programs)
+Base.@kwdef struct SMCConfig
+    num_particles::Int=3000
+    seed::Union{Int,Nothing}=nothing
+    verbose_best::Bool=false
+end
 
-    @assert !has_prim(corpus, name) "Primitive $name already exists in corpus"
+Base.@kwdef struct RunConfig
+    prefix::String="fn_"
+    N::Int=1
+    smc_config::SMCConfig=SMCConfig()
+end
+
+struct SMCResult
+    abstraction::Abstraction
+    before::Corpus
+    rewritten::Corpus
+end
+
+struct StitchResult
+    original::Corpus
+    steps::Vector{SMCResult}
+end
+
+function Base.show(io::IO, result::StitchResult)
+    original_size = size(result.original)
+    rewritten_size = size(result.steps[end].rewritten)
+    ratio = original_size / rewritten_size
+    println(io, "StitchResult(ratio=$(round(ratio, digits=2))x, original_size=$original_size, rewritten_size=$rewritten_size)")
+    for (i, step) in enumerate(result.steps)
+        print(io, "  ", step)
+        i < length(result.steps) && println(io)
+    end
+end
+
+function Base.show(io::IO, result::SMCResult)
+    ratio = size(result.before) / size(result.rewritten)
+    print(io, round(ratio, digits=2), "x ", result.abstraction)
+end
+
+function compress(;path::String="data/cogsci/nuts-bolts.json", config::RunConfig=RunConfig())
+    compress(load_corpus(path), config)
+end
+
+function compress(corpus::Corpus, config::RunConfig)
+    original = corpus
+    results = SMCResult[]
+    for i in 1:config.N
+        name = Symbol(config.prefix, i)
+        result = smc(corpus, config.smc_config, name)
+        push!(results, result)
+        corpus = result.rewritten
+    end
+    return StitchResult(original, results)
+end
+
+function smc(corpus::Corpus, config::SMCConfig, name::Symbol)
+
+    @assert !has_prim(corpus, name) "Primitive $(name) already exists in corpus"
 
     init_abs = identity_abstraction(corpus, name)
     init_particle = Particle(init_abs, 0., false)
-    particles = Particle[copy(init_particle) for _ in 1:num_particles]
+    particles = Particle[copy(init_particle) for _ in 1:config.num_particles]
 
     # tmp_particles = Particle[copy(init_particle) for _ in 1:num_particles]
 
@@ -26,7 +79,7 @@ function smc(; path="data/cogsci/nuts-bolts.json", seed=nothing, num_particles=3
     best_particle = init_particle
     temperature = .5
 
-    !isnothing(seed) && Random.seed!(seed)
+    !isnothing(config.seed) && Random.seed!(config.seed)
     # @show Random.seed!()
 
     while any(p -> !p.done, particles)
@@ -37,11 +90,10 @@ function smc(; path="data/cogsci/nuts-bolts.json", seed=nothing, num_particles=3
             if particle.abs.utility > best_utility
                 best_utility = particle.abs.utility
                 best_particle = copy(particle)
-                println("new best: ", particle.abs)
+                config.verbose_best && println("new best: ", particle.abs)
             end
         end
 
-        # println("resample")
 
         # resample
         for particle in particles
@@ -57,19 +109,11 @@ function smc(; path="data/cogsci/nuts-bolts.json", seed=nothing, num_particles=3
         end
         weights ./= sum(weights)
 
-        # new_idxs = Int[sample_normalized(weights) for _ in 1:num_particles]
-
-        # for (i, idx) in enumerate(new_idxs)
-        # #     @inbounds copy!(tmp_particles[i], particles[idx])
-        #     particles[i] = copy(particles[idx])
-        # end
-        # particles, tmp_particles = tmp_particles, particles
-
-        @inbounds particles = [copy(particles[sample_normalized(weights)]) for _ in 1:num_particles]
+        @inbounds particles = [copy(particles[sample_normalized(weights)]) for _ in 1:config.num_particles]
     end
 
     rewritten = rewrite(corpus, best_particle.abs)
-    return rewritten
-end
 
+    return SMCResult(best_particle.abs, corpus, rewritten)
+end
 
