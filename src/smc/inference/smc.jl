@@ -9,11 +9,13 @@ end
 Base.copy(p::Particle) = Particle(copy(p.abs), p.weight, p.done)
 
 
-function smc(; path="data/cogsci/nuts-bolts.json", seed=nothing, num_particles=3000)
+function smc(; path="data/cogsci/nuts-bolts.json", seed=nothing, num_particles=3000, name::Symbol=:fn)
     programs = String.(JSON.parsefile(path))
     corpus = Corpus(programs)
 
-    init_abs = identity_abstraction(corpus)
+    @assert !has_prim(corpus, name) "Primitive $name already exists in corpus"
+
+    init_abs = identity_abstraction(corpus, name)
     init_particle = Particle(init_abs, 0., false)
     particles = Particle[copy(init_particle) for _ in 1:num_particles]
 
@@ -21,6 +23,7 @@ function smc(; path="data/cogsci/nuts-bolts.json", seed=nothing, num_particles=3
 
 
     best_utility = 0.
+    best_particle = init_particle
     temperature = .5
 
     !isnothing(seed) && Random.seed!(seed)
@@ -33,6 +36,7 @@ function smc(; path="data/cogsci/nuts-bolts.json", seed=nothing, num_particles=3
             particle.done = !res
             if particle.abs.utility > best_utility
                 best_utility = particle.abs.utility
+                best_particle = copy(particle)
                 println("new best: ", particle.abs)
             end
         end
@@ -64,6 +68,8 @@ function smc(; path="data/cogsci/nuts-bolts.json", seed=nothing, num_particles=3
         @inbounds particles = [copy(particles[sample_normalized(weights)]) for _ in 1:num_particles]
     end
 
+    rewritten = rewrite(corpus, best_particle.abs)
+    return rewritten
 end
 
 

@@ -11,5 +11,6 @@ include("inference/abstractions.jl")
 include("inference/smc.jl")
 include("inference/expansion.jl")
 include("utility.jl")
+include("rewriting.jl")
 
 end

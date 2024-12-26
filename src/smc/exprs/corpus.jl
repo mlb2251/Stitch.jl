@@ -25,10 +25,13 @@ mutable struct CorpusNode
     expr_id::Int
     children::Vector{CorpusNode}
     # children_expr_paths::Vector{Path}
+    parent::Union{CorpusNode, Nothing}
     production::Production
     production_id::Int
     program::ProgramInfo
+    scratch::Union{Nothing, Any}
 end
+
 
 struct Corpus
     programs::Vector{ProgramInfo}
@@ -41,7 +44,7 @@ end
 
 function Corpus(exprs::Vector{PExpr})
     programs = ProgramInfo.(1:length(exprs))
-    nodes = [make_corpus_nodes(expr, program) for (expr, program) in zip(exprs, programs)]
+    nodes = [make_corpus_nodes(expr, program, nothing) for (expr, program) in zip(exprs, programs)]
     return Corpus(programs, nodes)
 end
 
@@ -56,7 +59,7 @@ function Base.show(io::IO, n::CorpusNode)
     print(io, n.expr)
 end
 
-function make_corpus_nodes(expr::PExpr, program::ProgramInfo)
+function make_corpus_nodes(expr::PExpr, program::ProgramInfo, parent::Union{Nothing, CorpusNode})
     # if expr isa Abs
     #     # we skip over lambdas because you cant match at them
     #     return CorpusNode(expr.body, program)
@@ -66,15 +69,34 @@ function make_corpus_nodes(expr::PExpr, program::ProgramInfo)
     prod = Production(expr)
     prod_id = production_idset[prod]
 
-    node = CorpusNode(expr, expr_id, CorpusNode[], prod, prod_id, program)
+    node = CorpusNode(expr, expr_id, CorpusNode[], parent, prod, prod_id, program, nothing)
     if expr isa App
         # we dont do `f` - matching at `f` is not eta long
         for arg in expr.args
-            push!(node.children, make_corpus_nodes(arg, program))
+            push!(node.children, make_corpus_nodes(arg, program, node))
         end
     end
     return node
 end
+
+function set_scratches!(f::F, corpus::Corpus) where F <: Function
+    worklist = CorpusNode[node for node in corpus.roots]
+    while !isempty(worklist)
+        node = pop!(worklist)
+        node.scratch = f(node)
+        append!(worklist, node.children)
+    end
+    nothing
+end
+
+function clear_scratches!(corpus::Corpus)
+    set_scratches!(corpus, (_) -> nothing)
+end
+
+@inline function get_scratch(::Type{T}, node::CorpusNode)::T where T
+    node.scratch
+end
+
 
 function descendants(node::CorpusNode; nodes=Vector{CorpusNode}())
     for child in node.children
@@ -97,4 +119,21 @@ function getchild(node::CorpusNode, path::Path)::CorpusNode
         node = node.children[i]
     end
     return node
+end
+
+function has_prim(corpus::Corpus, prim::Symbol)
+    any(node -> has_prim(node, prim), corpus.roots)
+end
+
+function has_prim(node::CorpusNode, prim::Symbol)
+    expr = node.expr
+    if expr isa Prim
+        return expr.name === prim
+    elseif expr isa App
+        return any(child -> has_prim(child, prim), node.children)
+    elseif expr isa MetaVar
+        error("MetaVar can't exist in corpus")
+    else
+        error("not implemented: $(typeof(expr))")
+    end
 end

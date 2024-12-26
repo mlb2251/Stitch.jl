@@ -22,10 +22,11 @@ mutable struct Abstraction
     multiuses::Int
     utility::Float64
     arity::Int
+    name::Symbol
 end
 
 # Base.copy(a::Abstraction) = Abstraction(Match[copy(m) for m in a.matches], copy.(a.metavar_paths), copy(a.expr), a.fresh_metavar, a.size, a.utility)
-Base.copy(a::Abstraction) = Abstraction(copy(a.matches), MetaVarPath[copy(p) for p in a.metavar_paths], copy(a.expr), a.fresh_metavar, a.size, a.multiuses, a.utility, a.arity)
+Base.copy(a::Abstraction) = Abstraction(copy(a.matches), MetaVarPath[copy(p) for p in a.metavar_paths], copy(a.expr), a.fresh_metavar, a.size, a.multiuses, a.utility, a.arity, a.name)
 
 function Base.show(io::IO, a::Abstraction)
     print(io, "[matches=", length(a.matches), " arity=", a.arity, " utility=", a.utility, " :")
@@ -41,9 +42,9 @@ function Base.show(io::IO, a::Abstraction)
     print(io, "]")
 end
 
-function identity_abstraction(corpus)
+function identity_abstraction(corpus, name::Symbol)
     nodes = descendants(corpus)
     # return Abstraction([Match(node, CorpusNode[node]) for node in nodes], Path[Int[]], MetaVar(1, metavar_names[1]), 2, 0, 0.)
     metavar_idx = 1
-    return Abstraction(nodes, MetaVarPath[MetaVarPath(Path(), metavar_idx, false)], MetaVar(metavar_idx), metavar_idx+1, 0, 0, 0., 1,)
+    return Abstraction(nodes, MetaVarPath[MetaVarPath(Path(), metavar_idx, false)], MetaVar(metavar_idx), metavar_idx+1, 0, 0, 0., 1, name)
 end
