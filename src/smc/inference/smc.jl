@@ -44,24 +44,24 @@ function Base.show(io::IO, result::SMCResult)
     print(io, round(ratio, digits=2), "x ", result.abstraction)
 end
 
-function compress(;path::String="data/cogsci/nuts-bolts.json", config::Config=Config())
-    compress(load_corpus(path), config)
+function compress(path::String; kwargs...)
+    compress(load_corpus(path); kwargs...)
 end
 
-function cogsci(; config::Config=Config())
+function cogsci(; kwargs...)
     paths = [
         "data/cogsci/nuts-bolts.json",
-        "data/cogsci/bridge.json",
+        # "data/cogsci/bridge.json",
         "data/cogsci/dials.json",
         "data/cogsci/furniture.json",
-        "data/cogsci/house.json",
+        # "data/cogsci/house.json",
         "data/cogsci/wheels.json",
-        "data/cogsci/city.json",
-        "data/cogsci/castle.json",
+        # "data/cogsci/city.json",
+        # "data/cogsci/castle.json",
     ]
     for path in paths
         println(path)
-        @time result = compress(;path, config)
+        @time result = compress(path; kwargs...)
         println(result)
     end
 end
@@ -69,7 +69,8 @@ end
 
 
 
-function compress(corpus::Corpus, config::Config)
+function compress(corpus::Corpus; kwargs...)
+    config = Config(;kwargs...)
     original = corpus
     results = SMCResult[]
     for i in 1:config.N
