@@ -31,6 +31,7 @@ mutable struct CorpusNode
     production::Production
     production_id::Int
     program::Int
+    size::Int
     scratch::Any
 end
 
@@ -44,7 +45,7 @@ struct Corpus
     bottom_up_order::Vector{CorpusNode}
 end
 
-size(node::CorpusNode) = 1 + sum(size(child) for child in node.children; init=0)
+size(node::CorpusNode) = node.size
 size(corpus::Program) = size(corpus.expr)
 size(corpus::Corpus) = sum(size(program) for program in corpus.programs; init=0)
 
@@ -89,22 +90,24 @@ function make_corpus_nodes(expr::PExpr, program::Int, parent::Union{Nothing, Cor
     prod = Production(expr)
     prod_id = production_idset[prod]
 
-    node = CorpusNode(expr, expr_id, CorpusNode[], parent, prod, prod_id, program, nothing)
+    node = CorpusNode(expr, expr_id, CorpusNode[], parent, prod, prod_id, program, 1, nothing)
     if expr isa App
         # we dont do `f` - matching at `f` is not eta long
         for arg in expr.args
-            push!(node.children, make_corpus_nodes(arg, program, node))
+            arg_node = make_corpus_nodes(arg, program, node)
+            node.size += size(arg_node)
+            push!(node.children, arg_node)
         end
     end
     return node
 end
 
+"""
+Set the scratch field of each node in the corpus. Nodes are visited in bottom-up order.
+"""
 function set_scratches!(f::F, corpus::Corpus) where F <: Function
-    worklist = CorpusNode[program.expr for program in corpus.programs]
-    while !isempty(worklist)
-        node = pop!(worklist)
+    for node in corpus.bottom_up_order
         node.scratch = f(node)
-        append!(worklist, node.children)
     end
     nothing
 end
