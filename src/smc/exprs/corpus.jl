@@ -41,6 +41,7 @@ end
 
 struct Corpus
     programs::Vector{Program}
+    bottom_up_order::Vector{CorpusNode}
 end
 
 size(node::CorpusNode) = 1 + sum(size(child) for child in node.children; init=0)
@@ -49,13 +50,17 @@ size(corpus::Corpus) = sum(size(program) for program in corpus.programs; init=0)
 
 
 function Corpus(programs::Vector{String})
-    Corpus(PExpr[parse_expr(p) for p in programs])
+    Corpus(PExpr[parse_expr(p) for p in programs], ProgramInfo.(1:length(programs)))
 end
 
-function Corpus(exprs::Vector{PExpr})
-    program_infos = ProgramInfo.(1:length(exprs))
-    nodes = [make_corpus_nodes(expr, program_info.id, nothing) for (expr, program_info) in zip(exprs, program_infos)]
-    return Corpus([Program(program_info, node) for (program_info, node) in zip(program_infos, nodes)])
+function Corpus(exprs::Vector{PExpr}, program_infos::Vector{ProgramInfo})
+    roots = [make_corpus_nodes(expr, program_info.id, nothing) for (expr, program_info) in zip(exprs, program_infos)]
+    programs = [Program(program_info, root) for (program_info, root) in zip(program_infos, roots)]
+    return Corpus(programs)
+end
+
+function Corpus(programs::Vector{Program})
+    Corpus(programs, bottom_up_order([p.expr for p in programs]))
 end
 
 function load_corpus(path::String)
@@ -112,21 +117,15 @@ end
     node.scratch
 end
 
-
-function descendants(node::CorpusNode; nodes=Vector{CorpusNode}())
-    for child in node.children
-        push!(nodes, child)
-        descendants(child; nodes=nodes)
+function bottom_up_order(roots::Vector{CorpusNode})
+    nodes = CorpusNode[]
+    worklist = copy(roots)
+    while !isempty(worklist)
+        node = pop!(worklist)
+        push!(nodes, node)
+        append!(worklist, node.children)
     end
-    return nodes
-end
-
-function descendants(corpus::Corpus)
-    nodes = Vector{CorpusNode}()
-    for program in corpus.programs
-        descendants(program.expr; nodes=nodes)
-    end
-    return nodes
+    return reverse(nodes)
 end
 
 function getchild(node::CorpusNode, path::Path)::CorpusNode

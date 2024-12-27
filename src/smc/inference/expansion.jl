@@ -68,7 +68,7 @@ function syntactic_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_
     abs.expr = setchild!(abs.expr, path_i, new_expr)
     abs.size += 1
     abs.arity -= 1
-    abs.utility = utility(abs)
+    abs.utility = simple_utility(abs)
 end
 
 function multiuse_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode, j::Int)
@@ -90,5 +90,5 @@ function multiuse_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_i
     abs.expr = setchild!(abs.expr, path_i, MetaVar(path_j.name))
     abs.multiuses += 1
     abs.arity -= 1
-    abs.utility = utility(abs)
+    abs.utility = simple_utility(abs)
 end
