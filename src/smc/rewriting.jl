@@ -112,7 +112,7 @@ function abstraction_args(node::CorpusNode, abs::Abstraction)
     # we need to reverse the metavar paths because metavar_paths[1] (after filtering
     # for representative paths) is meant to be de bruijn index $1 which is the innermost lambda and thus
     # the outermost (final) application argument
-    map(reverse(filter(p -> p.representative, abs.metavar_paths))) do argpath
+    map(reverse(abs.metavar_paths)) do argpath
         getchild(node, argpath)
     end
 end
