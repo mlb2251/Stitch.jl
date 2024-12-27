@@ -18,6 +18,19 @@ function set_indices!(node::PExpr, m::MetaVarPath, idx::Int)
     end
 end
 
+function insert_sorted!(m::MetaVarPath, path::Path)
+    i = searchsortedfirst(m.paths, path)
+    insert!(m.paths, i, path)
+    nothing
+end
+
+function insert_sorted!(m::MetaVarPath, paths::Vector{Path})
+    for path in paths
+        insert_sorted!(m, path)
+    end
+    nothing
+end
+
 
 @inline getchild(node::CorpusNode, path::MetaVarPath)::CorpusNode = getchild(node, primary_path(path))
 @inline getchild(node::PExpr, path::MetaVarPath)::PExpr = getchild(node, primary_path(path))

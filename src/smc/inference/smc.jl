@@ -166,3 +166,26 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
     return SMCResult(best_particle.abs, corpus, rewritten, shared.stats)
 end
 
+
+using Profile, PProf
+export ptime, pprofile, pallocs
+function ptime(f)
+    Base.GC.gc()
+    @time f()
+end
+function pprofile(f)
+    ptime(f) # warmstart
+    Base.GC.gc()
+    Profile.clear()
+    @profile f()
+    pprof()
+end
+function pallocs(f; sample_rate=.001)
+    ptime(f) # warmstart
+    Base.GC.gc()
+    Profile.Allocs.clear()
+    Profile.Allocs.@profile sample_rate=.001 f()
+    PProf.Allocs.pprof()
+end
+
+

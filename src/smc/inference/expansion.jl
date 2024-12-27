@@ -113,7 +113,7 @@ function multiuse_expansion!(shared::Shared, abs::Abstraction, match::CorpusNode
     end
 
     # transfer the hi path and subpaths to now be lo subpaths
-    append!(path_lo.paths, path_hi.paths)
+    insert_sorted!(path_lo, path_hi.paths)
 
     # remove hi from the list of paths
     popat!(abs.metavar_paths, hi)
