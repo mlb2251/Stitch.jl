@@ -52,13 +52,14 @@ function rewrite(node::CorpusNode, abs::Abstraction)::PExpr
     error("unreachable")
 end
 
-"""
-From each match location, walk up the chain of parents until we hit the root and
-mark them as an ancestor of a match (which means they can be affected by rewriting).
-"""
+
 function mark_rewritable_ancestors!(abs::Abstraction, corpus::Corpus)
     set_scratches!((node) -> RewriteData(false, false, size(node), nothing), corpus)
 
+    """
+    From each match location, walk up the chain of parents until we hit the root and
+    mark them as an ancestor of a match (which means they can be affected by rewriting).
+    """
     for match in abs.matches
         match.scratch.is_match = true
         node = match
@@ -79,7 +80,7 @@ function mark_rewritable_ancestors!(abs::Abstraction, corpus::Corpus)
         size_no_rewrite = 1 + sum(get_scratch(RewriteData, child).rewritten_size for child in node.children; init=0)
         # size with rewriting is based on the actual args
         size_yes_rewrite = 1 + sum(get_scratch(RewriteData, arg).rewritten_size for arg in args; init=0)
-        decision = size_yes_rewrite > size_no_rewrite
+        decision = size_yes_rewrite < size_no_rewrite
         scratch.rewritten_size = min(size_no_rewrite, size_yes_rewrite)
         scratch.match = MatchDecision(size_no_rewrite, size_yes_rewrite, args, decision)
     end
