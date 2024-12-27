@@ -33,19 +33,61 @@ Base.copy(e::App) = App(copy(e.f), PExpr[copy(arg) for arg in e.args])
 Base.copy(e::MetaVar) = MetaVar(e.name)
 Base.copy(e::Prim) = Prim(e.name)
 
-Base.:(==)(e1::PExpr, e2::PExpr) = false
-Base.:(==)(e1::App, e2::App) = e1.f == e2.f && e1.args == e2.args
-# Base.:(==)(e1::Abs, e2::Abs) = e1.argc == e2.argc && e1.argnames == e2.argnames && e1.body == e2.body
-# Base.:(==)(e1::Var, e2::Var) = e1.idx == e2.idx && e1.name == e2.name
-Base.:(==)(e1::MetaVar, e2::MetaVar) = e1.name == e2.name
-Base.:(==)(e1::Prim, e2::Prim) = e1.name == e2.name
+const eq_worklists1 = Vector{PExpr}[PExpr[] for _ in 1:Threads.nthreads()]
+const eq_worklists2 = Vector{PExpr}[PExpr[] for _ in 1:Threads.nthreads()]
+function Base.:(==)(e1::PExpr, e2::PExpr)
+    worklist1 = eq_worklists1[Threads.threadid()]
+    worklist2 = eq_worklists2[Threads.threadid()]
+    push!(worklist1, e1)
+    push!(worklist2, e2)
+    while !isempty(worklist1)
+        e1 = pop!(worklist1)
+        e2 = pop!(worklist2)
+        if e1 isa App
+            e2 isa App || return false
+            length(e1.args) == length(e2.args) || return false
+            push!(worklist1, e1.f)
+            push!(worklist2, e2.f)
+            for i in 1:length(e1.args)
+                @inbounds push!(worklist1, e1.args[i])
+                @inbounds push!(worklist2, e2.args[i])
+            end
+        elseif e1 isa MetaVar
+            e2 isa MetaVar || return false
+            e1.name == e2.name || return false
+        elseif e1 isa Prim
+            e2 isa Prim || return false
+            e1.name == e2.name || return false
+        else
+            error("unknown node type: $e1")
+        end
+    end
+    true
+end
 
-Base.hash(e::PExpr, ::UInt) = error("hash not implemented for $e")
-Base.hash(e::App, h::UInt) = hash(e.f, hash(e.args, h))
-# Base.hash(e::Abs, h::UInt) = hash(hash(e.argc, hash(e.argnames, hash(e.body, h)))
-# Base.hash(e::Var, h::UInt) = hash(hash(e.idx, hash(e.name, h)))
-Base.hash(e::MetaVar, h::UInt) = hash(e.name, h)
-Base.hash(e::Prim, h::UInt) = hash(e.name, h)
+
+const hash_worklists = Vector{PExpr}[PExpr[] for _ in 1:Threads.nthreads()]
+function Base.hash(e::PExpr, h::UInt)
+    worklist = hash_worklists[Threads.threadid()]
+    push!(worklist, e)
+    while !isempty(worklist)
+        node = pop!(worklist)
+        if node isa App
+            h = hash(:app, h)::UInt
+            push!(worklist, node.f)
+            append!(worklist, node.args)
+        elseif node isa MetaVar
+            h = hash(node.name, h)::UInt
+        elseif node isa Prim
+            h = hash(node.name, h)::UInt
+        else
+            error("unknown node type: $node")
+        end
+    end
+    h
+end
+
+
 
 const NONAME::Symbol = :noname
 
