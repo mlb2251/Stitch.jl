@@ -33,12 +33,14 @@ Base.copy(e::App) = App(copy(e.f), PExpr[copy(arg) for arg in e.args])
 Base.copy(e::MetaVar) = MetaVar(e.name)
 Base.copy(e::Prim) = Prim(e.name)
 
+Base.:(==)(e1::PExpr, e2::PExpr) = false
 Base.:(==)(e1::App, e2::App) = e1.f == e2.f && e1.args == e2.args
 # Base.:(==)(e1::Abs, e2::Abs) = e1.argc == e2.argc && e1.argnames == e2.argnames && e1.body == e2.body
 # Base.:(==)(e1::Var, e2::Var) = e1.idx == e2.idx && e1.name == e2.name
 Base.:(==)(e1::MetaVar, e2::MetaVar) = e1.name == e2.name
 Base.:(==)(e1::Prim, e2::Prim) = e1.name == e2.name
 
+Base.hash(e::PExpr, ::UInt) = error("hash not implemented for $e")
 Base.hash(e::App, h::UInt) = hash(e.f, hash(e.args, h))
 # Base.hash(e::Abs, h::UInt) = hash(hash(e.argc, hash(e.argnames, hash(e.body, h)))
 # Base.hash(e::Var, h::UInt) = hash(hash(e.idx, hash(e.name, h)))

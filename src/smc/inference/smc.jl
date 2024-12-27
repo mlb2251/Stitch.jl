@@ -17,15 +17,37 @@ Base.@kwdef struct Config
     N::Int=1
 end
 
+mutable struct SMCStats
+    steps::Int
+    proposals::Int
+    expansions::Int
+    time_smc::Float64
+    time_rewrite::Float64
+    matches_cache::HitRate
+end
+SMCStats() = SMCStats(0, 0, 0, 0., 0., HitRate())
+
+mutable struct Shared
+    matches_cache::Dict{PExpr, Vector{CorpusNode}}
+    stats::SMCStats
+end
+Shared() = Shared(Dict{PExpr, Vector{CorpusNode}}(), SMCStats())
+
+(Base.:+)(a::SMCStats, b::SMCStats) = SMCStats(a.steps + b.steps, a.proposals + b.proposals, a.expansions + b.expansions, a.time_smc + b.time_smc, a.time_rewrite + b.time_rewrite, a.matches_cache + b.matches_cache)
+
+Base.show(io::IO, stats::SMCStats) = print(io, "SMCStats(steps=$(stats.steps), proposals=$(stats.proposals), expansions=$(stats.expansions), time_smc=$(stats.time_smc), time_rewrite=$(stats.time_rewrite), matches_cache=$(stats.matches_cache))")
+
 struct SMCResult
     abstraction::Abstraction
     before::Corpus
     rewritten::Corpus
+    stats::SMCStats
 end
 
 struct StitchResult
     original::Corpus
     steps::Vector{SMCResult}
+    stats::SMCStats
 end
 
 function Base.show(io::IO, result::StitchResult)
@@ -34,9 +56,10 @@ function Base.show(io::IO, result::StitchResult)
     ratio = original_size / rewritten_size
     println(io, "StitchResult(ratio=$(round(ratio, digits=2))x, original_size=$original_size, rewritten_size=$rewritten_size)")
     for (i, step) in enumerate(result.steps)
-        print(io, "  ", step)
-        i < length(result.steps) && println(io)
+        println(io, "  ", step)
+        # i < length(result.steps) && println(io)
     end
+    print(io, "  ", result.stats)
 end
 
 function Base.show(io::IO, result::SMCResult)
@@ -79,11 +102,12 @@ function compress(corpus::Corpus; kwargs...)
         push!(results, result)
         corpus = result.rewritten
     end
-    return StitchResult(original, results)
+    return StitchResult(original, results, sum(result.stats for result in results))
 end
 
 function smc(corpus::Corpus, config::Config, name::Symbol)
 
+    tstart = time()
     @assert !has_prim(corpus, name) "Primitive $(name) already exists in corpus"
 
     init_abs = identity_abstraction(corpus, name)
@@ -96,14 +120,17 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
     best_utility = 0.
     best_particle = init_particle
     temperature = .5
+    shared = Shared()
 
     !isnothing(config.seed) && Random.seed!(config.seed)
     # @show Random.seed!()
 
     while any(p -> !p.done, particles)
+        shared.stats.steps += 1
+
         for particle in particles
-            # println("expand")
-            res = sample_expansion!(particle.abs)
+            particle.done && continue
+            res = sample_expansion!(shared, particle.abs)
             particle.done = !res
             if particle.abs.utility > best_utility
                 best_utility = particle.abs.utility
@@ -130,8 +157,12 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
         @inbounds particles = [copy(particles[sample_normalized(weights)]) for _ in 1:config.num_particles]
     end
 
-    rewritten = rewrite(corpus, best_particle.abs)
+    shared.stats.time_smc = time() - tstart
 
-    return SMCResult(best_particle.abs, corpus, rewritten)
+    tstart = time()
+    rewritten = rewrite(corpus, best_particle.abs)
+    shared.stats.time_rewrite = time() - tstart
+
+    return SMCResult(best_particle.abs, corpus, rewritten, shared.stats)
 end
 

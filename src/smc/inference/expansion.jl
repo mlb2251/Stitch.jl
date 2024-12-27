@@ -1,4 +1,4 @@
-function sample_expansion!(abs::Abstraction)
+function sample_expansion!(shared::Shared, abs::Abstraction)
     all(p -> p.frozen, abs.metavar_paths) && return false
 
     # pick a random match location to use as the basis for expansion
@@ -17,8 +17,7 @@ function sample_expansion!(abs::Abstraction)
     path = abs.metavar_paths[i]
     child_i = getchild(match, path)
 
-    # should we do multiuse or syntactic expansion? Lets pick something that makes sense here. So lets check for multiuse
-    # loop over all pairs of metavar_paths with this one
+    shared.stats.expansions += 1
 
     P_MULTIUSE = 0.5
 
@@ -31,24 +30,18 @@ function sample_expansion!(abs::Abstraction)
         if length(multiuse_candidates) > 0
             # pick a random one
             j = multiuse_candidates[rand(1:end)]
-            multiuse_expansion!(abs, match, i, path, child_i, j)
+            multiuse_expansion!(shared, abs, match, i, path, child_i, j)
             return true
         end
     end
 
-    syntactic_expansion!(abs, match, i, path, child_i)
-
+    syntactic_expansion!(shared, abs, match, i, path, child_i)
     return true
 end
 
-function syntactic_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode)
+function syntactic_expansion!(shared::Shared, abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode)
 
     popat!(abs.metavar_paths, i);
-
-    # subset to the matches that have the same production as the child we are expanding based on
-    filter!(abs.matches) do node
-        child_i.production_id == getchild(node, path_i).production_id
-    end
 
     # grow the abstraction
     prod = child_i.production
@@ -68,10 +61,21 @@ function syntactic_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_
     abs.expr = setchild!(abs.expr, path_i, new_expr)
     abs.size += 1
     abs.arity -= 1
+
+    hit!(shared.stats.matches_cache)
+    # subset to the matches that have the same production as the child we are expanding based on
+    abs.matches = get!(shared.matches_cache, abs.expr) do
+        unhit!(shared.stats.matches_cache) # silly
+        miss!(shared.stats.matches_cache)
+        filter!(abs.matches) do node
+            child_i.production_id == getchild(node, path_i).production_id
+        end
+    end
+
     abs.utility = simple_utility(abs)
 end
 
-function multiuse_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode, j::Int)
+function multiuse_expansion!(shared::Shared, abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode, j::Int)
     path_j = abs.metavar_paths[j]
 
     # freeze i and j
@@ -81,14 +85,20 @@ function multiuse_expansion!(abs::Abstraction, match::CorpusNode, i::Int, path_i
     abs.metavar_paths[i].name = path_j.name
     abs.metavar_paths[i].representative = false
 
-    # subset to the matches
-    filter!(abs.matches) do node
-        getchild(node, path_i).expr_id == getchild(node, path_j).expr_id
-    end
-
     # set the two vars to be the same. `j` is the one that will be kept since it might already be frozen
     abs.expr = setchild!(abs.expr, path_i, MetaVar(path_j.name))
     abs.multiuses += 1
     abs.arity -= 1
+
+    # subset to the matches
+    hit!(shared.stats.matches_cache)
+    abs.matches = get!(shared.matches_cache, abs.expr) do
+        unhit!(shared.stats.matches_cache) # silly
+        miss!(shared.stats.matches_cache)
+        filter!(abs.matches) do node
+            getchild(node, path_i).expr_id == getchild(node, path_j).expr_id
+        end
+    end
+
     abs.utility = simple_utility(abs)
 end
