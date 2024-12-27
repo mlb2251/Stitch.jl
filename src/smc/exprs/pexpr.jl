@@ -35,7 +35,7 @@ Base.copy(e::Prim) = Prim(e.name)
 
 const eq_worklists1 = Vector{PExpr}[PExpr[] for _ in 1:Threads.nthreads()]
 const eq_worklists2 = Vector{PExpr}[PExpr[] for _ in 1:Threads.nthreads()]
-function Base.:(==)(e1::PExpr, e2::PExpr)
+function Base.isequal(e1::PExpr, e2::PExpr)
     worklist1 = eq_worklists1[Threads.threadid()]
     worklist2 = eq_worklists2[Threads.threadid()]
     push!(worklist1, e1)

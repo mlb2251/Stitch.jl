@@ -10,7 +10,7 @@ Production(e::MetaVar) = error("there is no production for a metavar")
 Production(e::Prim) = Production(:prim, e, 0)
 
 Base.copy(p::Production) = Production(copy(p.type), copy(p.head), p.argc)
-Base.:(==)(p1::Production, p2::Production) = p1.type == p2.type && p1.argc == p2.argc && p1.head == p2.head
+Base.isequal(p1::Production, p2::Production) = p1.type == p2.type && p1.argc == p2.argc && p1.head == p2.head
 Base.hash(p::Production, h::UInt) = hash(hash(p.type, hash(p.head, hash(p.argc, h))))
 
 struct ProgramInfo

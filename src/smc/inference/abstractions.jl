@@ -9,6 +9,8 @@ struct MetaVarPath
     paths::Vector{Path}
 end
 Base.copy(m::MetaVarPath) = MetaVarPath(Path[copy(path) for path in m.paths])
+Base.hash(m::MetaVarPath, h::UInt) = hash(m.paths, h)
+Base.isequal(m1::MetaVarPath, m2::MetaVarPath) = m1.paths == m2.paths
 
 @inline primary_path(m::MetaVarPath) = @inbounds m.paths[1]
 @inline has_multiuses(m::MetaVarPath) = length(m.paths) > 1
