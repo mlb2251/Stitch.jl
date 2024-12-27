@@ -1,5 +1,5 @@
-function sample_expansion!(shared::Shared, abs::Abstraction)
-    all(p -> has_multiuses(p), abs.metavar_paths) && return false
+function sample_expansion(shared::Shared, abs::Abstraction)::Union{Abstraction, Nothing}
+    all(p -> has_multiuses(p), abs.metavar_paths) && return nothing
 
     # pick a random match location to use as the basis for expansion
     match = abs.matches[rand(1:end)]
@@ -31,27 +31,26 @@ function sample_expansion!(shared::Shared, abs::Abstraction)
         if length(multiuse_candidates) > 0
             # pick a random one
             j = multiuse_candidates[rand(1:end)]
-            multiuse_expansion!(shared, abs, match, i, path, child_i, j)
-            return true
+            return multiuse_expansion(shared, abs, match, i, path, child_i, j)
         end
     end
 
-    syntactic_expansion!(shared, abs, match, i, path, child_i)
-    return true
+    return syntactic_expansion(shared, abs, match, i, path, child_i)
 end
 
-function syntactic_expansion!(shared::Shared, abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode)
+function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode)::Abstraction
 
     # grow the abstraction
     prod = child_i.production
     if prod.type === :app
         new_expr = App(prod.head, PExpr[])
         for j in 1:prod.argc
-            push!(new_expr.args, MetaVar(length(abs.metavar_paths) + 1))
+            push!(new_expr.args, MetaVar(i + j - 1))
         end
     else
         new_expr = prod.head
     end
+    old_path_i_expr = getchild(abs.expr, path_i)
     abs.expr = setchild!(abs.expr, path_i, new_expr)
 
     # fix the metavar names above i because 1 path will be removed at i and argc paths will be added at i
@@ -65,40 +64,50 @@ function syntactic_expansion!(shared::Shared, abs::Abstraction, match::CorpusNod
         end
     end
 
-
-
-
-    # remove the path we're expanding (at index i)
-    popat!(abs.metavar_paths, i);
-
-    @assert !has_multiuses(path_i)
-
-    # add the new paths where the old one used to be – at indexes i through i+argc-1
-    if prod.type === :app
-        for j in 1:prod.argc
-            new_path = copy(primary_path(path_i))
-            push!(new_path, j)
-            insert!(abs.metavar_paths, i+j-1, MetaVarPath(Path[new_path]))
-        end
-    end
-
-
-    abs.size += 1
-
     hit!(shared.stats.matches_cache)
-    # subset to the matches that have the same production as the child we are expanding based on
-    abs.matches = get!(shared.matches_cache, abs.expr) do
+    new_abs = get!(shared.matches_cache, abs.expr) do
         unhit!(shared.stats.matches_cache) # silly
         miss!(shared.stats.matches_cache)
-        filter!(abs.matches) do node
+
+        new_abs = copy(abs)
+        
+        # subset to the matches that have the same production as the child we are expanding based on
+        filter!(new_abs.matches) do node
             child_i.production_id == getchild(node, path_i).production_id
+        end
+
+        # remove the path we're expanding (at index i)
+        popat!(new_abs.metavar_paths, i);
+        @assert !has_multiuses(path_i)
+        # add the new paths where the old one used to be – at indexes i through i+argc-1
+        if prod.type === :app
+            for j in 1:prod.argc
+                new_path = copy(primary_path(path_i))
+                push!(new_path, j)
+                insert!(new_abs.metavar_paths, i+j-1, MetaVarPath(Path[new_path]))
+            end
+        end
+        new_abs.size += 1
+        new_abs.utility = simple_utility(new_abs)
+        new_abs
+    end
+
+    # copy it since now it might be being used as a key
+    abs.expr = copy(abs.expr)
+
+    # undo the change to the original expression
+    abs.expr = setchild!(abs.expr, path_i, old_path_i_expr)
+    if shift_by != 0
+        for j in i+1:length(abs.metavar_paths)
+            path = abs.metavar_paths[j]
+            set_indices!(abs.expr, path, j - shift_by)
         end
     end
 
-    abs.utility = simple_utility(abs)
+    return new_abs
 end
 
-function multiuse_expansion!(shared::Shared, abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode, j::Int)
+function multiuse_expansion(shared::Shared, abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode, j::Int)
     lo, hi = i < j ? (i,j) : (j,i)
     path_lo = abs.metavar_paths[lo]
     path_hi = abs.metavar_paths[hi]
@@ -112,23 +121,36 @@ function multiuse_expansion!(shared::Shared, abs::Abstraction, match::CorpusNode
         set_indices!(abs.expr, path, j - 1)
     end
 
-    # transfer the hi path and subpaths to now be lo subpaths
-    insert_sorted!(path_lo, path_hi.paths)
+    new_abs = get!(shared.matches_cache, abs.expr) do
+        new_abs = copy(abs)
+        path_lo = new_abs.metavar_paths[lo]
+        path_hi = new_abs.metavar_paths[hi]    
+        # transfer the hi path and subpaths to now be lo subpaths
+        insert_sorted!(path_lo, path_hi.paths)
 
-    # remove hi from the list of paths
-    popat!(abs.metavar_paths, hi)
+        # remove hi from the list of paths
+        popat!(new_abs.metavar_paths, hi)
 
-
-
-    # subset to the matches
-    hit!(shared.stats.matches_cache)
-    abs.matches = get!(shared.matches_cache, abs.expr) do
+        # subset to the matches
+        hit!(shared.stats.matches_cache)
         unhit!(shared.stats.matches_cache) # silly
         miss!(shared.stats.matches_cache)
-        filter!(abs.matches) do node
+        filter!(new_abs.matches) do node
             getchild(node, path_lo).expr_id == getchild(node, path_hi).expr_id
         end
+        new_abs.utility = simple_utility(new_abs)
+        new_abs
     end
 
-    abs.utility = simple_utility(abs)
+    # copy it since now it might be being used as a key
+    abs.expr = copy(abs.expr)
+
+    # undo the changes to the original expression
+    set_indices!(abs.expr, path_hi, hi)
+    for j in hi+1:length(abs.metavar_paths)
+        path = abs.metavar_paths[j]
+        set_indices!(abs.expr, path, j + 1)
+    end
+
+    return new_abs
 end

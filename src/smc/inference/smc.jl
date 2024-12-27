@@ -6,7 +6,7 @@ mutable struct Particle
     weight::Float64
     done::Bool
 end
-Base.copy(p::Particle) = Particle(copy(p.abs), p.weight, p.done)
+Base.copy(p::Particle) = Particle(p.abs, p.weight, p.done)
 
 
 Base.@kwdef struct Config
@@ -28,10 +28,10 @@ end
 SMCStats() = SMCStats(0, 0, 0, 0., 0., HitRate())
 
 mutable struct Shared
-    matches_cache::Dict{PExpr, Vector{CorpusNode}}
+    matches_cache::Dict{PExpr, Abstraction}
     stats::SMCStats
 end
-Shared() = Shared(Dict{PExpr, Vector{CorpusNode}}(), SMCStats())
+Shared() = Shared(Dict{PExpr, Abstraction}(), SMCStats())
 
 (Base.:+)(a::SMCStats, b::SMCStats) = SMCStats(a.steps + b.steps, a.proposals + b.proposals, a.expansions + b.expansions, a.time_smc + b.time_smc, a.time_rewrite + b.time_rewrite, a.matches_cache + b.matches_cache)
 
@@ -130,8 +130,11 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
 
         for particle in particles
             particle.done && continue
-            res = sample_expansion!(shared, particle.abs)
-            particle.done = !res
+            abs = sample_expansion(shared, particle.abs)
+            particle.done = isnothing(abs)
+            if !particle.done
+                particle.abs = abs
+            end
             if particle.abs.utility > best_utility
                 best_utility = particle.abs.utility
                 best_particle = copy(particle)
