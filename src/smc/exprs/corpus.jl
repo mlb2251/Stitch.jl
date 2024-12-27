@@ -133,7 +133,7 @@ end
 
 function getchild(node::CorpusNode, path::Path)::CorpusNode
     for i in path
-        @inbounds node = node.children[i]
+        node = node.children[i]
     end
     node
 end

@@ -30,3 +30,19 @@ end
 function Base.getindex(idset::IdSet{T}, id::Id) where T
     idset.entry_of_id[id]
 end
+
+mutable struct HitRate
+    hits::Int
+    misses::Int
+end
+HitRate() = HitRate(0, 0)
+
+(Base.:+)(a::HitRate, b::HitRate) = HitRate(a.hits + b.hits, a.misses + b.misses)
+Base.show(io::IO, rate::HitRate) = print(io, round(hit_rate(rate) * 100, digits=2), "% (N=", rate.hits + rate.misses, ")")
+
+hit!(rate::HitRate) = (rate.hits += 1)
+miss!(rate::HitRate) = (rate.misses += 1)
+unhit!(rate::HitRate) = (rate.hits -= 1)
+unmiss!(rate::HitRate) = (rate.misses -= 1)
+hit_rate(rate::HitRate) = rate.hits / (rate.hits + rate.misses)
+
