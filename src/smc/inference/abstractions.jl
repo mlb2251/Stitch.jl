@@ -5,17 +5,23 @@ A path to a metavar in a corpus node.
 - `path` is the path from the match location to the corpus node corresponding to this metavar
 - `subpaths` todo
 """
-mutable struct MetaVarPath
-    path::Path
-    subpaths::Vector{Path}
+struct MetaVarPath
+    paths::Vector{Path}
 end
-Base.copy(m::MetaVarPath) = MetaVarPath(copy(m.path), Path[copy(subpath) for subpath in m.subpaths])
+Base.copy(m::MetaVarPath) = MetaVarPath(Path[copy(path) for path in m.paths])
 
-@inline isfrozen(m::MetaVarPath) = !isempty(m.subpaths)
+@inline primary_path(m::MetaVarPath) = @inbounds m.paths[1]
+@inline has_multiuses(m::MetaVarPath) = length(m.paths) > 1
+function set_indices!(node::PExpr, m::MetaVarPath, idx::Int)
+    for path in m.paths
+        setchild!(node, path, MetaVar(idx))
+    end
+end
 
-@inline getchild(node::CorpusNode, path::MetaVarPath)::CorpusNode = getchild(node, path.path)
-@inline getchild(node::PExpr, path::MetaVarPath)::PExpr = getchild(node, path.path)
-@inline setchild!(node::PExpr, path::MetaVarPath, child::PExpr) = setchild!(node, path.path, child)
+
+@inline getchild(node::CorpusNode, path::MetaVarPath)::CorpusNode = getchild(node, primary_path(path))
+@inline getchild(node::PExpr, path::MetaVarPath)::PExpr = getchild(node, primary_path(path))
+@inline setchild!(node::PExpr, path::MetaVarPath, child::PExpr) = setchild!(node, primary_path(path), child)
 
 
 mutable struct Abstraction
@@ -46,9 +52,9 @@ function Base.show(io::IO, a::Abstraction)
 end
 
 arity(abs::Abstraction) = length(abs.metavar_paths)
-multiuses(abs::Abstraction) = sum(length(p.subpaths) for p in abs.metavar_paths; init=0)
+multiuses(abs::Abstraction) = sum(length(p.paths) - 1 for p in abs.metavar_paths; init=0)
 
 function identity_abstraction(corpus, name::Symbol)
     # return Abstraction([Match(node, CorpusNode[node]) for node in nodes], Path[Int[]], MetaVar(1, metavar_names[1]), 2, 0, 0.)
-    return Abstraction(copy(corpus.bottom_up_order), MetaVarPath[MetaVarPath(Path(), Path[])], MetaVar(1), 0, 0., name, corpus)
+    return Abstraction(copy(corpus.bottom_up_order), MetaVarPath[MetaVarPath(Path[Path()])], MetaVar(1), 0, 0., name, corpus)
 end
