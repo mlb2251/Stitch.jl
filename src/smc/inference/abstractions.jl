@@ -55,5 +55,5 @@ end
 
 function identity_abstraction(corpus, name::Symbol)
     # return Abstraction([Match(node, CorpusNode[node]) for node in nodes], Path[Int[]], MetaVar(1, metavar_names[1]), 2, 0, 0.)
-    return Abstraction(copy(corpus.bottom_up_order), MetaVarPath[MetaVarPath(Path(), 1, false, true)], MetaVar(metavar_idx), metavar_idx+1, 0, 0, 0., 1, name, corpus)
+    return Abstraction(copy(corpus.bottom_up_order), MetaVarPath[MetaVarPath(Path(), 1, false, true)], MetaVar(1), 2, 0, 0, 0., 1, name, corpus)
 end

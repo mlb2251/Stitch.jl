@@ -23,8 +23,9 @@ function sample_expansion!(shared::Shared, abs::Abstraction)
 
     if rand() < P_MULTIUSE
         # consider multiuse expansion – is there another argument that is the same as the one we are expanding (at this location)?
+        # note due to freezing we can't modify the other path, but we can modify ourselves to be the same as the other path
         multiuse_candidates = filter(eachindex(abs.metavar_paths)) do j
-            j != i && child_i.expr_id == getchild(match, abs.metavar_paths[j]).expr_id
+            j != i && abs.metavar_paths[i].name != abs.metavar_paths[j].name && child_i.expr_id == getchild(match, abs.metavar_paths[j]).expr_id
         end
 
         if length(multiuse_candidates) > 0
@@ -78,7 +79,7 @@ end
 function multiuse_expansion!(shared::Shared, abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode, j::Int)
     path_j = abs.metavar_paths[j]
 
-    # freeze i and j
+    # path_j = abs.metavar_paths[j]
     abs.metavar_paths[i].frozen = true
     abs.metavar_paths[j].frozen = true
     # set i to be the same as j but not as a representative (and note j may or may not be a representative)
