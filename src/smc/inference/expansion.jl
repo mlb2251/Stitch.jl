@@ -1,10 +1,11 @@
-function sample_expansion(shared::Shared, abs::Abstraction)::Union{Abstraction, Nothing}
+function sample_expansion(shared::Shared, abs::Abstraction)::Union{Tuple{Float64, Abstraction}, Nothing}
+    # if all paths are multiuses, we can't expand
     all(p -> has_multiuses(p), abs.metavar_paths) && return nothing
 
     # pick a random match location to use as the basis for expansion
     match = abs.matches[rand(1:end)]
 
-    # pick a random (unfrozen) path to consider expanding
+    # pick a random (non-multiused) path to consider expanding
     probs = fill(1., length(abs.metavar_paths))
     for (i, path) in enumerate(abs.metavar_paths)
         if has_multiuses(path)
@@ -43,10 +44,8 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
     # grow the abstraction
     prod = child_i.production
     if prod.type === :app
-        new_expr = App(prod.head, PExpr[])
-        for j in 1:prod.argc
-            push!(new_expr.args, MetaVar(i + j - 1))
-        end
+        args = PExpr[MetaVar(i + j - 1) for j in 1:prod.argc]
+        new_expr = App(prod.head, args)
     else
         new_expr = prod.head
     end
@@ -60,9 +59,7 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
         # so our old paths that will be kept are just at index i+1 onwards
         for j in i+1:length(abs.metavar_paths)
             path = abs.metavar_paths[j]
-            # @assert getchild(abs.expr, path).name == j
             set_indices!(abs.expr, path, j + shift_by)
-            # @assert getchild(abs.expr, path).name == j + shift_by
         end
     end
 
