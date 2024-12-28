@@ -104,7 +104,7 @@ end
 
 const metavar_names = generate_metavar_names()
 
-function getchild(node::PExpr, path::Path)::PExpr
+function getchild(node::PExpr, path::T)::PExpr where T <: AbstractVector{Int}
     # while node isa Abs
     #     node = node.body  # abs are skipped over in getchild
     # end
@@ -120,9 +120,9 @@ end
 
 function setchild!(node::PExpr, path::Path, child::PExpr)
     isempty(path) && return child
-    parent = getchild(node, path[1:end-1])
+    parent = getchild(node, view(path, 1:length(path)-1))
     @assert parent isa App
     # could be a little broken around how Abs / body is handled
-    parent.args[path[end]] = child
+    @inbounds parent.args[path[end]] = child
     node
 end

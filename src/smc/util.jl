@@ -40,6 +40,7 @@ HitRate() = HitRate(0, 0)
 (Base.:+)(a::HitRate, b::HitRate) = HitRate(a.hits + b.hits, a.misses + b.misses)
 Base.show(io::IO, rate::HitRate) = print(io, round(hit_rate(rate) * 100, digits=2), "% (N=", rate.hits + rate.misses, ")")
 
+hit!(rate::HitRate, b::Bool) = b ? hit!(rate) : miss!(rate)
 hit!(rate::HitRate) = (rate.hits += 1)
 miss!(rate::HitRate) = (rate.misses += 1)
 unhit!(rate::HitRate) = (rate.hits -= 1)

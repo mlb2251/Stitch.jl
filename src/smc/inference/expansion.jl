@@ -64,10 +64,9 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
         end
     end
 
-    hit!(shared.stats.matches_cache)
+    hit = Ref(true)
     new_abs = get!(shared.matches_cache, abs.expr) do
-        unhit!(shared.stats.matches_cache) # silly
-        miss!(shared.stats.matches_cache)
+        hit[] = false
 
         new_abs = copy(abs)
         
@@ -92,8 +91,12 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
         new_abs
     end
 
-    # copy it since now it might be being used as a key
-    abs.expr = copy(abs.expr)
+    hit!(shared.stats.matches_cache, hit[])
+
+    # copy it if it's being used as a key so we don't mess with the key copy
+    if !hit[]
+        abs.expr = copy(abs.expr)
+    end
 
     # undo the change to the original expression
     abs.expr = setchild!(abs.expr, path_i, old_path_i_expr)
