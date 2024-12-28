@@ -7,6 +7,8 @@ function utility_by_rewrite(abs::Abstraction)
     # rewritten_size = size(rewritten)
     # original_size = size(abs.corpus)
     # return rewritten_size - original_size
+    # println(abs)
+    # rewritten = rewrite(abs.corpus, abs)
     return rewritten_size(abs.corpus, abs) - size(abs.corpus)
 end
 

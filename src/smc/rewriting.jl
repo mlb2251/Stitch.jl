@@ -14,7 +14,9 @@ function rewrite(corpus::Corpus, abs::Abstraction)
     mark_rewritable_ancestors!(abs, corpus)
     for program in corpus.programs
         rw = rewrite(program.expr, abs)
-        push!(rewritten, Program(program.info, make_corpus_nodes(rw, program.info.id, nothing)))
+        rw_program = Program(program.info, make_corpus_nodes(rw, program.info.id, nothing))
+        @assert size(rw_program) == program.expr.rewrite_data.rewritten_size "rewritten size mismatch: $(size(rw_program)) != $(program.expr.rewrite_data.rewritten_size) for program $(rw_program) and abstraction $abs"
+        push!(rewritten, rw_program)
     end
     Corpus(rewritten)
 end
@@ -27,7 +29,7 @@ function rewrite(node::CorpusNode, abs::Abstraction)::PExpr
     if node.rewrite_data.is_match
         match = node.rewrite_data.match
         if match.decision
-            args = map(match.args) do arg
+            args = map(match.args) do arg::CorpusNode
                 rewrite(arg, abs)
             end
             return App(Prim(abs.name), args)
@@ -75,7 +77,15 @@ function mark_rewritable_ancestors!(abs::Abstraction, corpus::Corpus)
     end
 
     for node in corpus.bottom_up_order
-        !node.rewrite_data.is_match && continue
+        !node.rewrite_data.is_ancestor_of_match && continue
+
+        if !node.rewrite_data.is_match
+            # just update rewritten sizes
+            node.rewrite_data.rewritten_size = 1 + sum(child.rewrite_data.rewritten_size for child in node.children; init=0)
+            continue
+        end
+
+        # match case
         args = abstraction_args(node, abs)
         # size without rewriting is just based on size of children
         size_no_rewrite = 1 + sum(child.rewrite_data.rewritten_size for child in node.children; init=0)
