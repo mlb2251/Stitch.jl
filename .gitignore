@@ -1,2 +1,4 @@
 .vscode/settings.json
 Manifest.toml
+alloc-profile.pb.gz
+profile.pb.gz
