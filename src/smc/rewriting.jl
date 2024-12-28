@@ -3,8 +3,8 @@
 function rewritten_size(corpus::Corpus, abs::Abstraction)
     mark_rewritable_ancestors!(abs, corpus)
     size = 0
-    for node in corpus.bottom_up_order
-        size += node.rewrite_data.rewritten_size
+    for program in corpus.programs
+        size += program.expr.rewrite_data.rewritten_size
     end
     size
 end

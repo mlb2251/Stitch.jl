@@ -9,7 +9,11 @@ function utility_by_rewrite(abs::Abstraction)
     # return rewritten_size - original_size
     # println(abs)
     # rewritten = rewrite(abs.corpus, abs)
-    return rewritten_size(abs.corpus, abs) - size(abs.corpus)
+
+    # original = size(abs.corpus)
+    # rw = rewritten_size(abs.corpus, abs)
+    # println("rewritten size: $rw, original size: $original")
+    return size(abs.corpus) - rewritten_size(abs.corpus, abs)
 end
 
 function top_down_utility(corpus::Corpus, abs::Abstraction)
