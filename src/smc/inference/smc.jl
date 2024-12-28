@@ -15,6 +15,7 @@ Base.@kwdef struct Config
     verbose_best::Bool=false
     prefix::String="fn_"
     N::Int=1
+    max_steps::Int=50
 end
 
 mutable struct SMCStats
@@ -128,13 +129,35 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
     while any(p -> !p.done, particles)
         shared.stats.steps += 1
 
-        for particle in particles
+        # @show shared.stats.steps
+
+        if shared.stats.steps > config.max_steps
+            break
+        end
+
+        for (i, particle) in enumerate(particles)
             particle.done && continue
+            # if shared.stats.steps == 2
+            # println(i, " BEFORE STEP: ", particle.abs)
+            # end
+            # assert_valid(particle.abs)
             abs = sample_expansion(shared, particle.abs)
+            # println(i, " AFTER STEP:  ", abs)
+
             particle.done = isnothing(abs)
-            if !particle.done
+            if !isnothing(abs)
                 particle.abs = abs
             end
+
+            # for (j, p) in enumerate(particles)
+            #     println("    ", j, " ", p.abs)
+            # end
+
+            # println()
+
+            # assert_valid(particle.abs)
+
+
             if particle.abs.utility > best_utility
                 best_utility = particle.abs.utility
                 best_particle = copy(particle)
@@ -150,14 +173,27 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
                 particle.weight = 0.
             end
         end
-        # weights = exp.([p.logweight/temperature for p in particles])
-        weights = [exp(log(p.weight)/temperature) for p in particles]
-        if sum(weights) ≈ 0
+
+        if all(p -> p.done, particles)
             break
         end
+
+        weights = [exp(log(p.weight)/temperature) for p in particles]
         weights ./= sum(weights)
 
-        @inbounds particles = [copy(particles[sample_normalized(weights)]) for _ in 1:config.num_particles]
+        # println("BEFORE RESAMPLE\n\n")
+        # for p in particles
+        #     println(p.abs)
+        #     assert_valid(p.abs)
+        # end
+        particles = resample_residual(particles, weights)
+        # particles = resample_multinomial(particles, weights)
+
+        # println("AFTER RESAMPLE\n\n")
+        # for p in particles
+        #     println(p.abs)
+        #     assert_valid(p.abs)
+        # end
     end
 
     shared.stats.time_smc = time() - tstart

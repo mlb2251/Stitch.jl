@@ -14,6 +14,47 @@ function sample_normalized(weights)
     return i
 end
 
+function sample_many(xs::Vector{T}, weights::Vector{Float64}, N::Int) where T
+    weights = weights ./ sum(weights)
+    res = Vector{T}(undef, N)
+    rands = sort!(rand(N))
+    W = length(weights)
+
+    weights_idx = 1
+    @inbounds cumulative_weight = weights[1]
+
+    for j in 1:N
+        while (@inbounds cumulative_weight < rands[j] && weights_idx < W)
+            @inbounds cumulative_weight += weights[weights_idx]
+            weights_idx += 1
+        end
+        @inbounds res[j] = copy(xs[weights_idx])
+    end
+    res
+end
+
+function resample_multinomial(xs::Vector{T}, weights::Vector{Float64})::Vector{T} where T
+    return sample_many(xs, weights, length(xs))
+end
+
+function resample_residual(xs::Vector{T}, weights::Vector{Float64})::Vector{T} where T
+    weights = weights ./ sum(weights)
+    N = length(weights)
+    Nweights = weights .* N
+    whole_weights = floor.(Int, Nweights)
+    residual_weights = Nweights .- whole_weights
+    residual_weights ./= sum(residual_weights)
+    res = Vector{T}()
+    for (i, count) in enumerate(whole_weights)
+        for _ in 1:count
+            @inbounds push!(res, copy(xs[i]))
+        end
+    end
+    append!(res, sample_many(xs, residual_weights, N - length(res)))
+    res
+end
+
+
 const Id = Int
 
 struct IdSet{T}

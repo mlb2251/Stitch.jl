@@ -60,13 +60,15 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
         # so our old paths that will be kept are just at index i+1 onwards
         for j in i+1:length(abs.metavar_paths)
             path = abs.metavar_paths[j]
+            # @assert getchild(abs.expr, path).name == j
             set_indices!(abs.expr, path, j + shift_by)
+            # @assert getchild(abs.expr, path).name == j + shift_by
         end
     end
 
-    hit = Ref(true)
+    hit = true
     new_abs = get!(shared.matches_cache, abs.expr) do
-        hit[] = false
+        hit = false
 
         new_abs = copy(abs)
         
@@ -91,10 +93,10 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
         new_abs
     end
 
-    hit!(shared.stats.matches_cache, hit[])
+    hit!(shared.stats.matches_cache, hit)
 
     # copy it if it's being used as a key so we don't mess with the key copy
-    if !hit[]
+    if !hit
         abs.expr = copy(abs.expr)
     end
 
@@ -103,7 +105,7 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
     if shift_by != 0
         for j in i+1:length(abs.metavar_paths)
             path = abs.metavar_paths[j]
-            set_indices!(abs.expr, path, j - shift_by)
+            set_indices!(abs.expr, path, j) # undo the shift by setting it back to j
         end
     end
 
@@ -112,11 +114,9 @@ end
 
 function multiuse_expansion(shared::Shared, abs::Abstraction, match::CorpusNode, i::Int, path_i::MetaVarPath, child_i::CorpusNode, j::Int)
     lo, hi = i < j ? (i,j) : (j,i)
-    path_lo = abs.metavar_paths[lo]
-    path_hi = abs.metavar_paths[hi]
 
     # set hi to be the same as lo within the expression
-    set_indices!(abs.expr, path_hi, lo)
+    set_indices!(abs.expr, abs.metavar_paths[hi], lo)
 
     # since we're removing `hi` we need to downshift all the paths above it
     for j in hi+1:length(abs.metavar_paths)
@@ -124,7 +124,10 @@ function multiuse_expansion(shared::Shared, abs::Abstraction, match::CorpusNode,
         set_indices!(abs.expr, path, j - 1)
     end
 
+    hit = true
     new_abs = get!(shared.matches_cache, abs.expr) do
+        hit = false
+
         new_abs = copy(abs)
         path_lo = new_abs.metavar_paths[lo]
         path_hi = new_abs.metavar_paths[hi]    
@@ -135,9 +138,6 @@ function multiuse_expansion(shared::Shared, abs::Abstraction, match::CorpusNode,
         popat!(new_abs.metavar_paths, hi)
 
         # subset to the matches
-        hit!(shared.stats.matches_cache)
-        unhit!(shared.stats.matches_cache) # silly
-        miss!(shared.stats.matches_cache)
         filter!(new_abs.matches) do node
             getchild(node, path_lo).expr_id == getchild(node, path_hi).expr_id
         end
@@ -145,14 +145,18 @@ function multiuse_expansion(shared::Shared, abs::Abstraction, match::CorpusNode,
         new_abs
     end
 
+    hit!(shared.stats.matches_cache, hit)
+
     # copy it since now it might be being used as a key
-    abs.expr = copy(abs.expr)
+    if !hit
+        abs.expr = copy(abs.expr)
+    end
 
     # undo the changes to the original expression
-    set_indices!(abs.expr, path_hi, hi)
+    set_indices!(abs.expr, abs.metavar_paths[hi], hi)
     for j in hi+1:length(abs.metavar_paths)
         path = abs.metavar_paths[j]
-        set_indices!(abs.expr, path, j + 1)
+        set_indices!(abs.expr, path, j) # undo the shift by setting it back to j
     end
 
     return new_abs

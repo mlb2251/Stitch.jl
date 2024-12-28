@@ -66,6 +66,12 @@ function Base.show(io::IO, a::Abstraction)
     print(io, "]")
 end
 
+function assert_valid(abs::Abstraction)
+    for (i, path) in enumerate(abs.metavar_paths)
+        @assert getchild(abs.expr, path).name == i
+    end
+end
+
 arity(abs::Abstraction) = length(abs.metavar_paths)
 multiuses(abs::Abstraction) = sum(length(p.paths) - 1 for p in abs.metavar_paths; init=0)
 
