@@ -89,7 +89,7 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
             end
         end
         new_abs.size += 1
-        new_abs.utility = simple_utility(new_abs)
+        new_abs.utility = utility_by_rewrite(new_abs)
         new_abs
     end
 
@@ -141,7 +141,7 @@ function multiuse_expansion(shared::Shared, abs::Abstraction, match::CorpusNode,
         filter!(new_abs.matches) do node
             getchild(node, path_lo).expr_id == getchild(node, path_hi).expr_id
         end
-        new_abs.utility = simple_utility(new_abs)
+        new_abs.utility = utility_by_rewrite(new_abs)
         new_abs
     end
 

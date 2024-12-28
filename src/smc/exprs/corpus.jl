@@ -21,22 +21,16 @@ const production_idset = IdSet{Production}()
 const expr_idset = IdSet{PExpr}()
 
 mutable struct MatchDecision
-    size_no_rewrite::Int
-    size_yes_rewrite::Int
-    args::Vector{Any} # CorpusNode 
-    decision::Bool
 end
-MatchDecision() = MatchDecision(typemin(Int), typemin(Int), Any[], false)
+MatchDecision() = MatchDecision(Any[], false)
 
 mutable struct RewriteData
     is_match::Bool
     is_ancestor_of_match::Bool
     rewritten_size::Int
-    match::MatchDecision
+    decision::Bool
 end
-RewriteData() = RewriteData(false, false, typemin(Int), MatchDecision())
-
-size(data::RewriteData) = data.match.size_best
+RewriteData() = RewriteData(false, false, typemin(Int), false)
 
 
 """
@@ -119,6 +113,7 @@ function make_corpus_nodes(expr::PExpr, program::Int, parent::Union{Nothing, Cor
             push!(node.children, arg_node)
         end
     end
+    node.rewrite_data.rewritten_size = size(node)
     return node
 end
 

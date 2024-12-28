@@ -1,37 +1,42 @@
 
 
 function rewritten_size(corpus::Corpus, abs::Abstraction)
-    mark_rewritable_ancestors!(abs, corpus)
+    bottom_up_rewrite_calculations!(abs, corpus)
     size = 0
     for program in corpus.programs
         size += program.expr.rewrite_data.rewritten_size
     end
+    unmark_rewritable_ancestors!(abs)
     size
 end
 
 function rewrite(corpus::Corpus, abs::Abstraction)
     rewritten = Program[]
-    mark_rewritable_ancestors!(abs, corpus)
+    bottom_up_rewrite_calculations!(abs, corpus)
     for program in corpus.programs
         rw = rewrite(program.expr, abs)
         rw_program = Program(program.info, make_corpus_nodes(rw, program.info.id, nothing))
         @assert size(rw_program) == program.expr.rewrite_data.rewritten_size "rewritten size mismatch: $(size(rw_program)) != $(program.expr.rewrite_data.rewritten_size) for program $(rw_program) and abstraction $abs"
         push!(rewritten, rw_program)
     end
+    unmark_rewritable_ancestors!(abs)
+    assert_cleared_rewrite_data!(corpus)
     Corpus(rewritten)
 end
 
 function rewrite(node::CorpusNode, abs::Abstraction)::PExpr
+    rewrite_data = node.rewrite_data
     # node is not affected by rewriting
-    !node.rewrite_data.is_ancestor_of_match && return node.expr
+    !rewrite_data.is_ancestor_of_match && return node.expr
 
     # if node is a match with a yes-decision, rewrite it
-    if node.rewrite_data.is_match
-        match = node.rewrite_data.match
-        if match.decision
-            args = map(match.args) do arg::CorpusNode
-                rewrite(arg, abs)
-            end
+    if rewrite_data.is_match
+        if rewrite_data.decision
+            # we need to reverse the metavar paths because metavar_paths[1] (after filtering
+            # for representative paths) is meant to be de bruijn index $1 which is the innermost lambda and thus
+            # the outermost (final) application argument
+            # also it needs to be an Any[] array because of where it's used later
+            args = reverse!(PExpr[rewrite(getchild(node, path), abs) for path in abs.metavar_paths])
             return App(Prim(abs.name), args)
         end
     end
@@ -52,19 +57,27 @@ function rewrite(node::CorpusNode, abs::Abstraction)::PExpr
     error("unreachable")
 end
 
-
-function mark_rewritable_ancestors!(abs::Abstraction, corpus::Corpus)
-    # set_scratches!((node) -> RewriteData(false, false, size(node), nothing), corpus)
+function clear_rewrite_data!(corpus::Corpus)
     for node in corpus.bottom_up_order
         node.rewrite_data.is_match = false
         node.rewrite_data.is_ancestor_of_match = false
         node.rewrite_data.rewritten_size = size(node)
     end
+end
 
-    """
-    From each match location, walk up the chain of parents until we hit the root and
-    mark them as an ancestor of a match (which means they can be affected by rewriting).
-    """
+function assert_cleared_rewrite_data!(corpus::Corpus)
+    for node in corpus.bottom_up_order
+        @assert !node.rewrite_data.is_match "is_match should be false"
+        @assert !node.rewrite_data.is_ancestor_of_match "is_ancestor_of_match should be false"
+        @assert node.rewrite_data.rewritten_size == size(node) "rewritten_size should be the size of the node"
+    end
+end
+
+ """
+From each match location, walk up the chain of parents until we hit the root and
+mark them as an ancestor of a match (which means they can be affected by rewriting).
+"""
+function mark_rewritable_ancestors!(abs::Abstraction)
     for match in abs.matches
         match.rewrite_data.is_match = true
         node = match
@@ -75,39 +88,49 @@ function mark_rewritable_ancestors!(abs::Abstraction, corpus::Corpus)
             node = node.parent
         end
     end
+end
+
+function unmark_rewritable_ancestors!(abs::Abstraction)
+    for match in abs.matches
+        match.rewrite_data.is_match = false
+        node = match
+        while true
+            isnothing(node) && break
+            !node.rewrite_data.is_ancestor_of_match && break
+            node.rewrite_data.is_ancestor_of_match = false
+            node.rewrite_data.rewritten_size = size(node)
+            node = node.parent
+        end
+    end
+end
+
+
+function bottom_up_rewrite_calculations!(abs::Abstraction, corpus::Corpus)
+    # set_scratches!((node) -> RewriteData(false, false, size(node), nothing), corpus)
+    
+    # clear_rewrite_data!(corpus)
+    mark_rewritable_ancestors!(abs)
 
     for node in corpus.bottom_up_order
-        !node.rewrite_data.is_ancestor_of_match && continue
+        rewrite_data = node.rewrite_data
+        !rewrite_data.is_ancestor_of_match && continue
 
-        if !node.rewrite_data.is_match
+        if !rewrite_data.is_match
             # just update rewritten sizes
-            node.rewrite_data.rewritten_size = 1 + sum(child.rewrite_data.rewritten_size for child in node.children; init=0)
+            rewrite_data.rewritten_size = 1 + sum(child.rewrite_data.rewritten_size for child in node.children; init=0)
             continue
         end
 
-        # match case
-        args = abstraction_args(node, abs)
         # size without rewriting is just based on size of children
         size_no_rewrite = 1 + sum(child.rewrite_data.rewritten_size for child in node.children; init=0)
         # size with rewriting is based on the actual args
-        size_yes_rewrite = 1 + sum(arg.rewrite_data.rewritten_size for arg in args; init=0)
+        size_yes_rewrite = 1 + sum(size(getchild(node, path)) for path in abs.metavar_paths; init=0)
         decision = size_yes_rewrite < size_no_rewrite
-        node.rewrite_data.rewritten_size = min(size_no_rewrite, size_yes_rewrite)
-        node.rewrite_data.match = MatchDecision(size_no_rewrite, size_yes_rewrite, args, decision)
+        rewrite_data.rewritten_size = min(size_no_rewrite, size_yes_rewrite)
+        rewrite_data.decision = decision
     end
 
     nothing
 end
 
-"""
-Get the CorpusNodes that are the arguments you would use if this node was being
-rewritten to use the abstraction.
-"""
-function abstraction_args(node::CorpusNode, abs::Abstraction)
-    # we need to reverse the metavar paths because metavar_paths[1] (after filtering
-    # for representative paths) is meant to be de bruijn index $1 which is the innermost lambda and thus
-    # the outermost (final) application argument
-    map(reverse(abs.metavar_paths)) do argpath
-        getchild(node, argpath)
-    end
-end
+
