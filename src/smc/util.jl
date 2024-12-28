@@ -33,14 +33,18 @@ function sample_many(xs::Vector{T}, weights::Vector{Float64}, N::Int) where T
     res
 end
 
-function resample_multinomial(xs::Vector{T}, weights::Vector{Float64})::Vector{T} where T
+function resample_multinomial(xs::Vector{T}, logweights::Vector{Float64})::Vector{T} where T
+    total = logsumexp(logweights)
+    total == -Inf && return [copy(x) for x in xs]
+    weights = exp.(logweights .- total)
     return sample_many(xs, weights, length(xs))
 end
 
-function resample_residual(xs::Vector{T}, weights::Vector{Float64})::Vector{T} where T
-    weights = weights ./ sum(weights)
-    N = length(weights)
-    Nweights = weights .* N
+function resample_residual(xs::Vector{T}, logweights::Vector{Float64})::Vector{T} where T
+    N = length(logweights)
+    total = logsumexp(logweights)
+    total == -Inf && return [copy(x) for x in xs]
+    Nweights = exp.(logweights .- total) .* N
     whole_weights = floor.(Int, Nweights)
     residual_weights = Nweights .- whole_weights
     residual_weights ./= sum(residual_weights)

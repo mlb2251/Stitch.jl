@@ -3,11 +3,15 @@ export smc
 
 mutable struct Particle
     abs::Abstraction
-    weight::Float64
     done::Bool
 end
-Base.copy(p::Particle) = Particle(p.abs, p.weight, p.done)
+Base.copy(p::Particle) = Particle(p.abs, p.done)
 
+mutable struct SMC
+    particles::Vector{Particle}
+    logweights::Vector{Float64}
+    ancestors::Vector{Int}
+end
 
 Base.@kwdef struct Config
     num_particles::Int=3000
@@ -39,7 +43,7 @@ Shared() = Shared(Dict{PExpr, Abstraction}(), SMCStats())
 
 (Base.:+)(a::SMCStats, b::SMCStats) = SMCStats(a.steps + b.steps, a.proposals + b.proposals, a.expansions + b.expansions, a.time_smc + b.time_smc, a.time_rewrite + b.time_rewrite, a.matches_cache + b.matches_cache)
 
-Base.show(io::IO, stats::SMCStats) = print(io, "SMCStats(steps=$(stats.steps), proposals=$(stats.proposals), expansions=$(stats.expansions), time_smc=$(stats.time_smc), time_rewrite=$(stats.time_rewrite), matches_cache=$(stats.matches_cache))")
+Base.show(io::IO, stats::SMCStats) = print(io, "SMCStats(steps=$(stats.steps), proposals=$(stats.proposals), expansions=$(stats.expansions), time_smc=$(round(stats.time_smc, sigdigits=2)), time_rewrite=$(round(stats.time_rewrite, sigdigits=2)), matches_cache=$(stats.matches_cache))")
 
 struct SMCResult
     abstraction::Abstraction
@@ -115,38 +119,28 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
     @assert !has_prim(corpus, name) "Primitive $(name) already exists in corpus"
 
     init_abs = identity_abstraction(corpus, name)
-    init_particle = Particle(init_abs, 0., false)
-    particles = Particle[copy(init_particle) for _ in 1:config.num_particles]
-
-    # tmp_particles = Particle[copy(init_particle) for _ in 1:num_particles]
-
+    init_particle = Particle(init_abs, false)
+    init_particles = Particle[copy(init_particle) for _ in 1:config.num_particles]
+    init_logweights = fill(0., config.num_particles)
+    init_ancestors = 1:config.num_particles
+    smc = SMC(init_particles, init_logweights, init_ancestors)
 
     best_utility = 0.
     best_particle = init_particle
     shared = Shared()
 
     !isnothing(config.seed) && Random.seed!(config.seed)
-    # @show Random.seed!()
+    # println("seed: ", Random.seed!())
 
-    while any(p -> !p.done, particles)
+    while any(p -> !p.done, smc.particles)
         shared.stats.steps += 1
 
-        # @show shared.stats.steps
+        shared.stats.steps > config.max_steps && break
 
-        if shared.stats.steps > config.max_steps
-            break
-        end
-
-        for (i, particle) in enumerate(particles)
+        for (i, particle) in enumerate(smc.particles)
             particle.done && continue
-            # if shared.stats.steps == 2
-            # println(i, " BEFORE STEP: ", particle.abs)
-            # end
-            # assert_valid(particle.abs)
             abs = sample_expansion(shared, particle.abs)
             
-            # println(i, " AFTER STEP:  ", abs)
-
             particle.done = isnothing(abs)
             if !isnothing(abs)
                 if isnan(abs.utility)
@@ -156,15 +150,6 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
                 particle.abs = abs
             end
 
-            # for (j, p) in enumerate(particles)
-            #     println("    ", j, " ", p.abs)
-            # end
-
-            # println()
-
-            # assert_valid(particle.abs)
-
-
             if particle.abs.utility > best_utility
                 best_utility = particle.abs.utility
                 best_particle = copy(particle)
@@ -172,48 +157,20 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
             end
         end
 
-        if all(p -> p.done, particles)
-            break
-        end
+        all(p -> p.done, smc.particles) && break
 
         # resample
-        if !config.logprob_mode
-            for particle in particles
-                particle.weight = max(1., particle.abs.utility)
-                if particle.done
-                    particle.weight = 0.
-                end
+        for i in eachindex(smc.particles)
+            particle = smc.particles[i]
+            if config.logprob_mode
+                smc.logweights[i] = particle.done ? -Inf : particle.abs.utility / config.temperature
+            else
+                smc.logweights[i] = particle.done ? -Inf : log(max(1., particle.abs.utility))
             end
-            weights = [exp(log(p.weight)/config.temperature) for p in particles]
-            weights ./= sum(weights)    
-        else
-            for particle in particles
-                particle.weight = particle.abs.utility
-                if particle.done
-                    particle.weight = -Inf
-                end
-            end
-            weights = [p.weight/config.temperature for p in particles]
-            total = logsumexp(weights)
-            # @show weights
-            weights .= exp.(weights .- total)
-            # @show weights
         end
 
-
-        # println("BEFORE RESAMPLE\n\n")
-        # for p in particles
-        #     println(p.abs)
-        #     assert_valid(p.abs)
-        # end
-        particles = resample_residual(particles, weights)
+        smc.particles = resample_residual(smc.particles, smc.logweights)
         # particles = resample_multinomial(particles, weights)
-
-        # println("AFTER RESAMPLE\n\n")
-        # for p in particles
-        #     println(p.abs)
-        #     assert_valid(p.abs)
-        # end
     end
 
     shared.stats.time_smc = time() - tstart

@@ -53,7 +53,7 @@ end
 Base.copy(a::Abstraction) = Abstraction(copy(a.matches), MetaVarPath[copy(p) for p in a.metavar_paths], copy(a.expr), a.size, a.utility, a.name, a.corpus)
 
 function Base.show(io::IO, a::Abstraction)
-    print(io, "[matches=", length(a.matches), " arity=", arity(a), " utility=", a.utility, " :")
+    print(io, "[matches=", length(a.matches), " arity=", arity(a), " utility=", a.utility, ": ")
     # if length(a.metavar_paths) > 0
     #     print(io, "(λ")
     #     for (i, _) in enumerate(a.metavar_paths)
