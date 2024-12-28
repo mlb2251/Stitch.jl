@@ -71,7 +71,7 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
         hit = false
 
         new_abs = copy(abs)
-        new_abs.utility = -Inf
+        new_abs.utility = NaN
         
         # subset to the matches that have the same production as the child we are expanding based on
         filter!(new_abs.matches) do node
@@ -129,7 +129,7 @@ function multiuse_expansion(shared::Shared, abs::Abstraction, match::CorpusNode,
         hit = false
 
         new_abs = copy(abs)
-        new_abs.utility = -Inf
+        new_abs.utility = NaN
 
         path_lo = new_abs.metavar_paths[lo]
         path_hi = new_abs.metavar_paths[hi]    

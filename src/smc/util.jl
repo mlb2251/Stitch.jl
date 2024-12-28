@@ -88,3 +88,17 @@ unhit!(rate::HitRate) = (rate.hits -= 1)
 unmiss!(rate::HitRate) = (rate.misses -= 1)
 hit_rate(rate::HitRate) = rate.hits / (rate.hits + rate.misses)
 
+
+function logaddexp(x::Float64, y::Float64)::Float64
+    if x == -Inf
+        return y
+    elseif y == -Inf
+        return x
+    else
+        # Numerically stable implementation
+        res = max(x, y) + log1p(exp(-abs(x - y)))
+        return (res > 0.0 && isapprox(res, 0.0; atol = eps(1.0))) ? 0.0 : res
+    end
+end
+
+logsumexp(x::Vector{Float64}) = reduce(logaddexp, x; init = -Inf)

@@ -18,6 +18,7 @@ Base.@kwdef struct Config
     max_steps::Int=50
     temperature::Float64=.5
     utility_fn::Function=utility_by_rewrite
+    logprob_mode::Bool=false
 end
 
 mutable struct SMCStats
@@ -148,8 +149,9 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
 
             particle.done = isnothing(abs)
             if !isnothing(abs)
-                if abs.utility == -Inf
+                if isnan(abs.utility)
                     abs.utility = config.utility_fn(abs)
+                    @assert !isnan(abs.utility)
                 end
                 particle.abs = abs
             end
@@ -170,21 +172,34 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
             end
         end
 
-
-        # resample
-        for particle in particles
-            particle.weight = max(1., particle.abs.utility)
-            if particle.done
-                particle.weight = 0.
-            end
-        end
-
         if all(p -> p.done, particles)
             break
         end
 
-        weights = [exp(log(p.weight)/config.temperature) for p in particles]
-        weights ./= sum(weights)
+        # resample
+        if !config.logprob_mode
+            for particle in particles
+                particle.weight = max(1., particle.abs.utility)
+                if particle.done
+                    particle.weight = 0.
+                end
+            end
+            weights = [exp(log(p.weight)/config.temperature) for p in particles]
+            weights ./= sum(weights)    
+        else
+            for particle in particles
+                particle.weight = particle.abs.utility
+                if particle.done
+                    particle.weight = -Inf
+                end
+            end
+            weights = [p.weight/config.temperature for p in particles]
+            total = logsumexp(weights)
+            # @show weights
+            weights .= exp.(weights .- total)
+            # @show weights
+        end
+
 
         # println("BEFORE RESAMPLE\n\n")
         # for p in particles

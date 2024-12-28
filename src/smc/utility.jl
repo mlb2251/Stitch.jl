@@ -20,3 +20,12 @@ function size_ratio_utility(abs::Abstraction)
     return size(abs.corpus) / rewritten_size(abs.corpus, abs)
 end
 
+"""
+For an untyped grammar of size N, the probability of a program of size M
+under a uniform distribution is 1/N^M so the log probability is -M*log(N)
+"""
+function logprob_utility(abs::Abstraction)
+    N = 10
+    M = rewritten_size(abs.corpus, abs)
+    return -M*log(N)
+end
