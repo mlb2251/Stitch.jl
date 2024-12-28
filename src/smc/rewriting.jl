@@ -4,8 +4,7 @@ function rewritten_size(corpus::Corpus, abs::Abstraction)
     mark_rewritable_ancestors!(abs, corpus)
     size = 0
     for node in corpus.bottom_up_order
-        scratch = node.scratch::RewriteData
-        size += scratch.rewritten_size
+        size += node.rewrite_data.rewritten_size
     end
     size
 end
@@ -21,13 +20,12 @@ function rewrite(corpus::Corpus, abs::Abstraction)
 end
 
 function rewrite(node::CorpusNode, abs::Abstraction)::PExpr
-    scratch = node.scratch::RewriteData
     # node is not affected by rewriting
-    !scratch.is_ancestor_of_match && return node.expr
+    !node.rewrite_data.is_ancestor_of_match && return node.expr
 
     # if node is a match with a yes-decision, rewrite it
-    if scratch.is_match
-        match = scratch.match::MatchDecision
+    if node.rewrite_data.is_match
+        match = node.rewrite_data.match
         if match.decision
             args = map(match.args) do arg
                 rewrite(arg, abs)
@@ -54,55 +52,42 @@ end
 
 
 function mark_rewritable_ancestors!(abs::Abstraction, corpus::Corpus)
-    set_scratches!((node) -> RewriteData(false, false, size(node), nothing), corpus)
+    # set_scratches!((node) -> RewriteData(false, false, size(node), nothing), corpus)
+    for node in corpus.bottom_up_order
+        node.rewrite_data.is_match = false
+        node.rewrite_data.is_ancestor_of_match = false
+        node.rewrite_data.rewritten_size = size(node)
+    end
 
     """
     From each match location, walk up the chain of parents until we hit the root and
     mark them as an ancestor of a match (which means they can be affected by rewriting).
     """
     for match in abs.matches
-        match.scratch.is_match = true
+        match.rewrite_data.is_match = true
         node = match
         while true
             isnothing(node) && break
-            scratch = node.scratch::RewriteData
-            scratch.is_ancestor_of_match && break
-            scratch.is_ancestor_of_match = true
+            node.rewrite_data.is_ancestor_of_match && break
+            node.rewrite_data.is_ancestor_of_match = true
             node = node.parent
         end
     end
 
     for node in corpus.bottom_up_order
-        scratch = node.scratch::RewriteData
-        !scratch.is_match && continue
+        !node.rewrite_data.is_match && continue
         args = abstraction_args(node, abs)
         # size without rewriting is just based on size of children
-        size_no_rewrite = 1 + sum(get_scratch(RewriteData, child).rewritten_size for child in node.children; init=0)
+        size_no_rewrite = 1 + sum(child.rewrite_data.rewritten_size for child in node.children; init=0)
         # size with rewriting is based on the actual args
-        size_yes_rewrite = 1 + sum(get_scratch(RewriteData, arg).rewritten_size for arg in args; init=0)
+        size_yes_rewrite = 1 + sum(arg.rewrite_data.rewritten_size for arg in args; init=0)
         decision = size_yes_rewrite < size_no_rewrite
-        scratch.rewritten_size = min(size_no_rewrite, size_yes_rewrite)
-        scratch.match = MatchDecision(size_no_rewrite, size_yes_rewrite, args, decision)
+        node.rewrite_data.rewritten_size = min(size_no_rewrite, size_yes_rewrite)
+        node.rewrite_data.match = MatchDecision(size_no_rewrite, size_yes_rewrite, args, decision)
     end
 
     nothing
 end
-
-mutable struct MatchDecision
-    size_no_rewrite::Int
-    size_yes_rewrite::Int
-    args::Vector{CorpusNode}
-    decision::Bool
-end
-
-mutable struct RewriteData
-    is_match::Bool
-    is_ancestor_of_match::Bool
-    rewritten_size::Int
-    match::Union{MatchDecision, Nothing}
-end
-
-size(data::RewriteData) = data.match.size_best
 
 """
 Get the CorpusNodes that are the arguments you would use if this node was being

@@ -20,6 +20,25 @@ end
 const production_idset = IdSet{Production}()
 const expr_idset = IdSet{PExpr}()
 
+mutable struct MatchDecision
+    size_no_rewrite::Int
+    size_yes_rewrite::Int
+    args::Vector{Any} # CorpusNode 
+    decision::Bool
+end
+MatchDecision() = MatchDecision(typemin(Int), typemin(Int), Any[], false)
+
+mutable struct RewriteData
+    is_match::Bool
+    is_ancestor_of_match::Bool
+    rewritten_size::Int
+    match::MatchDecision
+end
+RewriteData() = RewriteData(false, false, typemin(Int), MatchDecision())
+
+size(data::RewriteData) = data.match.size_best
+
+
 """
 There is one CorpusNode for each grammar production it would take to build the expression.
 """
@@ -32,6 +51,7 @@ mutable struct CorpusNode
     production_id::Int
     program::Int
     size::Int
+    rewrite_data::RewriteData
     scratch::Any
 end
 
@@ -90,7 +110,7 @@ function make_corpus_nodes(expr::PExpr, program::Int, parent::Union{Nothing, Cor
     prod = Production(expr)
     prod_id = production_idset[prod]
 
-    node = CorpusNode(expr, expr_id, CorpusNode[], parent, prod, prod_id, program, 1, nothing)
+    node = CorpusNode(expr, expr_id, CorpusNode[], parent, prod, prod_id, program, 1, RewriteData(), nothing)
     if expr isa App
         # we dont do `f` - matching at `f` is not eta long
         for arg in expr.args
