@@ -16,6 +16,8 @@ Base.@kwdef struct Config
     prefix::String="fn_"
     N::Int=1
     max_steps::Int=50
+    temperature::Float64=.5
+    utility_fn::Function=utility_by_rewrite
 end
 
 mutable struct SMCStats
@@ -120,7 +122,6 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
 
     best_utility = 0.
     best_particle = init_particle
-    temperature = .5
     shared = Shared()
 
     !isnothing(config.seed) && Random.seed!(config.seed)
@@ -148,7 +149,7 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
             particle.done = isnothing(abs)
             if !isnothing(abs)
                 if abs.utility == -Inf
-                    abs.utility = utility_by_rewrite(abs)
+                    abs.utility = config.utility_fn(abs)
                 end
                 particle.abs = abs
             end
@@ -182,7 +183,7 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
             break
         end
 
-        weights = [exp(log(p.weight)/temperature) for p in particles]
+        weights = [exp(log(p.weight)/config.temperature) for p in particles]
         weights ./= sum(weights)
 
         # println("BEFORE RESAMPLE\n\n")

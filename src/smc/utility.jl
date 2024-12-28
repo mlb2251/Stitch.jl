@@ -16,3 +16,7 @@ function utility_by_rewrite(abs::Abstraction)
     return size(abs.corpus) - rewritten_size(abs.corpus, abs)
 end
 
+function size_ratio_utility(abs::Abstraction)
+    return size(abs.corpus) / rewritten_size(abs.corpus, abs)
+end
+
