@@ -16,6 +16,3 @@ function utility_by_rewrite(abs::Abstraction)
     return size(abs.corpus) - rewritten_size(abs.corpus, abs)
 end
 
-function top_down_utility(corpus::Corpus, abs::Abstraction)
-
-end

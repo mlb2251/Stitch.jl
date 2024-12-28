@@ -117,14 +117,14 @@ function bottom_up_rewrite_calculations!(abs::Abstraction, corpus::Corpus)
 
         if !rewrite_data.is_match
             # just update rewritten sizes
-            rewrite_data.rewritten_size = 1 + sum(child.rewrite_data.rewritten_size for child in node.children; init=0)
+            rewrite_data.rewritten_size = 1 + sum(child -> child.rewrite_data.rewritten_size, node.children; init=0)
             continue
         end
 
         # size without rewriting is just based on size of children
-        size_no_rewrite = 1 + sum(child.rewrite_data.rewritten_size for child in node.children; init=0)
+        size_no_rewrite = 1 + sum(child -> child.rewrite_data.rewritten_size, node.children; init=0)
         # size with rewriting is based on the actual args
-        size_yes_rewrite = 1 + sum(size(getchild(node, path)) for path in abs.metavar_paths; init=0)
+        size_yes_rewrite = 1 + sum(path -> size(getchild(node, path)), abs.metavar_paths; init=0)
         decision = size_yes_rewrite < size_no_rewrite
         rewrite_data.rewritten_size = min(size_no_rewrite, size_yes_rewrite)
         rewrite_data.decision = decision

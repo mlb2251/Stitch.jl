@@ -142,10 +142,14 @@ function smc(corpus::Corpus, config::Config, name::Symbol)
             # end
             # assert_valid(particle.abs)
             abs = sample_expansion(shared, particle.abs)
+            
             # println(i, " AFTER STEP:  ", abs)
 
             particle.done = isnothing(abs)
             if !isnothing(abs)
+                if abs.utility == -Inf
+                    abs.utility = utility_by_rewrite(abs)
+                end
                 particle.abs = abs
             end
 

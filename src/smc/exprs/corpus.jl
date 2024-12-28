@@ -137,13 +137,18 @@ end
 
 function bottom_up_order(roots::Vector{CorpusNode})
     nodes = CorpusNode[]
-    worklist = copy(roots)
-    while !isempty(worklist)
-        node = pop!(worklist)
-        push!(nodes, node)
-        append!(worklist, node.children)
+    # we could alternatively initialize a single worklist with all the roots
+    # but the way we're doing it instead keeps the same-root nodes together
+    # in memory which could be more cache-friendly
+    for root in roots
+        worklist = [root]
+        while !isempty(worklist)
+            node = pop!(worklist)
+            push!(nodes, node)
+            append!(worklist, node.children)
+        end
     end
-    return reverse(nodes)
+    return reverse!(nodes)
 end
 
 function getchild(node::CorpusNode, path::Path)::CorpusNode
