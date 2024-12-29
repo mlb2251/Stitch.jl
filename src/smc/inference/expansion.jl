@@ -92,7 +92,7 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
                 insert!(new_abs.metavar_paths, i+j-1, MetaVarPath(new_paths))
             end
         end
-        new_abs.size += 1
+        new_abs.size += length(path_i.paths)
         new_abs
     end
 
