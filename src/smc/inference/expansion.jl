@@ -1,7 +1,7 @@
 function sample_expansion(shared::Shared, abs::Abstraction)::Union{Abstraction, Nothing}
     # if all paths are multiuses, we can't expand
-    all(p -> has_multiuses(p), abs.metavar_paths) && return nothing
-    # isempty(abs.metavar_paths) && return nothing
+    # all(p -> has_multiuses(p), abs.metavar_paths) && return nothing
+    isempty(abs.metavar_paths) && return nothing
 
     # pick a random match location to use as the basis for expansion
     match = abs.matches[rand(1:end)]
@@ -9,9 +9,9 @@ function sample_expansion(shared::Shared, abs::Abstraction)::Union{Abstraction, 
     # pick a random (non-multiused) path to consider expanding
     probs = fill(1., length(abs.metavar_paths))
     for (i, path) in enumerate(abs.metavar_paths)
-        if has_multiuses(path)
-            probs[i] = 0.
-        end
+        # if has_multiuses(path)
+        #     probs[i] = 0.
+        # end
     end
     probs ./= sum(probs)
 
@@ -50,7 +50,11 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
     else
         new_expr = prod.head
     end
-    abs.expr = setchild!(abs.expr, path_i, new_expr)
+
+    for (k, path) in enumerate(path_i.paths)
+        e = k == 1 ? new_expr : copy(new_expr)
+        abs.expr = setchild!(abs.expr, path, e)
+    end
 
     # fix the metavar names above i because 1 path will be removed at i and argc paths will be added at i
     shift_by = prod.argc - 1
@@ -77,13 +81,15 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
 
         # remove the path we're expanding (at index i)
         popat!(new_abs.metavar_paths, i);
-        @assert !has_multiuses(path_i)
+        # @assert !has_multiuses(path_i)
         # add the new paths where the old one used to be – at indexes i through i+argc-1
         if prod.type === :app
             for j in 1:prod.argc
-                new_path = copy(primary_path(path_i))
-                push!(new_path, j)
-                insert!(new_abs.metavar_paths, i+j-1, MetaVarPath(Path[new_path]))
+                new_paths = Path[copy(path) for path in path_i.paths]
+                for path in new_paths
+                    push!(path, j)
+                end
+                insert!(new_abs.metavar_paths, i+j-1, MetaVarPath(new_paths))
             end
         end
         new_abs.size += 1
@@ -98,7 +104,10 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
     end
 
     # undo the change to the original expression
-    abs.expr = setchild!(abs.expr, path_i, MetaVar(i))
+    for path in path_i.paths
+        abs.expr = setchild!(abs.expr, path, MetaVar(i))
+    end
+
     if shift_by != 0
         for j in i+1:length(abs.metavar_paths)
             path = abs.metavar_paths[j]
