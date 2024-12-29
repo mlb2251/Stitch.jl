@@ -1,6 +1,7 @@
-function sample_expansion(shared::Shared, abs::Abstraction)::Union{Tuple{Float64, Abstraction}, Nothing}
+function sample_expansion(shared::Shared, abs::Abstraction)::Union{Abstraction, Nothing}
     # if all paths are multiuses, we can't expand
     all(p -> has_multiuses(p), abs.metavar_paths) && return nothing
+    # isempty(abs.metavar_paths) && return nothing
 
     # pick a random match location to use as the basis for expansion
     match = abs.matches[rand(1:end)]
@@ -49,7 +50,6 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
     else
         new_expr = prod.head
     end
-    old_path_i_expr = getchild(abs.expr, path_i)
     abs.expr = setchild!(abs.expr, path_i, new_expr)
 
     # fix the metavar names above i because 1 path will be removed at i and argc paths will be added at i
@@ -98,7 +98,7 @@ function syntactic_expansion(shared::Shared, abs::Abstraction, match::CorpusNode
     end
 
     # undo the change to the original expression
-    abs.expr = setchild!(abs.expr, path_i, old_path_i_expr)
+    abs.expr = setchild!(abs.expr, path_i, MetaVar(i))
     if shift_by != 0
         for j in i+1:length(abs.metavar_paths)
             path = abs.metavar_paths[j]
