@@ -174,10 +174,6 @@ Base.@kwdef mutable struct SearchConfig
     # testing
     strict = false
     shuffle_expansions_seed::Union{Nothing,Int64} = nothing
-
-    # wahtever
-    start::Union{SExpr, Nothing} = nothing
-    # on_find_track::Union{Symbol, Nothing} = nothing
 end
 
 
@@ -232,14 +228,7 @@ mutable struct SearchState{M}
     past_expansions::Vector{PossibleExpansion}
 
     function SearchState(corpus, config)
-        start = if config.start === nothing 
-            new_hole(nothing)
-        else
-            config.start
-        end
-        holes = find_holes(start)
-
-        abstraction = Abstraction(start, 0, 0, 0, 0, :uninit_state, [], [], [])
+        abstraction = Abstraction(new_hole(nothing), 0, 0, 0, 0, :uninit_state, [], [], [])
 
         typ = if config.match_sequences
             MatchPossibilities
@@ -259,7 +248,7 @@ mutable struct SearchState{M}
         matches = filter_matches(matches, config)
         new{typ}(config, corpus, all_nodes,
             PlotData(), best_util, best_abstraction, Stats(),
-            abstraction, holes, matches, PossibleExpansion[],
+            abstraction, [abstraction.body], matches, PossibleExpansion[],
             SExpr[], PossibleExpansion[], Match[], PossibleExpansion[])
     end
 end
