@@ -19,6 +19,6 @@ function compute_best_score_and_lower_bound(abstr, corpus, search_config_args)
     util_real = compute_score_for_search(corpus, search_config_args, abstr.body)
 
     prog_vars, new_arity  = replace_holes_with_variables(abstr.body, abstr.arity)
-    util_lb = compute_score_for_search(corpus, (; search_config_args..., max_arity=new_arity), prog_vars)
+    util_lb = compute_score_for_search(corpus, (; search_config_args..., max_arity=new_arity, upper_bound_fn=(state, matches) -> Inf32, follow_precisely=true, silent=true), prog_vars)
     return util_real, util_lb
 end
