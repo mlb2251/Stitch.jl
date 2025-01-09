@@ -459,7 +459,7 @@ function stitch_search(corpus, config; produce_abstraction_list=false)
         # println(search_state.abstraction.body)
         # println(expansion.data)
         # upper bound check
-        if config.upper_bound_fn(search_state, expansion) <= search_state.best_util
+        if !config.follow && config.upper_bound_fn(search_state, expansion) <= search_state.best_util
             # println(config.upper_bound_fn(search_state, expansion))
             # println("Failed upper bounds check")
             is_tracked_pruned(search_state, expansion=expansion, message="$(@__FILE__):$(@__LINE__) - upper bound $(config.upper_bound_fn(search_state,expansion)) <= best util $(search_state.best_util)")
@@ -595,7 +595,7 @@ function stitch_search(corpus, config; produce_abstraction_list=false)
 
     isnothing(search_state.best_abstraction) && return nothing, search_state.stats
 
-    if config.follow
+    if config.follow && string(search_state.best_abstraction.body) == string(config.track)
         return search_state, search_state.stats
     end
 

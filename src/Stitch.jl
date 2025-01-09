@@ -1,6 +1,7 @@
 module Stitch
 
-export SExpr, stitch_search, Corpus, Program, compress, load_corpus, load_dfa, rewrite_novel, intermediate_search_results, SearchConfig, bottom_up_utility, SearchState, is_leaf, is_hole, find_holes
+export SExpr, stitch_search, Corpus, Program, compress, load_corpus, load_dfa, rewrite_novel, intermediate_search_results, SearchConfig
+export bottom_up_utility, SearchState, is_leaf, is_hole, find_holes, compute_scores
 
 using AutoHashEquals
 
@@ -24,6 +25,7 @@ include("search.jl")
 include("expand.jl")
 include("utility.jl")
 include("rewrite.jl")
+include("analysis.jl")
 
 end # module Stitch
 
