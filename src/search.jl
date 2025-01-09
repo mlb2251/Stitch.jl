@@ -460,14 +460,14 @@ function stitch_search(corpus, config)
         plot && push!(plot_data.size_matches, (search_state.stats.expansions, sum(match -> max(match.local_utility, 0.0), search_state.matches)))
 
         # strict dominance check - https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
-        if strictly_dominated(search_state)
+        if !config.follow && strictly_dominated(search_state)
             is_tracked_pruned(search_state, message="$(@__FILE__):$(@__LINE__) - strictly dominated")
             unexpand_general!(search_state) # force early unexpansion
             continue
         end
 
         # https://arxiv.org/pdf/2211.16605.pdf "To avoid overfitting, DreamCoder prunes the abstractions that are only useful in programs from a single task."
-        if !config.allow_single_task && is_single_task(search_state)
+        if !config.follow && !config.allow_single_task && is_single_task(search_state)
             is_tracked_pruned(search_state, message="$(@__FILE__):$(@__LINE__) - single task")
             unexpand_general!(search_state) # force early unexpansion
             continue
@@ -488,7 +488,7 @@ function stitch_search(corpus, config)
 
             plot && push!(plot_data.completed_approx_util, (search_state.stats.expansions, approx_util))
 
-            if approx_util <= search_state.best_util
+            if !config.follow && approx_util <= search_state.best_util
                 continue # skip - worse than best so far
             end
 
@@ -510,8 +510,8 @@ function stitch_search(corpus, config)
             end
 
             # return now if this is `follow=true`
-            if config.follow
-                string(search_state.abstraction.body) == string(config.track) || error("shouldnt be possible")
+            # only if it's an actual exact match
+            if config.follow && string(search_state.abstraction.body) == string(config.track)
                 plot && break
                 return search_state, search_state.stats
             end
@@ -537,7 +537,9 @@ function stitch_search(corpus, config)
 
     isnothing(search_state.best_abstraction) && return nothing, search_state.stats
 
-    !config.follow || plot || error("shouldnt be possibleee")
+    if config.follow
+        return search_state, search_state.stats
+    end
 
     # recurse, but with follow=true so that we rapidly narrow in on the best abstraction
     # then the search state at that point gets returned
