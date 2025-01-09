@@ -14,8 +14,6 @@ function compute_scores(abstr, corpus, search_config_args)
     util_real = bottom_up_utility(stateFinal)
     println("COMPUTING UTILITY", util_real)
 
-    return 0, 0
-
     function replace_holes_with_variables(prog, original_arity)
         prog_vars = deepcopy(prog)
         holes = find_holes(prog_vars)
