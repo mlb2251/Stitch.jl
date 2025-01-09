@@ -456,12 +456,12 @@ function stitch_search(corpus, config; produce_abstraction_list=false)
         # pop new expansion
         expansion = pop!(search_state.expansions)
 
-        println(search_state.abstraction.body)
-        println(expansion.data)
+        # println(search_state.abstraction.body)
+        # println(expansion.data)
         # upper bound check
         if config.upper_bound_fn(search_state, expansion) <= search_state.best_util
-            println(config.upper_bound_fn(search_state, expansion))
-            println("Failed upper bounds check")
+            # println(config.upper_bound_fn(search_state, expansion))
+            # println("Failed upper bounds check")
             is_tracked_pruned(search_state, expansion=expansion, message="$(@__FILE__):$(@__LINE__) - upper bound $(config.upper_bound_fn(search_state,expansion)) <= best util $(search_state.best_util)")
             plot && push!(plot_data.pruned_bound, (search_state.stats.expansions, config.upper_bound_fn(search_state, expansion)))
             continue # skip - worse than best so far
@@ -527,8 +527,8 @@ function stitch_search(corpus, config; produce_abstraction_list=false)
 
         # are we done?
         if isempty(search_state.holes)
-            println("DONE")
-            println(search_state.abstraction.body)
+            # println("DONE")
+            # println(search_state.abstraction.body)
             search_state.stats.completed += 1
 
             if search_state.config.return_first_abstraction
