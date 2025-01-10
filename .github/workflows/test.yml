@@ -15,6 +15,7 @@ jobs:
         julia-version: ["1.7.3", "1.9.3"]
         julia-arch: [x64]
         os: [ubuntu-latest, windows-latest, macOS-latest]
+        test-name: [integration, unit_tests]
 
     steps:
       - uses: actions/checkout@v2
@@ -24,6 +25,6 @@ jobs:
           arch: ${{ matrix.julia-arch }}
       - uses: julia-actions/julia-buildpkg@v1
       - run: |
-          julia --project=. tests/integration.jl
+          julia --project=. tests/${{ matrix.test-name }}.jl
         # with:
         #   annotate: true
