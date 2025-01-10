@@ -1,6 +1,9 @@
 
-function compute_score_for_search(corpus, search_config_args, start_prog)
+function compute_score_for_search(corpus, search_config_args, start_prog)::Float64
     state, _ = stitch_search(corpus, SearchConfig(; search_config_args..., follow=true, track=start_prog))
+    if state === nothing
+        return 0.0
+    end
     bottom_up_utility(state)
 end
 
@@ -16,9 +19,28 @@ end
 
 function compute_best_score_and_lower_bound(abstr, corpus, search_config_args)
 
-    util_real = compute_score_for_search(corpus, search_config_args, abstr.body)
+    util_real = compute_score_for_search(corpus, (; search_config_args..., silent=true), abstr.body)
 
     prog_vars, new_arity  = replace_holes_with_variables(abstr.body, abstr.arity)
     util_lb = compute_score_for_search(corpus, (; search_config_args..., max_arity=new_arity, follow_precisely=true, silent=true), prog_vars)
     return util_real, util_lb
+end
+
+function bounds_analysis(corpus, count)
+    results = []
+    items = intermediate_search_results(corpus)
+    chunk = div(length(items), count)
+    println("Chunk size: $chunk")
+    if chunk < 1
+        chunk = 1
+    end
+    for (i, (abstr, util_ub)) in enumerate(items)
+        if i % chunk != 0
+            continue
+        end
+        println(abstr.body)
+        util_real, util_lb = compute_best_score_and_lower_bound(abstr, corpus, (;))
+        push!(results, (abstr.body, util_ub, util_real, util_lb))
+    end
+    results
 end

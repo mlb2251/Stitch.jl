@@ -73,7 +73,7 @@ function collect_rci(search_state::SearchState{M})::Tuple{Float64,MultiRewriteCo
             rcis[expr.metadata.id].cumulative_utility = 0.0
             rcis[expr.metadata.id].accept_rewrite = false
         end
-        return 0.0
+        return 0.0, rcis
     end
 
     actual_matches = 0
