@@ -176,6 +176,9 @@ Base.@kwdef mutable struct SearchConfig
     # testing
     strict = false
     shuffle_expansions_seed::Union{Nothing,Int64} = nothing
+
+    # callbacks
+    on_expanded_search_state::Union{Function, Nothing} = nothing
 end
 
 
@@ -449,6 +452,10 @@ function stitch_search(corpus, config)
 
         config.check_holes_size && check_holes_size(search_state.matches)
 
+        if config.on_expanded_search_state !== nothing
+            config.on_expanded_search_state(search_state)
+        end
+
         # for when we are tracking a specific abstraction
         tracked = is_tracked(search_state)
         if tracked
@@ -615,6 +622,17 @@ function check_abstraction_names_not_present(corpus, names)
             end
         end
     end
+end
+
+function intermediate_search_results(corpus; dfa=nothing, kwargs...)::Vector{Tuple{Abstraction,Float32}}
+    abstraction_list = []
+    function on_expanded_search_state(state)
+        push!(abstraction_list, (copy(state.abstraction), config.upper_bound_fn(state)))
+    end
+    config = SearchConfig(; dfa=dfa, kwargs..., on_expanded_search_state=on_expanded_search_state)
+    config.new_abstraction_name = Symbol(config.abstraction_name_function(1))
+    stitch_search(corpus, config)
+    abstraction_list
 end
 
 function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
