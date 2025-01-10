@@ -147,6 +147,21 @@ function sexpr_leaf(leaf::Symbol; parent=nothing)
     SExpr(leaf, Vector{SExpr}(), parent, nothing)
 end
 
+function same_expr(e1::SExpr, e2::SExpr)
+    if e1.leaf !== e2.leaf
+        return false
+    end
+    if length(e1.children) != length(e2.children)
+        return false
+    end
+    for (c1, c2) in zip(e1.children, e2.children)
+        if !same_expr(c1, c2)
+            return false
+        end
+    end
+    return true
+end
+
 is_leaf(e::SExpr) = !isnothing(e.leaf)
 
 # TODO document why isn't this copying all the fields??
