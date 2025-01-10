@@ -421,8 +421,6 @@ function stitch_search(corpus, config)
 
     expand_search_state!(search_state)
 
-    abstraction_list = []
-
     while true
 
         # check if there are no expansions to try, and backtrack if so
@@ -440,8 +438,6 @@ function stitch_search(corpus, config)
         # pop new expansion
         expansion = pop!(search_state.expansions)
 
-        # println(search_state.abstraction.body)
-        # println(expansion.data)
         # upper bound check
         if !config.follow_precisely && config.upper_bound_fn(search_state, expansion) <= search_state.best_util
             is_tracked_pruned(search_state, expansion=expansion, message="$(@__FILE__):$(@__LINE__) - upper bound $(config.upper_bound_fn(search_state,expansion)) <= best util $(search_state.best_util)")
@@ -455,10 +451,6 @@ function stitch_search(corpus, config)
         expand_general!(search_state, expansion)
 
         config.check_holes_size && check_holes_size(search_state.matches)
-        
-        if config.on_expanded_search_state !== nothing
-            config.on_expanded_search_state(search_state)
-        end
 
         if config.on_expanded_search_state !== nothing
             config.on_expanded_search_state(search_state)
@@ -472,25 +464,6 @@ function stitch_search(corpus, config)
             unexpand_general!(search_state)
             continue
         end
-
-        # println(config.track)
-        # println(search_state.abstraction.body)
-        # println(config.track !== nothing && same_expr(config.track, search_state.abstraction.body))
-
-        # if config.track !== nothing && same_expr(config.track, search_state.abstraction.body)
-        #     # we found it
-        #     if config.on_find_track === :bail
-        #         return search_state, search_state.stats
-        #     elseif config.on_find_track === :continue
-        #         # disable tracking so we can continue searching
-        #         # config.track = nothing
-        #         # config.follow = false
-        #     else
-        #         if config.on_find_track !== nothing
-        #             error("invalid on_find_track value")
-        #         end
-        #     end
-        # end
 
         search_state.stats.expansions += 1
 
@@ -513,8 +486,6 @@ function stitch_search(corpus, config)
 
         # are we done?
         if isempty(search_state.holes)
-            # println("DONE")
-            # println(search_state.abstraction.body)
             search_state.stats.completed += 1
 
             if search_state.config.return_first_abstraction
