@@ -7,6 +7,16 @@ function compute_score_for_search(corpus, search_config_args, start_prog)::Float
     bottom_up_utility(state)
 end
 
+function find_holes(expr)
+    holes = SExpr[]
+    for node in subexpressions(expr)
+        if is_hole(node)
+            push!(holes, node)
+        end
+    end
+    holes
+end
+
 function replace_holes_with_variables(prog, original_arity)
     prog_vars = deepcopy(prog)
     holes = find_holes(prog_vars)

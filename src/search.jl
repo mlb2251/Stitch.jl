@@ -194,18 +194,6 @@ Base.@kwdef mutable struct PlotData
     pruned_bound::Vector{Tuple{Int,Float32}} = [(0, 0.0)]
 end
 
-function find_holes(expr)
-    holes = SExpr[]
-    for node in subexpressions(expr)
-        if is_hole(node)
-            push!(holes, node)
-        end
-    end
-    # println(expr)
-    # println(holes)
-    holes
-end
-
 mutable struct SearchState{M}
     # config
     config::SearchConfig
