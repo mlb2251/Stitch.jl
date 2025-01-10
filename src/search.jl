@@ -176,6 +176,9 @@ Base.@kwdef mutable struct SearchConfig
     # testing
     strict = false
     shuffle_expansions_seed::Union{Nothing,Int64} = nothing
+
+    # collection
+    on_expanded_search_state::Union{Function, Nothing} = nothing
 end
 
 
@@ -417,7 +420,7 @@ function expand_search_state!(search_state)
     search_state.config.plot && push!(plot_data.num_matches, (search_state.stats.expansions, length(search_state.matches)))
 end
 
-function stitch_search(corpus, config; produce_abstraction_list=false)
+function stitch_search(corpus, config)
 
     !config.follow_precisely || config.follow || error("follow_precisely should only be used with follow=true")
 
@@ -465,8 +468,8 @@ function stitch_search(corpus, config; produce_abstraction_list=false)
 
         config.check_holes_size && check_holes_size(search_state.matches)
         
-        if produce_abstraction_list
-            push!(abstraction_list, (copy(search_state.abstraction), config.upper_bound_fn(search_state)))
+        if config.on_expanded_search_state !== nothing
+            config.on_expanded_search_state(search_state)
         end
 
         # for when we are tracking a specific abstraction
@@ -573,10 +576,6 @@ function stitch_search(corpus, config; produce_abstraction_list=false)
         silent || println("Best abstraction: ", search_state.best_abstraction.body, " with utility ", search_state.best_util, " compressed by ", size(search_state.corpus, size_by_symbol) / (size(search_state.corpus, size_by_symbol) - search_state.best_util), "x")
     end
 
-    if produce_abstraction_list
-        return abstraction_list
-    end
-
     silent || println(search_state.stats)
 
     # plot
@@ -662,10 +661,15 @@ function check_abstraction_names_not_present(corpus, names)
     end
 end
 
-function intermediate_search_results(corpus; dfa=nothing, kwargs...)
-    config = SearchConfig(; dfa=dfa, kwargs...)
+function intermediate_search_results(corpus; dfa=nothing, kwargs...)::Vector{Tuple{Abstraction,Float32}}
+    abstraction_list = []
+    function on_expanded_search_state(state)
+        push!(abstraction_list, (copy(state.abstraction), config.upper_bound_fn(state)))
+    end
+    config = SearchConfig(; dfa=dfa, kwargs..., on_expanded_search_state=on_expanded_search_state)
     config.new_abstraction_name = Symbol(config.abstraction_name_function(1))
-    return stitch_search(corpus, config; produce_abstraction_list=true)
+    stitch_search(corpus, config)
+    abstraction_list
 end
 
 function compress(original_corpus; iterations=3, dfa=nothing, kwargs...)
