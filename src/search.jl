@@ -177,7 +177,7 @@ Base.@kwdef mutable struct SearchConfig
     strict = false
     shuffle_expansions_seed::Union{Nothing,Int64} = nothing
 
-    # collection
+    # callbacks
     on_expanded_search_state::Union{Function, Nothing} = nothing
 end
 
@@ -456,6 +456,10 @@ function stitch_search(corpus, config)
 
         config.check_holes_size && check_holes_size(search_state.matches)
         
+        if config.on_expanded_search_state !== nothing
+            config.on_expanded_search_state(search_state)
+        end
+
         if config.on_expanded_search_state !== nothing
             config.on_expanded_search_state(search_state)
         end
