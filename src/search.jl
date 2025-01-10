@@ -421,6 +421,8 @@ function stitch_search(corpus, config; produce_abstraction_list=false)
 
     !config.follow_precisely || config.follow || error("follow_precisely should only be used with follow=true")
 
+    !config.follow_precisely || config.follow || error("follow_precisely should only be used with follow=true")
+
     size_by_symbol = config.size_by_symbol
     search_state = SearchState(corpus, config)
 
@@ -453,8 +455,6 @@ function stitch_search(corpus, config; produce_abstraction_list=false)
         # println(expansion.data)
         # upper bound check
         if !config.follow_precisely && config.upper_bound_fn(search_state, expansion) <= search_state.best_util
-            # println(config.upper_bound_fn(search_state, expansion))
-            # println("Failed upper bounds check")
             is_tracked_pruned(search_state, expansion=expansion, message="$(@__FILE__):$(@__LINE__) - upper bound $(config.upper_bound_fn(search_state,expansion)) <= best util $(search_state.best_util)")
             plot && push!(plot_data.pruned_bound, (search_state.stats.expansions, config.upper_bound_fn(search_state, expansion)))
             continue # skip - worse than best so far
@@ -599,7 +599,6 @@ function stitch_search(corpus, config; produce_abstraction_list=false)
     config.verbose = config.verbose_best = config.plot = false
     config.track = search_state.best_abstraction.body
     config.follow = config.follow_precisely = config.silent = config.allow_single_task = true
-    # config.on_find_track = nothing
     res, _ = stitch_search(corpus, config)
     isnothing(res) && error("shouldnt be possible - we found it the first time around without tracking")
     res, search_state.stats
