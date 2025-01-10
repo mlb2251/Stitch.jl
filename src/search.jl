@@ -423,6 +423,8 @@ function stitch_search(corpus, config; produce_abstraction_list=false)
 
     !config.follow_precisely || config.follow || error("follow_precisely should only be used with follow=true")
 
+    !config.follow_precisely || config.follow || error("follow_precisely should only be used with follow=true")
+
     size_by_symbol = config.size_by_symbol
     search_state = SearchState(corpus, config)
 
