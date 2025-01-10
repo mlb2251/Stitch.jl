@@ -139,6 +139,8 @@ Base.@kwdef mutable struct SearchConfig
     verbose_best::Bool = true
     check_holes_size::Bool = false
     follow::Bool = false
+    # whether to follow the track exactly or just find something that is a superset of the track
+    follow_precisely::Bool = false
     plot::Bool = false
     silent::Bool = false
     allow_single_task::Bool = true
@@ -377,7 +379,7 @@ function is_tracked(search_state; expansion=nothing)
 end
 
 function is_tracked_pruned(search_state; expansion=nothing, message="message here")
-    if is_tracked(search_state, expansion=expansion)
+    if is_tracked(search_state, expansion=expansion) && search_state.config.follow_precisely
         isnothing(expansion) || expand_general!(search_state, expansion)
         printstyled("TRACK (PRUNED): ", search_state, "\n", color=:red, bold=true)
         isnothing(expansion) || unexpand_general!(search_state)
@@ -404,6 +406,8 @@ function expand_search_state!(search_state)
 end
 
 function stitch_search(corpus, config)
+
+    !config.follow_precisely || config.follow || error("follow_precisely should only be used with follow=true")
 
     size_by_symbol = config.size_by_symbol
     search_state = SearchState(corpus, config)
@@ -432,7 +436,7 @@ function stitch_search(corpus, config)
         expansion = pop!(search_state.expansions)
 
         # upper bound check
-        if config.upper_bound_fn(search_state, expansion) <= search_state.best_util
+        if !config.follow_precisely && config.upper_bound_fn(search_state, expansion) <= search_state.best_util
             is_tracked_pruned(search_state, expansion=expansion, message="$(@__FILE__):$(@__LINE__) - upper bound $(config.upper_bound_fn(search_state,expansion)) <= best util $(search_state.best_util)")
             plot && push!(plot_data.pruned_bound, (search_state.stats.expansions, config.upper_bound_fn(search_state, expansion)))
             continue # skip - worse than best so far
@@ -460,14 +464,14 @@ function stitch_search(corpus, config)
         plot && push!(plot_data.size_matches, (search_state.stats.expansions, sum(match -> max(match.local_utility, 0.0), search_state.matches)))
 
         # strict dominance check - https://arxiv.org/pdf/2211.16605.pdf (section 4.3)
-        if !config.follow && strictly_dominated(search_state)
+        if !config.follow_precisely && strictly_dominated(search_state)
             is_tracked_pruned(search_state, message="$(@__FILE__):$(@__LINE__) - strictly dominated")
             unexpand_general!(search_state) # force early unexpansion
             continue
         end
 
         # https://arxiv.org/pdf/2211.16605.pdf "To avoid overfitting, DreamCoder prunes the abstractions that are only useful in programs from a single task."
-        if !config.follow && !config.allow_single_task && is_single_task(search_state)
+        if !config.follow_precisely && !config.allow_single_task && is_single_task(search_state)
             is_tracked_pruned(search_state, message="$(@__FILE__):$(@__LINE__) - single task")
             unexpand_general!(search_state) # force early unexpansion
             continue
@@ -488,7 +492,7 @@ function stitch_search(corpus, config)
 
             plot && push!(plot_data.completed_approx_util, (search_state.stats.expansions, approx_util))
 
-            if !config.follow && approx_util <= search_state.best_util
+            if !config.follow_precisely && approx_util <= search_state.best_util
                 continue # skip - worse than best so far
             end
 
@@ -537,7 +541,7 @@ function stitch_search(corpus, config)
 
     isnothing(search_state.best_abstraction) && return nothing, search_state.stats
 
-    if config.follow
+    if config.follow && string(search_state.best_abstraction.body) == string(config.track)
         return search_state, search_state.stats
     end
 
@@ -547,7 +551,7 @@ function stitch_search(corpus, config)
     config.max_arity = 10000
     config.verbose = config.verbose_best = config.plot = false
     config.track = search_state.best_abstraction.body
-    config.follow = config.silent = config.allow_single_task = true
+    config.follow = config.follow_precisely = config.silent = config.allow_single_task = true
     res, _ = stitch_search(corpus, config)
     isnothing(res) && error("shouldnt be possible - we found it the first time around without tracking")
     res, search_state.stats
@@ -653,6 +657,7 @@ function rewrite_novel(programs, abstraction::SExpr; kwargs...)
         programs;
         kwargs...,
         follow=true,
+        follow_precisely=true,
         track=abstraction,
         max_arity=10000,
         max_choice_arity=10000,
