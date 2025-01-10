@@ -522,7 +522,7 @@ function stitch_search(corpus, config)
 
             # return now if this is `follow=true`
             # only if it's an actual exact match
-            if config.follow && string(search_state.abstraction.body) == string(config.track)
+            if config.follow && same_expr(search_state.abstraction.body, config.track)
                 plot && break
                 return search_state, search_state.stats
             end
@@ -548,7 +548,7 @@ function stitch_search(corpus, config)
 
     isnothing(search_state.best_abstraction) && return nothing, search_state.stats
 
-    if config.follow && string(search_state.best_abstraction.body) == string(config.track)
+    if config.follow && same_expr(search_state.best_abstraction.body, config.track)
         return search_state, search_state.stats
     end
 
