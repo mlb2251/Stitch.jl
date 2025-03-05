@@ -18,7 +18,7 @@ function benchmark(path::String)
 	repeated = []
 	for _ in 1:repeats
 		start_t = time_ns()
-		abstractions, corpus, dfa, corpus_sizes = result()
+		abstractions, _, dfa, corpus_sizes = result()
 		end_t = time_ns()
 		time_taken = (end_t - start_t) / 1e9
 		push!(
@@ -41,12 +41,12 @@ function main()
     for path in readdir("data/cogsci")
         if endswith(path, ".json") && !contains(path, "-out")
             result = benchmark(joinpath("data/cogsci", path))
-            push!(results_all, [
+            push!(results_all,
                 Dict(
                     "path" => path,
                     "result" => result,
                 )
-            ])
+            )
         end
     end
     # write to file
