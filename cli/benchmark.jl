@@ -7,12 +7,13 @@ using JSON: JSON
 repeats = 10
 iterations = 1
 
-function benchmark(path::String)
+function benchmark(path::String, config)
 	println(path)
 	corpus = load_corpus(path)
 	result = () -> compress(
 		corpus;
 		iterations = iterations,
+		config...
 	)
 	result()
 	repeated = []
@@ -36,11 +37,11 @@ function benchmark(path::String)
     return repeated
 end
 
-function main()
+function main(folder, shortname, config)
     results_all = []
-    for path in readdir("data/cogsci")
+    for path in readdir(folder)
         if endswith(path, ".json") && !contains(path, "-out")
-            result = benchmark(joinpath("data/cogsci", path))
+            result = benchmark(joinpath(folder, path), config)
             push!(results_all,
                 Dict(
                     "path" => path,
@@ -50,9 +51,10 @@ function main()
         end
     end
     # write to file
-    open("analysis_out/cogsci-benchmark-results.json", "w") do io
-        JSON.print(io, results_all)
+    open("analysis_out/$(shortname)-benchmark-results.json", "w") do io
+        JSON.print(io, results_all, 2)
     end
 end
 
-main()
+main("../compression_benchmark/processed/without-apps", "without-apps", ())
+main("../compression_benchmark/processed/with-apps", "with-apps", (; size_by_symbol=Dict(:app => 0.01)))
