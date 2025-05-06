@@ -7,13 +7,13 @@ using JSON: JSON
 repeats = 10
 iterations = 1
 
-function benchmark(path::String, config)
+function benchmark(path::String, size_by_symbol)
 	println(path)
 	corpus = load_corpus(path)
 	result = () -> compress(
 		corpus;
 		iterations = iterations,
-		config...
+		size_by_symbol=size_by_symbol
 	)
 	result()
 	repeated = []
@@ -28,20 +28,24 @@ function benchmark(path::String, config)
 				"time_taken" => time_taken,
 				"corpus_sizes" => corpus_sizes,
 				"abstraction_sizes" => [
-					S.size(abstraction.body, nothing)
+					S.size(abstraction.body, size_by_symbol)
 					for abstraction in abstractions
 				],
+				"abstractions" => [
+					string(abstraction.body)
+					for abstraction in abstractions
+				]
 			),
 		)
 	end
     return repeated
 end
 
-function main(folder, shortname, config)
+function main(folder, shortname, size_by_symbol)
     results_all = []
     for path in readdir(folder)
         if endswith(path, ".json") && !contains(path, "-out")
-            result = benchmark(joinpath(folder, path), config)
+            result = benchmark(joinpath(folder, path), size_by_symbol)
             push!(results_all,
                 Dict(
                     "path" => path,
@@ -56,5 +60,5 @@ function main(folder, shortname, config)
     end
 end
 
-main("../compression_benchmark/processed/without-apps", "without-apps", ())
-main("../compression_benchmark/processed/with-apps", "with-apps", (; size_by_symbol=Dict(:app => 0.01)))
+main("../compression_benchmark/processed/without-apps", "without-apps", nothing)
+main("../compression_benchmark/processed/with-apps", "with-apps", Dict(:app => Float32(0.01)))
