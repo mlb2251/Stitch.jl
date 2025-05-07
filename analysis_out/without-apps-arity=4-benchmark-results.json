@@ -1,0 +1,137 @@
+[
+  {
+    "path": "wheels.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          35426.0,
+          26855.0
+        ],
+        "time_taken": 1.534031223,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #2 (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26855.0
+        ],
+        "time_taken": 1.667652686,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #2 (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26855.0
+        ],
+        "time_taken": 1.522255984,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #2 (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26855.0
+        ],
+        "time_taken": 1.479299544,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #2 (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26855.0
+        ],
+        "time_taken": 1.562621217,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #2 (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26855.0
+        ],
+        "time_taken": 1.503396587,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #2 (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26855.0
+        ],
+        "time_taken": 1.501042167,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #2 (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26855.0
+        ],
+        "time_taken": 1.513495718,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #2 (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26855.0
+        ],
+        "time_taken": 1.509431271,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #2 (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26855.0
+        ],
+        "time_taken": 1.510739951,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #2 (M 1 0 #1 #0))"
+        ]
+      }
+    ]
+  }
+]

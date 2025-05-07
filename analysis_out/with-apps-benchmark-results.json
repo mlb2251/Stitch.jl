@@ -1,0 +1,1082 @@
+[
+  {
+    "path": "bridge.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          34594.57,
+          26948.17
+        ],
+        "time_taken": 19.377283905,
+        "abstraction_sizes": [
+          11.099999997764826
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 t) (app r #0)) t) (app l #0)) t) (app r #0)) t)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34594.57,
+          26948.17
+        ],
+        "time_taken": 19.753043266,
+        "abstraction_sizes": [
+          11.099999997764826
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 t) (app r #0)) t) (app l #0)) t) (app r #0)) t)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34594.57,
+          26948.17
+        ],
+        "time_taken": 19.365909848,
+        "abstraction_sizes": [
+          11.099999997764826
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 t) (app r #0)) t) (app l #0)) t) (app r #0)) t)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34594.57,
+          26948.17
+        ],
+        "time_taken": 18.962815845,
+        "abstraction_sizes": [
+          11.099999997764826
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 t) (app r #0)) t) (app l #0)) t) (app r #0)) t)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34594.57,
+          26948.17
+        ],
+        "time_taken": 18.986955506,
+        "abstraction_sizes": [
+          11.099999997764826
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 t) (app r #0)) t) (app l #0)) t) (app r #0)) t)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34594.57,
+          26948.17
+        ],
+        "time_taken": 19.038415518,
+        "abstraction_sizes": [
+          11.099999997764826
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 t) (app r #0)) t) (app l #0)) t) (app r #0)) t)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34594.57,
+          26948.17
+        ],
+        "time_taken": 19.519130613,
+        "abstraction_sizes": [
+          11.099999997764826
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 t) (app r #0)) t) (app l #0)) t) (app r #0)) t)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34594.57,
+          26948.17
+        ],
+        "time_taken": 18.863011488,
+        "abstraction_sizes": [
+          11.099999997764826
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 t) (app r #0)) t) (app l #0)) t) (app r #0)) t)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34594.57,
+          26948.17
+        ],
+        "time_taken": 19.419189769,
+        "abstraction_sizes": [
+          11.099999997764826
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 t) (app r #0)) t) (app l #0)) t) (app r #0)) t)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34594.57,
+          26948.17
+        ],
+        "time_taken": 18.674833469,
+        "abstraction_sizes": [
+          11.099999997764826
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 t) (app r #0)) t) (app l #0)) t) (app r #0)) t)"
+        ]
+      }
+    ]
+  },
+  {
+    "path": "castle.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          47742.14,
+          39333.88
+        ],
+        "time_taken": 17.328368894,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 h) (app r 4)) h) (app l #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47742.14,
+          39333.88
+        ],
+        "time_taken": 17.409853469,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 h) (app r 4)) h) (app l #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47742.14,
+          39333.88
+        ],
+        "time_taken": 17.258872877,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 h) (app r 4)) h) (app l #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47742.14,
+          39333.88
+        ],
+        "time_taken": 17.02927335,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 h) (app r 4)) h) (app l #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47742.14,
+          39333.88
+        ],
+        "time_taken": 17.228873694,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 h) (app r 4)) h) (app l #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47742.14,
+          39333.88
+        ],
+        "time_taken": 17.060762231,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 h) (app r 4)) h) (app l #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47742.14,
+          39333.88
+        ],
+        "time_taken": 17.026752966,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 h) (app r 4)) h) (app l #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47742.14,
+          39333.88
+        ],
+        "time_taken": 17.71633418,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 h) (app r 4)) h) (app l #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47742.14,
+          39333.88
+        ],
+        "time_taken": 17.613007307,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 h) (app r 4)) h) (app l #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47742.14,
+          39333.88
+        ],
+        "time_taken": 17.793055782,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 h) (app r 4)) h) (app l #0))"
+        ]
+      }
+    ]
+  },
+  {
+    "path": "city.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          40824.66,
+          32668.12
+        ],
+        "time_taken": 14.071475071,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 (app l #0)) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40824.66,
+          32668.12
+        ],
+        "time_taken": 13.902611565,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 (app l #0)) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40824.66,
+          32668.12
+        ],
+        "time_taken": 14.267175036,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 (app l #0)) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40824.66,
+          32668.12
+        ],
+        "time_taken": 13.876777441,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 (app l #0)) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40824.66,
+          32668.12
+        ],
+        "time_taken": 14.090277982,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 (app l #0)) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40824.66,
+          32668.12
+        ],
+        "time_taken": 13.736671251,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 (app l #0)) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40824.66,
+          32668.12
+        ],
+        "time_taken": 14.049734603,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 (app l #0)) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40824.66,
+          32668.12
+        ],
+        "time_taken": 14.278660039,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 (app l #0)) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40824.66,
+          32668.12
+        ],
+        "time_taken": 14.122775257,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 (app l #0)) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40824.66,
+          32668.12
+        ],
+        "time_taken": 14.001374155,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app (app (app #1 (app l #0)) h) (app r 4)) h)"
+        ]
+      }
+    ]
+  },
+  {
+    "path": "dials.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          36066.62,
+          28497.42
+        ],
+        "time_taken": 4.896046194,
+        "abstraction_sizes": [
+          61.599999986588955
+        ],
+        "abstractions": [
+          "(app (app C (app (app C (app (app T (app (app T (app (app T l) (app (app (app (app M 3) (app (app / pi) 2)) 0) -2))) (app (app (app (app M 1) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M 2) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 1)))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M #0) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          36066.62,
+          28497.42
+        ],
+        "time_taken": 4.729894282,
+        "abstraction_sizes": [
+          61.599999986588955
+        ],
+        "abstractions": [
+          "(app (app C (app (app C (app (app T (app (app T (app (app T l) (app (app (app (app M 3) (app (app / pi) 2)) 0) -2))) (app (app (app (app M 1) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M 2) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 1)))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M #0) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          36066.62,
+          28497.42
+        ],
+        "time_taken": 4.797847642,
+        "abstraction_sizes": [
+          61.599999986588955
+        ],
+        "abstractions": [
+          "(app (app C (app (app C (app (app T (app (app T (app (app T l) (app (app (app (app M 3) (app (app / pi) 2)) 0) -2))) (app (app (app (app M 1) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M 2) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 1)))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M #0) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          36066.62,
+          28497.42
+        ],
+        "time_taken": 4.395814004,
+        "abstraction_sizes": [
+          61.599999986588955
+        ],
+        "abstractions": [
+          "(app (app C (app (app C (app (app T (app (app T (app (app T l) (app (app (app (app M 3) (app (app / pi) 2)) 0) -2))) (app (app (app (app M 1) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M 2) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 1)))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M #0) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          36066.62,
+          28497.42
+        ],
+        "time_taken": 4.625891634,
+        "abstraction_sizes": [
+          61.599999986588955
+        ],
+        "abstractions": [
+          "(app (app C (app (app C (app (app T (app (app T (app (app T l) (app (app (app (app M 3) (app (app / pi) 2)) 0) -2))) (app (app (app (app M 1) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M 2) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 1)))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M #0) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          36066.62,
+          28497.42
+        ],
+        "time_taken": 4.670936743,
+        "abstraction_sizes": [
+          61.599999986588955
+        ],
+        "abstractions": [
+          "(app (app C (app (app C (app (app T (app (app T (app (app T l) (app (app (app (app M 3) (app (app / pi) 2)) 0) -2))) (app (app (app (app M 1) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M 2) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 1)))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M #0) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          36066.62,
+          28497.42
+        ],
+        "time_taken": 4.62918946,
+        "abstraction_sizes": [
+          61.599999986588955
+        ],
+        "abstractions": [
+          "(app (app C (app (app C (app (app T (app (app T (app (app T l) (app (app (app (app M 3) (app (app / pi) 2)) 0) -2))) (app (app (app (app M 1) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M 2) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 1)))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M #0) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          36066.62,
+          28497.42
+        ],
+        "time_taken": 4.662007173,
+        "abstraction_sizes": [
+          61.599999986588955
+        ],
+        "abstractions": [
+          "(app (app C (app (app C (app (app T (app (app T (app (app T l) (app (app (app (app M 3) (app (app / pi) 2)) 0) -2))) (app (app (app (app M 1) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M 2) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 1)))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M #0) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          36066.62,
+          28497.42
+        ],
+        "time_taken": 4.35391326,
+        "abstraction_sizes": [
+          61.599999986588955
+        ],
+        "abstractions": [
+          "(app (app C (app (app C (app (app T (app (app T (app (app T l) (app (app (app (app M 3) (app (app / pi) 2)) 0) -2))) (app (app (app (app M 1) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M 2) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 1)))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M #0) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          36066.62,
+          28497.42
+        ],
+        "time_taken": 4.646269068,
+        "abstraction_sizes": [
+          61.599999986588955
+        ],
+        "abstractions": [
+          "(app (app C (app (app C (app (app T (app (app T (app (app T l) (app (app (app (app M 3) (app (app / pi) 2)) 0) -2))) (app (app (app (app M 1) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M 2) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 1)))) (app (app T (app (app T (app (app T l) (app (app (app (app M 1) 0) -0.5) 0))) (app (app (app (app M #0) 0) 0) 0))) (app (app (app (app M 1) 0) 0) 0)))"
+        ]
+      }
+    ]
+  },
+  {
+    "path": "furniture.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          43361.85,
+          31336.13
+        ],
+        "time_taken": 8.473349475,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app T #1) (app (app (app (app M 1) 0) 0) #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          43361.85,
+          31336.13
+        ],
+        "time_taken": 8.28107545,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app T #1) (app (app (app (app M 1) 0) 0) #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          43361.85,
+          31336.13
+        ],
+        "time_taken": 8.134484909,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app T #1) (app (app (app (app M 1) 0) 0) #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          43361.85,
+          31336.13
+        ],
+        "time_taken": 8.444700714,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app T #1) (app (app (app (app M 1) 0) 0) #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          43361.85,
+          31336.13
+        ],
+        "time_taken": 8.63142582,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app T #1) (app (app (app (app M 1) 0) 0) #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          43361.85,
+          31336.13
+        ],
+        "time_taken": 8.302716231,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app T #1) (app (app (app (app M 1) 0) 0) #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          43361.85,
+          31336.13
+        ],
+        "time_taken": 8.436570577,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app T #1) (app (app (app (app M 1) 0) 0) #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          43361.85,
+          31336.13
+        ],
+        "time_taken": 8.288329327,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app T #1) (app (app (app (app M 1) 0) 0) #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          43361.85,
+          31336.13
+        ],
+        "time_taken": 8.208822479,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app T #1) (app (app (app (app M 1) 0) 0) #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          43361.85,
+          31336.13
+        ],
+        "time_taken": 8.100821645,
+        "abstraction_sizes": [
+          7.0599999986588955
+        ],
+        "abstractions": [
+          "(app (app T #1) (app (app (app (app M 1) 0) 0) #0))"
+        ]
+      }
+    ]
+  },
+  {
+    "path": "house.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          42449.91,
+          28014.67
+        ],
+        "time_taken": 17.427023204,
+        "abstraction_sizes": [
+          10.089999997988343
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 h) (app r 4)) h) #0) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42449.91,
+          28014.67
+        ],
+        "time_taken": 17.594074945,
+        "abstraction_sizes": [
+          10.089999997988343
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 h) (app r 4)) h) #0) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42449.91,
+          28014.67
+        ],
+        "time_taken": 16.962135468,
+        "abstraction_sizes": [
+          10.089999997988343
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 h) (app r 4)) h) #0) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42449.91,
+          28014.67
+        ],
+        "time_taken": 17.248096626,
+        "abstraction_sizes": [
+          10.089999997988343
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 h) (app r 4)) h) #0) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42449.91,
+          28014.67
+        ],
+        "time_taken": 17.399412897,
+        "abstraction_sizes": [
+          10.089999997988343
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 h) (app r 4)) h) #0) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42449.91,
+          28014.67
+        ],
+        "time_taken": 16.919443739,
+        "abstraction_sizes": [
+          10.089999997988343
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 h) (app r 4)) h) #0) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42449.91,
+          28014.67
+        ],
+        "time_taken": 17.446747521,
+        "abstraction_sizes": [
+          10.089999997988343
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 h) (app r 4)) h) #0) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42449.91,
+          28014.67
+        ],
+        "time_taken": 17.234858866,
+        "abstraction_sizes": [
+          10.089999997988343
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 h) (app r 4)) h) #0) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42449.91,
+          28014.67
+        ],
+        "time_taken": 17.447899114,
+        "abstraction_sizes": [
+          10.089999997988343
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 h) (app r 4)) h) #0) h) (app r 4)) h)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42449.91,
+          28014.67
+        ],
+        "time_taken": 17.190855393,
+        "abstraction_sizes": [
+          10.089999997988343
+        ],
+        "abstractions": [
+          "(app (app (app (app (app (app (app #1 h) (app r 4)) h) #0) h) (app r 4)) h)"
+        ]
+      }
+    ]
+  },
+  {
+    "path": "nuts-bolts.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          19195.58,
+          10785.98
+        ],
+        "time_taken": 1.702776591,
+        "abstraction_sizes": [
+          29.279999993741512
+        ],
+        "abstractions": [
+          "(app (app T (app (app (app repeat (app (app T l) (app (app (app (app M 1) 0) -0.5) (app (app / 0.5) (app tan (app (app / pi) #1)))))) #1) (app (app (app (app M 1) (app (app / (app (app * 2) pi)) #1)) 0) 0))) (app (app (app (app M #0) 0) 0) 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19195.58,
+          10785.98
+        ],
+        "time_taken": 1.540626754,
+        "abstraction_sizes": [
+          29.279999993741512
+        ],
+        "abstractions": [
+          "(app (app T (app (app (app repeat (app (app T l) (app (app (app (app M 1) 0) -0.5) (app (app / 0.5) (app tan (app (app / pi) #1)))))) #1) (app (app (app (app M 1) (app (app / (app (app * 2) pi)) #1)) 0) 0))) (app (app (app (app M #0) 0) 0) 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19195.58,
+          10785.98
+        ],
+        "time_taken": 1.497387344,
+        "abstraction_sizes": [
+          29.279999993741512
+        ],
+        "abstractions": [
+          "(app (app T (app (app (app repeat (app (app T l) (app (app (app (app M 1) 0) -0.5) (app (app / 0.5) (app tan (app (app / pi) #1)))))) #1) (app (app (app (app M 1) (app (app / (app (app * 2) pi)) #1)) 0) 0))) (app (app (app (app M #0) 0) 0) 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19195.58,
+          10785.98
+        ],
+        "time_taken": 1.600467774,
+        "abstraction_sizes": [
+          29.279999993741512
+        ],
+        "abstractions": [
+          "(app (app T (app (app (app repeat (app (app T l) (app (app (app (app M 1) 0) -0.5) (app (app / 0.5) (app tan (app (app / pi) #1)))))) #1) (app (app (app (app M 1) (app (app / (app (app * 2) pi)) #1)) 0) 0))) (app (app (app (app M #0) 0) 0) 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19195.58,
+          10785.98
+        ],
+        "time_taken": 1.439227048,
+        "abstraction_sizes": [
+          29.279999993741512
+        ],
+        "abstractions": [
+          "(app (app T (app (app (app repeat (app (app T l) (app (app (app (app M 1) 0) -0.5) (app (app / 0.5) (app tan (app (app / pi) #1)))))) #1) (app (app (app (app M 1) (app (app / (app (app * 2) pi)) #1)) 0) 0))) (app (app (app (app M #0) 0) 0) 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19195.58,
+          10785.98
+        ],
+        "time_taken": 1.556308723,
+        "abstraction_sizes": [
+          29.279999993741512
+        ],
+        "abstractions": [
+          "(app (app T (app (app (app repeat (app (app T l) (app (app (app (app M 1) 0) -0.5) (app (app / 0.5) (app tan (app (app / pi) #1)))))) #1) (app (app (app (app M 1) (app (app / (app (app * 2) pi)) #1)) 0) 0))) (app (app (app (app M #0) 0) 0) 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19195.58,
+          10785.98
+        ],
+        "time_taken": 1.611079809,
+        "abstraction_sizes": [
+          29.279999993741512
+        ],
+        "abstractions": [
+          "(app (app T (app (app (app repeat (app (app T l) (app (app (app (app M 1) 0) -0.5) (app (app / 0.5) (app tan (app (app / pi) #1)))))) #1) (app (app (app (app M 1) (app (app / (app (app * 2) pi)) #1)) 0) 0))) (app (app (app (app M #0) 0) 0) 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19195.58,
+          10785.98
+        ],
+        "time_taken": 1.550321933,
+        "abstraction_sizes": [
+          29.279999993741512
+        ],
+        "abstractions": [
+          "(app (app T (app (app (app repeat (app (app T l) (app (app (app (app M 1) 0) -0.5) (app (app / 0.5) (app tan (app (app / pi) #1)))))) #1) (app (app (app (app M 1) (app (app / (app (app * 2) pi)) #1)) 0) 0))) (app (app (app (app M #0) 0) 0) 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19195.58,
+          10785.98
+        ],
+        "time_taken": 1.546439716,
+        "abstraction_sizes": [
+          29.279999993741512
+        ],
+        "abstractions": [
+          "(app (app T (app (app (app repeat (app (app T l) (app (app (app (app M 1) 0) -0.5) (app (app / 0.5) (app tan (app (app / pi) #1)))))) #1) (app (app (app (app M 1) (app (app / (app (app * 2) pi)) #1)) 0) 0))) (app (app (app (app M #0) 0) 0) 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19195.58,
+          10785.98
+        ],
+        "time_taken": 1.691941417,
+        "abstraction_sizes": [
+          29.279999993741512
+        ],
+        "abstractions": [
+          "(app (app T (app (app (app repeat (app (app T l) (app (app (app (app M 1) 0) -0.5) (app (app / 0.5) (app tan (app (app / pi) #1)))))) #1) (app (app (app (app M 1) (app (app / (app (app * 2) pi)) #1)) 0) 0))) (app (app (app (app M #0) 0) 0) 0))"
+        ]
+      }
+    ]
+  },
+  {
+    "path": "wheels.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          35777.76,
+          28709.16
+        ],
+        "time_taken": 4.625223735,
+        "abstraction_sizes": [
+          5.03999999910593
+        ],
+        "abstractions": [
+          "(app (app (app (app M 1) 0) #1) #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35777.76,
+          28709.16
+        ],
+        "time_taken": 4.863821673,
+        "abstraction_sizes": [
+          5.03999999910593
+        ],
+        "abstractions": [
+          "(app (app (app (app M 1) 0) #1) #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35777.76,
+          28709.16
+        ],
+        "time_taken": 4.830338768,
+        "abstraction_sizes": [
+          5.03999999910593
+        ],
+        "abstractions": [
+          "(app (app (app (app M 1) 0) #1) #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35777.76,
+          28709.16
+        ],
+        "time_taken": 4.895209325,
+        "abstraction_sizes": [
+          5.03999999910593
+        ],
+        "abstractions": [
+          "(app (app (app (app M 1) 0) #1) #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35777.76,
+          28709.16
+        ],
+        "time_taken": 5.048206515,
+        "abstraction_sizes": [
+          5.03999999910593
+        ],
+        "abstractions": [
+          "(app (app (app (app M 1) 0) #1) #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35777.76,
+          28709.16
+        ],
+        "time_taken": 4.932915911,
+        "abstraction_sizes": [
+          5.03999999910593
+        ],
+        "abstractions": [
+          "(app (app (app (app M 1) 0) #1) #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35777.76,
+          28709.16
+        ],
+        "time_taken": 4.77303849,
+        "abstraction_sizes": [
+          5.03999999910593
+        ],
+        "abstractions": [
+          "(app (app (app (app M 1) 0) #1) #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35777.76,
+          28709.16
+        ],
+        "time_taken": 4.948089272,
+        "abstraction_sizes": [
+          5.03999999910593
+        ],
+        "abstractions": [
+          "(app (app (app (app M 1) 0) #1) #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35777.76,
+          28709.16
+        ],
+        "time_taken": 4.531179694,
+        "abstraction_sizes": [
+          5.03999999910593
+        ],
+        "abstractions": [
+          "(app (app (app (app M 1) 0) #1) #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35777.76,
+          28709.16
+        ],
+        "time_taken": 5.464182586,
+        "abstraction_sizes": [
+          5.03999999910593
+        ],
+        "abstractions": [
+          "(app (app (app (app M 1) 0) #1) #0)"
+        ]
+      }
+    ]
+  }
+]

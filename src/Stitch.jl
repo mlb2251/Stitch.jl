@@ -1,6 +1,6 @@
 module Stitch
 
-export SExpr, stitch_search, Corpus, Program, compress, load_corpus, load_dfa, rewrite_novel, bounds_analysis
+export SExpr, stitch_search, Corpus, Program, compress, load_corpus, load_dfa, rewrite_novel, bounds_analysis, size
 
 using AutoHashEquals
 

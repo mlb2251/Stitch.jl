@@ -1,0 +1,137 @@
+[
+  {
+    "path": "wheels.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          35426.0,
+          26354.0
+        ],
+        "time_taken": 2.235062083,
+        "abstraction_sizes": [
+          13.0
+        ],
+        "abstractions": [
+          "(T (T #4 (M #3 0 0 #2)) (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26354.0
+        ],
+        "time_taken": 2.233079733,
+        "abstraction_sizes": [
+          13.0
+        ],
+        "abstractions": [
+          "(T (T #4 (M #3 0 0 #2)) (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26354.0
+        ],
+        "time_taken": 2.209618586,
+        "abstraction_sizes": [
+          13.0
+        ],
+        "abstractions": [
+          "(T (T #4 (M #3 0 0 #2)) (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26354.0
+        ],
+        "time_taken": 2.257465637,
+        "abstraction_sizes": [
+          13.0
+        ],
+        "abstractions": [
+          "(T (T #4 (M #3 0 0 #2)) (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26354.0
+        ],
+        "time_taken": 2.21716641,
+        "abstraction_sizes": [
+          13.0
+        ],
+        "abstractions": [
+          "(T (T #4 (M #3 0 0 #2)) (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26354.0
+        ],
+        "time_taken": 2.207382976,
+        "abstraction_sizes": [
+          13.0
+        ],
+        "abstractions": [
+          "(T (T #4 (M #3 0 0 #2)) (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26354.0
+        ],
+        "time_taken": 2.225609995,
+        "abstraction_sizes": [
+          13.0
+        ],
+        "abstractions": [
+          "(T (T #4 (M #3 0 0 #2)) (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26354.0
+        ],
+        "time_taken": 2.268716358,
+        "abstraction_sizes": [
+          13.0
+        ],
+        "abstractions": [
+          "(T (T #4 (M #3 0 0 #2)) (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26354.0
+        ],
+        "time_taken": 2.244541162,
+        "abstraction_sizes": [
+          13.0
+        ],
+        "abstractions": [
+          "(T (T #4 (M #3 0 0 #2)) (M 1 0 #1 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          26354.0
+        ],
+        "time_taken": 2.255962081,
+        "abstraction_sizes": [
+          13.0
+        ],
+        "abstractions": [
+          "(T (T #4 (M #3 0 0 #2)) (M 1 0 #1 #0))"
+        ]
+      }
+    ]
+  }
+]

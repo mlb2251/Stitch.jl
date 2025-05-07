@@ -1,0 +1,1082 @@
+[
+  {
+    "path": "bridge.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          34257.0,
+          31857.0
+        ],
+        "time_taken": 0.258788311,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34257.0,
+          31857.0
+        ],
+        "time_taken": 0.326397449,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34257.0,
+          31857.0
+        ],
+        "time_taken": 0.571078855,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34257.0,
+          31857.0
+        ],
+        "time_taken": 0.255576626,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34257.0,
+          31857.0
+        ],
+        "time_taken": 0.253807576,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34257.0,
+          31857.0
+        ],
+        "time_taken": 0.343271172,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34257.0,
+          31857.0
+        ],
+        "time_taken": 0.415914234,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34257.0,
+          31857.0
+        ],
+        "time_taken": 0.264938438,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34257.0,
+          31857.0
+        ],
+        "time_taken": 0.426964405,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          34257.0,
+          31857.0
+        ],
+        "time_taken": 0.2708573,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      }
+    ]
+  },
+  {
+    "path": "castle.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          47273.0,
+          43602.0
+        ],
+        "time_taken": 0.700865995,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47273.0,
+          43602.0
+        ],
+        "time_taken": 0.453621664,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47273.0,
+          43602.0
+        ],
+        "time_taken": 0.524238763,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47273.0,
+          43602.0
+        ],
+        "time_taken": 0.841179158,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47273.0,
+          43602.0
+        ],
+        "time_taken": 0.543361129,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47273.0,
+          43602.0
+        ],
+        "time_taken": 0.51649718,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47273.0,
+          43602.0
+        ],
+        "time_taken": 0.44438665,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47273.0,
+          43602.0
+        ],
+        "time_taken": 0.684180155,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47273.0,
+          43602.0
+        ],
+        "time_taken": 0.411740266,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          47273.0,
+          43602.0
+        ],
+        "time_taken": 0.429617017,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      }
+    ]
+  },
+  {
+    "path": "city.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          40424.0,
+          37116.0
+        ],
+        "time_taken": 0.39209726,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40424.0,
+          37116.0
+        ],
+        "time_taken": 0.405869675,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40424.0,
+          37116.0
+        ],
+        "time_taken": 0.485624004,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40424.0,
+          37116.0
+        ],
+        "time_taken": 0.322061716,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40424.0,
+          37116.0
+        ],
+        "time_taken": 0.315389586,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40424.0,
+          37116.0
+        ],
+        "time_taken": 0.325489849,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40424.0,
+          37116.0
+        ],
+        "time_taken": 0.389125175,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40424.0,
+          37116.0
+        ],
+        "time_taken": 0.451777191,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40424.0,
+          37116.0
+        ],
+        "time_taken": 0.330650022,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          40424.0,
+          37116.0
+        ],
+        "time_taken": 0.296885684,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      }
+    ]
+  },
+  {
+    "path": "dials.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          35712.0,
+          28219.0
+        ],
+        "time_taken": 0.919165608,
+        "abstraction_sizes": [
+          61.0
+        ],
+        "abstractions": [
+          "(C (C (T (T (T l (M 3 (/ pi 2) 0 -2)) (M 1 0 0 0)) (M 1 0 0 0)) (T (T (T l (M 1 0 -0.5 0)) (M 2 0 0 0)) (M 1 0 0 1))) (T (T (T l (M 1 0 -0.5 0)) (M #0 0 0 0)) (M 1 0 0 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35712.0,
+          28219.0
+        ],
+        "time_taken": 0.884551991,
+        "abstraction_sizes": [
+          61.0
+        ],
+        "abstractions": [
+          "(C (C (T (T (T l (M 3 (/ pi 2) 0 -2)) (M 1 0 0 0)) (M 1 0 0 0)) (T (T (T l (M 1 0 -0.5 0)) (M 2 0 0 0)) (M 1 0 0 1))) (T (T (T l (M 1 0 -0.5 0)) (M #0 0 0 0)) (M 1 0 0 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35712.0,
+          28219.0
+        ],
+        "time_taken": 0.794746572,
+        "abstraction_sizes": [
+          61.0
+        ],
+        "abstractions": [
+          "(C (C (T (T (T l (M 3 (/ pi 2) 0 -2)) (M 1 0 0 0)) (M 1 0 0 0)) (T (T (T l (M 1 0 -0.5 0)) (M 2 0 0 0)) (M 1 0 0 1))) (T (T (T l (M 1 0 -0.5 0)) (M #0 0 0 0)) (M 1 0 0 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35712.0,
+          28219.0
+        ],
+        "time_taken": 0.893376161,
+        "abstraction_sizes": [
+          61.0
+        ],
+        "abstractions": [
+          "(C (C (T (T (T l (M 3 (/ pi 2) 0 -2)) (M 1 0 0 0)) (M 1 0 0 0)) (T (T (T l (M 1 0 -0.5 0)) (M 2 0 0 0)) (M 1 0 0 1))) (T (T (T l (M 1 0 -0.5 0)) (M #0 0 0 0)) (M 1 0 0 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35712.0,
+          28219.0
+        ],
+        "time_taken": 0.780611474,
+        "abstraction_sizes": [
+          61.0
+        ],
+        "abstractions": [
+          "(C (C (T (T (T l (M 3 (/ pi 2) 0 -2)) (M 1 0 0 0)) (M 1 0 0 0)) (T (T (T l (M 1 0 -0.5 0)) (M 2 0 0 0)) (M 1 0 0 1))) (T (T (T l (M 1 0 -0.5 0)) (M #0 0 0 0)) (M 1 0 0 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35712.0,
+          28219.0
+        ],
+        "time_taken": 0.958767783,
+        "abstraction_sizes": [
+          61.0
+        ],
+        "abstractions": [
+          "(C (C (T (T (T l (M 3 (/ pi 2) 0 -2)) (M 1 0 0 0)) (M 1 0 0 0)) (T (T (T l (M 1 0 -0.5 0)) (M 2 0 0 0)) (M 1 0 0 1))) (T (T (T l (M 1 0 -0.5 0)) (M #0 0 0 0)) (M 1 0 0 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35712.0,
+          28219.0
+        ],
+        "time_taken": 0.911572954,
+        "abstraction_sizes": [
+          61.0
+        ],
+        "abstractions": [
+          "(C (C (T (T (T l (M 3 (/ pi 2) 0 -2)) (M 1 0 0 0)) (M 1 0 0 0)) (T (T (T l (M 1 0 -0.5 0)) (M 2 0 0 0)) (M 1 0 0 1))) (T (T (T l (M 1 0 -0.5 0)) (M #0 0 0 0)) (M 1 0 0 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35712.0,
+          28219.0
+        ],
+        "time_taken": 0.79247193,
+        "abstraction_sizes": [
+          61.0
+        ],
+        "abstractions": [
+          "(C (C (T (T (T l (M 3 (/ pi 2) 0 -2)) (M 1 0 0 0)) (M 1 0 0 0)) (T (T (T l (M 1 0 -0.5 0)) (M 2 0 0 0)) (M 1 0 0 1))) (T (T (T l (M 1 0 -0.5 0)) (M #0 0 0 0)) (M 1 0 0 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35712.0,
+          28219.0
+        ],
+        "time_taken": 0.858819992,
+        "abstraction_sizes": [
+          61.0
+        ],
+        "abstractions": [
+          "(C (C (T (T (T l (M 3 (/ pi 2) 0 -2)) (M 1 0 0 0)) (M 1 0 0 0)) (T (T (T l (M 1 0 -0.5 0)) (M 2 0 0 0)) (M 1 0 0 1))) (T (T (T l (M 1 0 -0.5 0)) (M #0 0 0 0)) (M 1 0 0 0)))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35712.0,
+          28219.0
+        ],
+        "time_taken": 0.806508681,
+        "abstraction_sizes": [
+          61.0
+        ],
+        "abstractions": [
+          "(C (C (T (T (T l (M 3 (/ pi 2) 0 -2)) (M 1 0 0 0)) (M 1 0 0 0)) (T (T (T l (M 1 0 -0.5 0)) (M 2 0 0 0)) (M 1 0 0 1))) (T (T (T l (M 1 0 -0.5 0)) (M #0 0 0 0)) (M 1 0 0 0)))"
+        ]
+      }
+    ]
+  },
+  {
+    "path": "furniture.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          42935.0,
+          31087.0
+        ],
+        "time_taken": 1.27029169,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #1 (M 1 0 0 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42935.0,
+          31087.0
+        ],
+        "time_taken": 1.273782781,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #1 (M 1 0 0 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42935.0,
+          31087.0
+        ],
+        "time_taken": 1.309844113,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #1 (M 1 0 0 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42935.0,
+          31087.0
+        ],
+        "time_taken": 1.322845826,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #1 (M 1 0 0 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42935.0,
+          31087.0
+        ],
+        "time_taken": 1.263314956,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #1 (M 1 0 0 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42935.0,
+          31087.0
+        ],
+        "time_taken": 1.281265555,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #1 (M 1 0 0 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42935.0,
+          31087.0
+        ],
+        "time_taken": 1.259974747,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #1 (M 1 0 0 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42935.0,
+          31087.0
+        ],
+        "time_taken": 1.260350464,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #1 (M 1 0 0 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42935.0,
+          31087.0
+        ],
+        "time_taken": 1.333445717,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #1 (M 1 0 0 #0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42935.0,
+          31087.0
+        ],
+        "time_taken": 1.257317955,
+        "abstraction_sizes": [
+          7.0
+        ],
+        "abstractions": [
+          "(T #1 (M 1 0 0 #0))"
+        ]
+      }
+    ]
+  },
+  {
+    "path": "house.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          42033.0,
+          35535.0
+        ],
+        "time_taken": 0.316454398,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42033.0,
+          35535.0
+        ],
+        "time_taken": 0.349413791,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42033.0,
+          35535.0
+        ],
+        "time_taken": 0.358701755,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42033.0,
+          35535.0
+        ],
+        "time_taken": 0.444717479,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42033.0,
+          35535.0
+        ],
+        "time_taken": 0.327166602,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42033.0,
+          35535.0
+        ],
+        "time_taken": 0.305801746,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42033.0,
+          35535.0
+        ],
+        "time_taken": 0.331144481,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42033.0,
+          35535.0
+        ],
+        "time_taken": 0.346253221,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42033.0,
+          35535.0
+        ],
+        "time_taken": 0.341437767,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          42033.0,
+          35535.0
+        ],
+        "time_taken": 0.462285458,
+        "abstraction_sizes": [
+          2.0
+        ],
+        "abstractions": [
+          "(r 4)"
+        ]
+      }
+    ]
+  },
+  {
+    "path": "nuts-bolts.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          19008.0,
+          10688.0
+        ],
+        "time_taken": 0.373792971,
+        "abstraction_sizes": [
+          29.0
+        ],
+        "abstractions": [
+          "(T (repeat (T l (M 1 0 -0.5 (/ 0.5 (tan (/ pi #1))))) #1 (M 1 (/ (* 2 pi) #1) 0 0)) (M #0 0 0 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19008.0,
+          10688.0
+        ],
+        "time_taken": 0.445111139,
+        "abstraction_sizes": [
+          29.0
+        ],
+        "abstractions": [
+          "(T (repeat (T l (M 1 0 -0.5 (/ 0.5 (tan (/ pi #1))))) #1 (M 1 (/ (* 2 pi) #1) 0 0)) (M #0 0 0 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19008.0,
+          10688.0
+        ],
+        "time_taken": 0.319170241,
+        "abstraction_sizes": [
+          29.0
+        ],
+        "abstractions": [
+          "(T (repeat (T l (M 1 0 -0.5 (/ 0.5 (tan (/ pi #1))))) #1 (M 1 (/ (* 2 pi) #1) 0 0)) (M #0 0 0 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19008.0,
+          10688.0
+        ],
+        "time_taken": 0.317400569,
+        "abstraction_sizes": [
+          29.0
+        ],
+        "abstractions": [
+          "(T (repeat (T l (M 1 0 -0.5 (/ 0.5 (tan (/ pi #1))))) #1 (M 1 (/ (* 2 pi) #1) 0 0)) (M #0 0 0 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19008.0,
+          10688.0
+        ],
+        "time_taken": 0.301446768,
+        "abstraction_sizes": [
+          29.0
+        ],
+        "abstractions": [
+          "(T (repeat (T l (M 1 0 -0.5 (/ 0.5 (tan (/ pi #1))))) #1 (M 1 (/ (* 2 pi) #1) 0 0)) (M #0 0 0 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19008.0,
+          10688.0
+        ],
+        "time_taken": 0.335697651,
+        "abstraction_sizes": [
+          29.0
+        ],
+        "abstractions": [
+          "(T (repeat (T l (M 1 0 -0.5 (/ 0.5 (tan (/ pi #1))))) #1 (M 1 (/ (* 2 pi) #1) 0 0)) (M #0 0 0 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19008.0,
+          10688.0
+        ],
+        "time_taken": 0.342633678,
+        "abstraction_sizes": [
+          29.0
+        ],
+        "abstractions": [
+          "(T (repeat (T l (M 1 0 -0.5 (/ 0.5 (tan (/ pi #1))))) #1 (M 1 (/ (* 2 pi) #1) 0 0)) (M #0 0 0 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19008.0,
+          10688.0
+        ],
+        "time_taken": 0.405103079,
+        "abstraction_sizes": [
+          29.0
+        ],
+        "abstractions": [
+          "(T (repeat (T l (M 1 0 -0.5 (/ 0.5 (tan (/ pi #1))))) #1 (M 1 (/ (* 2 pi) #1) 0 0)) (M #0 0 0 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19008.0,
+          10688.0
+        ],
+        "time_taken": 0.316098267,
+        "abstraction_sizes": [
+          29.0
+        ],
+        "abstractions": [
+          "(T (repeat (T l (M 1 0 -0.5 (/ 0.5 (tan (/ pi #1))))) #1 (M 1 (/ (* 2 pi) #1) 0 0)) (M #0 0 0 0))"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          19008.0,
+          10688.0
+        ],
+        "time_taken": 0.321270694,
+        "abstraction_sizes": [
+          29.0
+        ],
+        "abstractions": [
+          "(T (repeat (T l (M 1 0 -0.5 (/ 0.5 (tan (/ pi #1))))) #1 (M 1 (/ (* 2 pi) #1) 0 0)) (M #0 0 0 0))"
+        ]
+      }
+    ]
+  },
+  {
+    "path": "wheels.json",
+    "result": [
+      {
+        "corpus_sizes": [
+          35426.0,
+          28496.0
+        ],
+        "time_taken": 0.801399489,
+        "abstraction_sizes": [
+          5.0
+        ],
+        "abstractions": [
+          "(M 1 0 #1 #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          28496.0
+        ],
+        "time_taken": 0.780726034,
+        "abstraction_sizes": [
+          5.0
+        ],
+        "abstractions": [
+          "(M 1 0 #1 #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          28496.0
+        ],
+        "time_taken": 0.918712186,
+        "abstraction_sizes": [
+          5.0
+        ],
+        "abstractions": [
+          "(M 1 0 #1 #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          28496.0
+        ],
+        "time_taken": 0.700573326,
+        "abstraction_sizes": [
+          5.0
+        ],
+        "abstractions": [
+          "(M 1 0 #1 #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          28496.0
+        ],
+        "time_taken": 0.673390747,
+        "abstraction_sizes": [
+          5.0
+        ],
+        "abstractions": [
+          "(M 1 0 #1 #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          28496.0
+        ],
+        "time_taken": 0.902181549,
+        "abstraction_sizes": [
+          5.0
+        ],
+        "abstractions": [
+          "(M 1 0 #1 #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          28496.0
+        ],
+        "time_taken": 0.68204055,
+        "abstraction_sizes": [
+          5.0
+        ],
+        "abstractions": [
+          "(M 1 0 #1 #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          28496.0
+        ],
+        "time_taken": 0.64432228,
+        "abstraction_sizes": [
+          5.0
+        ],
+        "abstractions": [
+          "(M 1 0 #1 #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          28496.0
+        ],
+        "time_taken": 0.700893258,
+        "abstraction_sizes": [
+          5.0
+        ],
+        "abstractions": [
+          "(M 1 0 #1 #0)"
+        ]
+      },
+      {
+        "corpus_sizes": [
+          35426.0,
+          28496.0
+        ],
+        "time_taken": 0.750187749,
+        "abstraction_sizes": [
+          5.0
+        ],
+        "abstractions": [
+          "(M 1 0 #1 #0)"
+        ]
+      }
+    ]
+  }
+]
