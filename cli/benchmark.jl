@@ -60,5 +60,5 @@ function main(folder, shortname, size_by_symbol)
     end
 end
 
-main("../compression_benchmark/processed/without-apps", "without-apps", nothing)
-main("../compression_benchmark/processed/with-apps", "with-apps", Dict(:app => Float32(0.01)))
+main("../compression_benchmark/processed/without-apps-no-lam", "without-apps", nothing)
+main("../compression_benchmark/processed/with-apps-no-lam", "with-apps", Dict(:app => Float32(0.01)))
