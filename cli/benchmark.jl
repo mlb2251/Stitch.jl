@@ -7,13 +7,14 @@ using JSON: JSON
 repeats = 10
 iterations = 1
 
-function benchmark(path::String, size_by_symbol)
+function benchmark(path::String, size_by_symbol, config_args)
 	println(path)
 	corpus = load_corpus(path)
 	result = () -> compress(
 		corpus;
 		iterations = iterations,
-		size_by_symbol=size_by_symbol
+		size_by_symbol=size_by_symbol,
+		config_args...,
 	)
 	result()
 	repeated = []
@@ -41,11 +42,11 @@ function benchmark(path::String, size_by_symbol)
     return repeated
 end
 
-function main(folder, shortname, size_by_symbol)
+function main(folder, shortname, size_by_symbol, config_args; predicate=x -> true)
     results_all = []
     for path in readdir(folder)
-        if endswith(path, ".json") && !contains(path, "-out")
-            result = benchmark(joinpath(folder, path), size_by_symbol)
+        if endswith(path, ".json") && !contains(path, "-out") && predicate(path)
+            result = benchmark(joinpath(folder, path), size_by_symbol, config_args)
             push!(results_all,
                 Dict(
                     "path" => path,
@@ -60,5 +61,8 @@ function main(folder, shortname, size_by_symbol)
     end
 end
 
-main("../compression_benchmark/processed/without-apps-no-lam", "without-apps", nothing)
-main("../compression_benchmark/processed/with-apps-no-lam", "with-apps", Dict(:app => Float32(0.01)))
+# main("../compression_benchmark/processed/without-apps-no-lam", "without-apps", nothing, ())
+# main("../compression_benchmark/processed/with-apps-no-lam", "with-apps", Dict(:app => Float32(0.01)), ())
+for max_arity in 3:5
+	main("../compression_benchmark/processed/without-apps-no-lam", "without-apps-arity=$(max_arity)", Dict(:app => Float32(0.01)), (;max_arity=max_arity); predicate=(path -> path == "wheels.json"))
+end
